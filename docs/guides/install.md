@@ -24,12 +24,21 @@ It links skills into:
 ~/.agents/skills/
 ```
 
-It also creates:
+It registers the plugin in:
+
+```text
+~/.agents/plugins/marketplace.json
+~/.agents/plugins/research-pilot
+```
+
+It also creates compatibility helper links:
 
 ```text
 ~/.research-pilot-plugin
 ~/.research-pilot/bin/research-pilot-init
 ```
+
+After restart, Research Pilot should appear as a local plugin in Codex plugin views. If a Codex build only reads skills, the installed skills still work.
 
 After install, start Codex and use the plugin command:
 

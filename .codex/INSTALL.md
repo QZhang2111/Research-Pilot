@@ -28,7 +28,14 @@ It links each skill directory into:
 ~/.agents/skills/
 ```
 
-It also creates:
+It registers the plugin in:
+
+```text
+~/.agents/plugins/marketplace.json
+~/.agents/plugins/research-pilot
+```
+
+It also creates compatibility helper links:
 
 ```text
 ~/.research-pilot-plugin

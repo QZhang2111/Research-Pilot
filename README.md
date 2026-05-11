@@ -94,7 +94,7 @@ The agent proposes D* deltas. You accept, reject, park, or request revision. Onl
 curl -fsSL https://raw.githubusercontent.com/QZhang2111/Research-Pilot/main/install.sh | bash
 ```
 
-This clones or updates the plugin source in `~/.research-pilot/repo`, links skills into `~/.agents/skills/`, and exposes plugin commands such as `/research-init`.
+This clones or updates the plugin source in `~/.research-pilot/repo`, registers Research Pilot in the local plugin catalog, links skills into `~/.agents/skills/`, and exposes plugin commands such as `/research-init`.
 
 ### 2. Start Codex and initialize a private workspace
 
@@ -215,6 +215,7 @@ The graph event log is the source of truth for project understanding. Snapshots,
 
 ```text
 Research Pilot repo = hidden plugin source and tools
+Codex plugin = manifest + commands + skills + assets + catalog entry
 User research workspace = private research memory
 Agent chat = primary interface
 Zotero = paper metadata, PDFs, collections, tags
@@ -224,6 +225,16 @@ Generated DB/reports/dashboard = rebuildable read models
 ```
 
 The hidden plugin checkout is the tool factory. Your private workspace is the research site.
+
+Repo, skill, and plugin are different layers:
+
+```text
+repo = source distribution on GitHub
+skill = one agent instruction workflow
+plugin = packaged capability: manifest, commands, skills, assets, install metadata
+```
+
+After installation, Research Pilot is registered through `~/.agents/plugins/marketplace.json` and should appear as a local plugin in Codex plugin views. If a Codex build only reads skills, the same workflows still work through the installed skills and `/research-init` command file in the hidden plugin checkout.
 
 ---
 
@@ -268,6 +279,7 @@ wiki/graphs/events/**/*.jsonl
 ## 📦 What Is Included
 
 - Codex plugin manifest at `.codex-plugin/plugin.json`.
+- Plugin command `/research-init`.
 - Curl-based Codex-compatible installer.
 - `research-pilot` router skill.
 - Private workspace initializer.

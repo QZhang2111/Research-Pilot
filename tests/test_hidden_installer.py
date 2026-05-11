@@ -1,5 +1,5 @@
 import os
-import shutil
+import json
 import stat
 import subprocess
 import tempfile
@@ -26,6 +26,8 @@ class HiddenInstallerTests(unittest.TestCase):
                 "RP_DIR": str(self.home / ".research-pilot" / "repo"),
                 "RP_PLUGIN_LINK": str(self.home / ".research-pilot-plugin"),
                 "RP_BIN_DIR": str(self.home / ".research-pilot" / "bin"),
+                "RP_MARKETPLACE_PATH": str(self.home / ".agents" / "plugins" / "marketplace.json"),
+                "RP_CATALOG_LINK": str(self.home / ".agents" / "plugins" / "research-pilot"),
             }
         )
 
@@ -80,12 +82,15 @@ class HiddenInstallerTests(unittest.TestCase):
         repo_dir = self.home / ".research-pilot" / "repo"
         skill_link = self.home / ".agents" / "skills" / "alpha-skill"
         plugin_link = self.home / ".research-pilot-plugin"
+        catalog_link = self.home / ".agents" / "plugins" / "research-pilot"
         init_link = self.home / ".research-pilot" / "bin" / "research-pilot-init"
 
         self.assertTrue((repo_dir / ".git").exists())
         self.assertEqual(Path(os.readlink(skill_link)), repo_dir / "skills" / "alpha-skill")
         self.assertEqual(Path(os.readlink(plugin_link)), repo_dir)
+        self.assertEqual(Path(os.readlink(catalog_link)), repo_dir)
         self.assertEqual(Path(os.readlink(init_link)), repo_dir / "tools" / "research_pilot_init.py")
+        self.assert_marketplace_entry_installed()
 
     def test_codex_install_uses_hidden_checkout_not_current_worktree(self) -> None:
         self._run_install("codex")
@@ -110,8 +115,25 @@ class HiddenInstallerTests(unittest.TestCase):
 
         self.assertFalse((self.home / ".agents" / "skills" / "alpha-skill").exists())
         self.assertFalse((self.home / ".research-pilot-plugin").exists())
+        self.assertFalse((self.home / ".agents" / "plugins" / "research-pilot").exists())
         self.assertFalse((self.home / ".research-pilot" / "bin" / "research-pilot-init").exists())
         self.assertTrue((self.home / ".research-pilot" / "repo" / ".git").exists())
+        self.assert_marketplace_entry_absent()
+
+    def assert_marketplace_entry_installed(self) -> None:
+        path = self.home / ".agents" / "plugins" / "marketplace.json"
+        data = json.loads(path.read_text())
+        entries = [item for item in data["plugins"] if item["name"] == "research-pilot"]
+        self.assertEqual(len(entries), 1)
+        entry = entries[0]
+        self.assertEqual(entry["source"], {"source": "local", "path": "./research-pilot"})
+        self.assertEqual(entry["policy"]["installation"], "INSTALLED_BY_DEFAULT")
+        self.assertEqual(entry["category"], "Productivity")
+
+    def assert_marketplace_entry_absent(self) -> None:
+        path = self.home / ".agents" / "plugins" / "marketplace.json"
+        data = json.loads(path.read_text())
+        self.assertFalse([item for item in data["plugins"] if item["name"] == "research-pilot"])
 
 
 if __name__ == "__main__":

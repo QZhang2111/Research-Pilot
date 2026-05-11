@@ -10,6 +10,8 @@
 #   RP_DIR           Override clone destination (default: $HOME/.research-pilot/repo)
 #   RP_PLUGIN_LINK   Override universal plugin symlink (default: $HOME/.research-pilot-plugin)
 #   RP_BIN_DIR       Override helper command directory (default: $HOME/.research-pilot/bin)
+#   RP_MARKETPLACE_PATH  Override plugin marketplace path (default: $HOME/.agents/plugins/marketplace.json)
+#   RP_CATALOG_LINK      Override plugin catalog symlink (default: $HOME/.agents/plugins/research-pilot)
 
 set -euo pipefail
 
@@ -17,6 +19,8 @@ REPO_URL="${RP_REPO_URL:-https://github.com/QZhang2111/Research-Pilot.git}"
 REPO_DIR="${RP_DIR:-$HOME/.research-pilot/repo}"
 PLUGIN_LINK="${RP_PLUGIN_LINK:-$HOME/.research-pilot-plugin}"
 BIN_DIR="${RP_BIN_DIR:-$HOME/.research-pilot/bin}"
+MARKETPLACE_PATH="${RP_MARKETPLACE_PATH:-$HOME/.agents/plugins/marketplace.json}"
+CATALOG_LINK="${RP_CATALOG_LINK:-$HOME/.agents/plugins/research-pilot}"
 
 platforms_table() {
   cat <<EOF
@@ -151,6 +155,68 @@ unlink_plugin_root() {
   [[ -L "$PLUGIN_LINK" ]] && rm -f "$PLUGIN_LINK"
 }
 
+link_plugin_catalog() {
+  mkdir -p "$(dirname "$CATALOG_LINK")"
+  safe_symlink "$REPO_DIR" "$CATALOG_LINK"
+  printf '  linked %s -> %s\n' "$CATALOG_LINK" "$REPO_DIR"
+}
+
+unlink_plugin_catalog() {
+  [[ -L "$CATALOG_LINK" ]] && rm -f "$CATALOG_LINK"
+}
+
+write_marketplace_entry() {
+  mkdir -p "$(dirname "$MARKETPLACE_PATH")"
+  MARKETPLACE_PATH="$MARKETPLACE_PATH" python3 - <<'PY'
+import json
+import os
+from pathlib import Path
+
+path = Path(os.environ["MARKETPLACE_PATH"])
+if path.exists():
+    data = json.loads(path.read_text())
+else:
+    data = {
+        "name": "local-plugins",
+        "interface": {"displayName": "Local Plugins"},
+        "plugins": [],
+    }
+
+data.setdefault("name", "local-plugins")
+data.setdefault("interface", {}).setdefault("displayName", "Local Plugins")
+plugins = [item for item in data.get("plugins", []) if item.get("name") != "research-pilot"]
+plugins.append(
+    {
+        "name": "research-pilot",
+        "source": {"source": "local", "path": "./research-pilot"},
+        "policy": {
+            "installation": "INSTALLED_BY_DEFAULT",
+            "authentication": "ON_INSTALL",
+        },
+        "category": "Productivity",
+    }
+)
+data["plugins"] = plugins
+path.write_text(json.dumps(data, indent=2) + "\n")
+PY
+  printf '  registered marketplace entry %s\n' "$MARKETPLACE_PATH"
+}
+
+remove_marketplace_entry() {
+  [[ -f "$MARKETPLACE_PATH" ]] || return 0
+  MARKETPLACE_PATH="$MARKETPLACE_PATH" python3 - <<'PY'
+import json
+import os
+from pathlib import Path
+
+path = Path(os.environ["MARKETPLACE_PATH"])
+data = json.loads(path.read_text())
+data["plugins"] = [item for item in data.get("plugins", []) if item.get("name") != "research-pilot"]
+path.write_text(json.dumps(data, indent=2) + "\n")
+PY
+  printf '  removed marketplace entry %s\n' "$MARKETPLACE_PATH"
+}
+
 link_bins() {
   mkdir -p "$BIN_DIR"
   safe_symlink "$REPO_DIR/tools/research_pilot_init.py" "$BIN_DIR/research-pilot-init"
@@ -172,6 +238,9 @@ link_installation() {
   link_skills "$target" "$style"
   printf -- '-> Linking plugin root\n'
   link_plugin_root
+  printf -- '-> Registering plugin catalog\n'
+  link_plugin_catalog
+  write_marketplace_entry
   printf -- '-> Linking helper commands\n'
   link_bins
 }
@@ -183,6 +252,7 @@ cmd_install() {
 
   printf '\nInstalled Research Pilot for %s\n' "$id"
   printf 'Plugin source: %s\n' "$REPO_DIR"
+  printf 'Plugin catalog: %s\n' "$MARKETPLACE_PATH"
   printf 'Initialize a private workspace:\n'
   printf '  %s/research-pilot-init ~/Research/MyResearchWiki\n' "$BIN_DIR"
   printf 'Then run Codex from inside that workspace.\n'
@@ -197,6 +267,7 @@ cmd_update() {
   link_installation codex
   printf '\nUpdated Research Pilot for codex\n'
   printf 'Plugin source: %s\n' "$REPO_DIR"
+  printf 'Plugin catalog: %s\n' "$MARKETPLACE_PATH"
 }
 
 cmd_uninstall() {
@@ -209,6 +280,8 @@ cmd_uninstall() {
   printf -- '-> Removing Research Pilot links for %s\n' "$id"
   unlink_skills "$target" "$style"
   unlink_plugin_root
+  unlink_plugin_catalog
+  remove_marketplace_entry
   unlink_bins
 
   printf '\nUninstalled Research Pilot links for %s\n' "$id"
@@ -236,6 +309,8 @@ Environment:
   RP_DIR           Override clone destination (default: \$HOME/.research-pilot/repo)
   RP_PLUGIN_LINK   Override plugin symlink (default: \$HOME/.research-pilot-plugin)
   RP_BIN_DIR       Override helper command directory (default: \$HOME/.research-pilot/bin)
+  RP_MARKETPLACE_PATH  Override plugin marketplace path (default: \$HOME/.agents/plugins/marketplace.json)
+  RP_CATALOG_LINK      Override plugin catalog symlink (default: \$HOME/.agents/plugins/research-pilot)
 USAGE
 }
 
