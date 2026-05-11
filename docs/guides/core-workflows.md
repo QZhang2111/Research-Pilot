@@ -7,6 +7,14 @@ python3 tools/graph_query_cli.py summary --repo "$WORKSPACE" --project "$PROJECT
 python3 tools/project_next_action_cli.py suggest --repo "$WORKSPACE" --project "$PROJECT" --json
 ```
 
+Generate a markdown project graph report:
+
+```bash
+python3 tools/build_project_graph_report.py --repo "$WORKSPACE" --project "$PROJECT"
+```
+
+The generated report is a read model. Graph truth remains append-only JSONL events.
+
 ## Gap Detection
 
 ```bash

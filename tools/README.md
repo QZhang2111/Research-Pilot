@@ -13,7 +13,7 @@ Truth boundaries:
 | Area | Files | Responsibility |
 | --- | --- | --- |
 | workspace | `research_pilot_init.py` | Create private user workspace from templates. |
-| graph | `graph_store.py`, `graph_validate.py`, `build_graph_snapshot.py`, `build_graph_db.py`, `graph_query_cli.py` | Validate/replay graph events and query read models. |
+| graph | `graph_store.py`, `graph_validate.py`, `build_graph_snapshot.py`, `build_graph_db.py`, `build_project_graph_report.py`, `graph_query_cli.py` | Validate/replay graph events and query read models. |
 | delta | `graph_delta_api.py`, `graph_delta_cli.py` | Dry-run, register, and decide human-gated graph deltas. |
 | dossier | `paper_dossier_cli.py`, `source_intake_cli.py` | Create project-local paper/source dossiers and export proposed deltas. |
 | gap | `project_gap_cli.py`, `project_next_action_cli.py`, `gap_search_cli.py`, `research_gap_discovery_cli.py` | Detect graph gaps, recommend next workflow moves, and derive paper-search leads. |

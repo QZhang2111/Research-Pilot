@@ -28,6 +28,7 @@ fi
 python3 -m unittest \
   tests.test_source_intake_cli \
   tests.test_graph_core \
+  tests.test_project_graph_report \
   tests.test_graph_delta_loop \
   tests.test_paper_dossier_cli \
   tests.test_dashboard_public \

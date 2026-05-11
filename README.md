@@ -34,6 +34,7 @@ Current public extraction includes:
 - graph-event validation;
 - graph snapshot generation;
 - SQLite graph read-model generation;
+- generated project graph markdown reports;
 - read-only graph query commands;
 - read-only gap detection and next-action routing;
 - project understanding update and evidence synthesis workflow protocols;
@@ -101,6 +102,7 @@ Build graph read models in a workspace after adding project graph events:
 python3 tools/graph_validate.py --repo ~/Research/MyResearchWiki --project DemoProject
 python3 tools/build_graph_snapshot.py --repo ~/Research/MyResearchWiki --project DemoProject
 python3 tools/build_graph_db.py --repo ~/Research/MyResearchWiki --project DemoProject
+python3 tools/build_project_graph_report.py --repo ~/Research/MyResearchWiki --project DemoProject
 python3 tools/graph_query_cli.py summary --repo ~/Research/MyResearchWiki --project DemoProject --json
 ```
 
