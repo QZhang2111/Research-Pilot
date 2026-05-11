@@ -8,14 +8,18 @@ It helps AI agents initialize and operate a private research workspace where pap
 
 Experimental public extraction.
 
-MVP-A only includes:
+Current public extraction includes:
 
 - Codex-compatible install instructions;
 - a `research-pilot` router skill skeleton;
 - a private workspace initializer;
-- workspace templates with no private research data.
+- workspace templates with no private research data;
+- graph-event validation;
+- graph snapshot generation;
+- SQLite graph read-model generation;
+- read-only graph query commands.
 
-Graph tools, Zotero workflows, dashboard support, and full paper-to-delta automation are extracted in later MVP slices.
+Zotero workflows, dashboard support, human-gated delta apply, and full paper-to-delta automation are extracted in later MVP slices.
 
 ## Mental Model
 
@@ -57,6 +61,21 @@ Then start your agent inside that workspace and ask:
 
 ```text
 Use Research Pilot to inspect this workspace.
+```
+
+Run the graph-core smoke test:
+
+```bash
+./scripts/smoke_mvp_b.sh
+```
+
+Build graph read models in a workspace:
+
+```bash
+python3 tools/graph_validate.py --repo ~/Research/MyResearchWiki --project DemoProject
+python3 tools/build_graph_snapshot.py --repo ~/Research/MyResearchWiki --project DemoProject
+python3 tools/build_graph_db.py --repo ~/Research/MyResearchWiki --project DemoProject
+python3 tools/graph_query_cli.py summary --repo ~/Research/MyResearchWiki --project DemoProject --json
 ```
 
 ## Private Data Rule
