@@ -1,0 +1,326 @@
+.react-flow__pane {
+  cursor: grab;
+}
+
+.react-flow__pane:active {
+  cursor: grabbing;
+}
+
+.react-flow__controls {
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: var(--shadow-soft);
+}
+
+.react-flow__controls button {
+  background: var(--surface-1);
+  border-bottom: 1px solid var(--border);
+  color: var(--text-main);
+}
+
+.react-flow__controls button:hover {
+  background: rgba(214, 168, 79, 0.12);
+}
+
+.react-flow__minimap {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-1);
+}
+
+.project-graph-handle {
+  width: 1px;
+  height: 1px;
+  border: 0;
+  background: transparent;
+  opacity: 0;
+}
+
+.project-graph-shell {
+  grid-template-rows: auto auto minmax(0, 1fr);
+}
+
+.project-graph-shell.is-paper-view {
+  grid-template-columns: minmax(0, 1fr);
+  min-height: min(88vh, 1080px);
+}
+
+.project-graph-shell.is-paper-view .project-graph-flow {
+  min-height: min(88vh, 1080px);
+}
+
+.project-graph-breadcrumb,
+.project-graph-loading {
+  grid-column: 1 / -1;
+}
+
+.project-graph-breadcrumb {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 12;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  padding: 0 2px;
+  color: var(--text-dim);
+  font: 800 11px/1 var(--mono);
+}
+
+.project-graph-breadcrumb button,
+.project-graph-breadcrumb span {
+  border: 1px solid rgba(49, 57, 71, 0.78);
+  border-radius: 999px;
+  background: rgba(8, 10, 13, 0.62);
+  color: var(--text-main);
+  padding: 7px 10px;
+  font: inherit;
+}
+
+.project-graph-breadcrumb button {
+  cursor: pointer;
+}
+
+.project-graph-breadcrumb button:hover,
+.project-graph-breadcrumb button:focus-visible {
+  border-color: rgba(214, 168, 79, 0.72);
+  color: var(--accent);
+  outline: none;
+}
+
+.project-graph-loading {
+  border: 1px solid rgba(104, 199, 212, 0.34);
+  border-radius: 8px;
+  background: rgba(104, 199, 212, 0.08);
+  color: #9bd7df;
+  padding: 8px 10px;
+  font: 800 11px/1.25 var(--mono);
+}
+
+.project-graph-loading.is-error {
+  border-color: rgba(229, 139, 131, 0.44);
+  background: rgba(229, 139, 131, 0.08);
+  color: #e8a39d;
+}
+
+.project-graph-paper-source-node,
+.project-graph-paper-portal-node,
+.project-graph-paper-container-node,
+.project-graph-paper-argument-node {
+  width: 100%;
+  height: 100%;
+  color: var(--text-main);
+  text-align: left;
+  transition: opacity 140ms ease, border-color 140ms ease, box-shadow 140ms ease, transform 140ms ease;
+}
+
+.project-graph-paper-source-node,
+.project-graph-paper-portal-node,
+.project-graph-paper-argument-node {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: 7px 10px;
+  align-content: start;
+  border: 1px solid rgba(104, 199, 212, 0.34);
+  border-radius: 8px;
+  background:
+    linear-gradient(90deg, rgba(104, 199, 212, 0.18), transparent 5px),
+    linear-gradient(180deg, rgba(13, 18, 25, 0.94), rgba(7, 10, 14, 0.93));
+  padding: 12px;
+  cursor: pointer;
+}
+
+.project-graph-paper-source-node span,
+.project-graph-paper-portal-node span,
+.project-graph-paper-argument-node span {
+  display: inline-grid;
+  place-items: center;
+  width: 36px;
+  min-width: 36px;
+  height: 26px;
+  border: 1px solid rgba(104, 199, 212, 0.45);
+  border-radius: 6px;
+  color: #9bd7df;
+  font: 900 10px/1 var(--mono);
+}
+
+.project-graph-paper-source-node strong,
+.project-graph-paper-portal-node strong,
+.project-graph-paper-argument-node strong {
+  min-width: 0;
+  color: var(--text-main);
+  font-size: 12px;
+  line-height: 1.24;
+}
+
+.project-graph-paper-source-node em,
+.project-graph-paper-source-node small,
+.project-graph-paper-portal-node em,
+.project-graph-paper-portal-node small,
+.project-graph-paper-argument-node em {
+  grid-column: 2;
+  color: var(--text-dim);
+  font: 800 10px/1.2 var(--mono);
+  font-style: normal;
+  text-transform: uppercase;
+}
+
+.project-graph-paper-source-node small,
+.project-graph-paper-portal-node small {
+  width: fit-content;
+  border: 1px solid rgba(104, 199, 212, 0.28);
+  border-radius: 999px;
+  padding: 4px 7px;
+  color: #9bd7df;
+  background: rgba(104, 199, 212, 0.07);
+}
+
+.project-graph-paper-portal-node {
+  border-style: dashed;
+  border-color: rgba(104, 199, 212, 0.54);
+  background:
+    linear-gradient(90deg, rgba(104, 199, 212, 0.13), transparent 6px),
+    linear-gradient(180deg, rgba(10, 18, 23, 0.88), rgba(7, 10, 14, 0.9));
+}
+
+.project-graph-paper-portal-node span {
+  color: #9bd7df;
+}
+
+.project-graph-paper-source-node:hover,
+.project-graph-paper-source-node:focus-visible,
+.project-graph-paper-portal-node:hover,
+.project-graph-paper-portal-node:focus-visible,
+.project-graph-paper-argument-node:hover,
+.project-graph-paper-argument-node:focus-visible,
+.project-graph-paper-source-node.is-selected,
+.project-graph-paper-portal-node.is-selected,
+.project-graph-paper-argument-node.is-selected {
+  border-color: rgba(104, 199, 212, 0.72);
+  box-shadow: 0 0 0 1px rgba(104, 199, 212, 0.16), 0 18px 38px rgba(0, 0, 0, 0.24);
+  outline: none;
+  transform: translateY(-1px);
+}
+
+.project-graph-paper-source-node.is-dimmed,
+.project-graph-paper-portal-node.is-dimmed,
+.project-graph-paper-argument-node.is-dimmed,
+.project-graph-paper-container-node.is-dimmed {
+  opacity: 0.2;
+}
+
+.project-graph-paper-container-node {
+  display: grid;
+  gap: 7px;
+  align-content: start;
+  border: 1px dashed rgba(214, 168, 79, 0.36);
+  border-radius: 12px;
+  background:
+    radial-gradient(circle at 18% 12%, rgba(214, 168, 79, 0.09), transparent 34%),
+    linear-gradient(180deg, rgba(20, 17, 11, 0.62), rgba(8, 10, 13, 0.46));
+  padding: 16px 18px;
+  pointer-events: none;
+}
+
+.project-graph-shell.is-paper-view .project-graph-paper-container-node {
+  background:
+    linear-gradient(180deg, rgba(214, 168, 79, 0.045), transparent 120px),
+    linear-gradient(90deg, rgba(214, 168, 79, 0.035), transparent 55%),
+    rgba(8, 10, 13, 0.28);
+}
+
+.project-graph-paper-container-node strong {
+  color: var(--text-main);
+  font-size: 18px;
+  line-height: 1.18;
+}
+
+.project-graph-paper-container-node span,
+.project-graph-paper-container-node small {
+  color: var(--text-dim);
+  font: 800 11px/1.2 var(--mono);
+}
+
+.project-graph-paper-argument-node.is-claim {
+  border-color: rgba(214, 168, 79, 0.44);
+  background:
+    linear-gradient(90deg, rgba(214, 168, 79, 0.20), transparent 5px),
+    linear-gradient(180deg, rgba(28, 23, 15, 0.94), rgba(8, 10, 13, 0.93));
+}
+
+.project-graph-paper-argument-node.is-claim span {
+  border-color: rgba(214, 168, 79, 0.48);
+  color: var(--accent);
+}
+
+.project-graph-paper-argument-node.is-evidence {
+  border-color: rgba(112, 214, 163, 0.36);
+  background:
+    linear-gradient(90deg, rgba(112, 214, 163, 0.16), transparent 5px),
+    linear-gradient(180deg, rgba(11, 22, 18, 0.94), rgba(8, 10, 13, 0.93));
+}
+
+.project-graph-paper-argument-node.is-evidence span {
+  border-color: rgba(112, 214, 163, 0.44);
+  color: #9be8c0;
+}
+
+.project-graph-paper-argument-node.is-warrant {
+  border-color: rgba(190, 147, 255, 0.38);
+  background:
+    linear-gradient(90deg, rgba(190, 147, 255, 0.16), transparent 5px),
+    linear-gradient(180deg, rgba(18, 14, 25, 0.94), rgba(8, 10, 13, 0.93));
+}
+
+.project-graph-paper-argument-node.is-warrant span {
+  border-color: rgba(190, 147, 255, 0.46);
+  color: #ceb3ff;
+}
+
+.project-graph-paper-argument-node.is-limitation {
+  border-color: rgba(229, 139, 131, 0.38);
+  background:
+    linear-gradient(90deg, rgba(229, 139, 131, 0.16), transparent 5px),
+    linear-gradient(180deg, rgba(27, 13, 12, 0.94), rgba(8, 10, 13, 0.93));
+}
+
+.project-graph-paper-argument-node.is-limitation span {
+  border-color: rgba(229, 139, 131, 0.46);
+  color: #e8a39d;
+}
+
+.project-graph-edge-translationbridgeedge {
+  filter: drop-shadow(0 0 5px rgba(104, 199, 212, 0.18));
+}
+
+.project-graph-minimap {
+  width: 150px;
+  height: 112px;
+  opacity: 0.72;
+}
+
+.project-graph-minimap:hover {
+  opacity: 0.95;
+}
+
+:root[data-theme="light"] .project-graph-breadcrumb button,
+:root[data-theme="light"] .project-graph-breadcrumb span,
+:root[data-theme="light"] .project-graph-paper-source-node,
+:root[data-theme="light"] .project-graph-paper-portal-node,
+:root[data-theme="light"] .project-graph-paper-argument-node {
+  border-color: rgba(199, 189, 173, 0.82);
+  background:
+    linear-gradient(90deg, rgba(47, 127, 159, 0.12), transparent 5px),
+    linear-gradient(180deg, rgba(255, 253, 248, 0.96), rgba(244, 240, 232, 0.94));
+  box-shadow: 0 12px 26px rgba(85, 74, 56, 0.09);
+}
+
+:root[data-theme="light"] .project-graph-paper-container-node {
+  border-color: rgba(152, 107, 31, 0.34);
+  background:
+    radial-gradient(circle at 18% 12%, rgba(152, 107, 31, 0.08), transparent 34%),
+    linear-gradient(180deg, rgba(255, 253, 248, 0.68), rgba(244, 240, 232, 0.52));
+}

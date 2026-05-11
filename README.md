@@ -20,9 +20,10 @@ Current public extraction includes:
 - read-only graph query commands;
 - human-gated delta dry-run, registration, and decision commands;
 - project-local paper dossier creation, validation, and delta export;
-- public-safe source intake with optional Zotero identity and no-key fallback.
+- public-safe source intake with optional Zotero identity and no-key fallback;
+- optional Research Browser dashboard served from plugin UI files over workspace read models.
 
-Dashboard support is extracted in a later slice.
+Dashboard is an optional observer. It reads `.dashboard/index.json`, graph snapshots, and graph.db; graph truth remains `wiki/graphs/events/**/*.jsonl`.
 
 ## Mental Model
 
@@ -108,6 +109,13 @@ Intake source identity with or without Zotero credentials:
 ```bash
 python3 tools/source_intake_cli.py status --json
 python3 tools/source_intake_cli.py intake --repo ~/Research/MyResearchWiki --project DemoProject --paper paper-a --title "Paper A" --zotero-key ABC123 --doi 10.000/demo --json
+```
+
+Build and serve the dashboard:
+
+```bash
+python3 tools/build_dashboard_index.py --repo ~/Research/MyResearchWiki --output .dashboard/index.json
+python3 tools/research_browser_server.py --repo ~/Research/MyResearchWiki --port 8765
 ```
 
 ## Private Data Rule

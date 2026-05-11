@@ -1,0 +1,16 @@
+{
+  "name": "research-pilot-dashboard",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build:project-graph": "vite build --config project-graph/vite.config.mjs"
+  },
+  "dependencies": {
+    "@vitejs/plugin-react": "^5.1.1",
+    "@xyflow/react": "^12.10.0",
+    "vite": "^7.2.6",
+    "react": "^19.2.1",
+    "react-dom": "^19.2.1"
+  },
+  "devDependencies": {}
+}

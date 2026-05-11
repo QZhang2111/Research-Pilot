@@ -23,8 +23,9 @@ Research Pilot is the primary router skill for agent-operated research memory.
 - Create and validate project-local paper dossiers.
 - Export paper-dossier graph delta JSON proposals.
 - Intake source identity with optional Zotero keys and manual fallback.
+- Build and serve the optional Research Browser dashboard.
 
-Dashboard launching is extracted in a later MVP slice.
+Dashboard is an optional observer. It must not become graph truth.
 
 ## Workspace Detection
 
@@ -132,8 +133,24 @@ python3 "$PLUGIN_ROOT/tools/source_intake_cli.py" intake --repo "$WORKSPACE_PATH
 
 If Zotero credentials are unavailable, continue with DOI, arXiv, URL, or manual source refs.
 
+### Dashboard
+
+When the user asks to build or refresh the dashboard read model:
+
+```bash
+python3 "$PLUGIN_ROOT/tools/build_dashboard_index.py" --repo "$WORKSPACE_PATH" --output .dashboard/index.json
+```
+
+When the user asks to open the dashboard:
+
+```bash
+python3 "$PLUGIN_ROOT/tools/research_browser_server.py" --repo "$WORKSPACE_PATH" --port 8765
+```
+
 ## Boundaries
 
-Do not claim Zotero workflows, dashboard support, or paper deep-read automation are available until those MVP slices are extracted.
+Do not claim Zotero API workflows or full paper deep-read automation are available until those MVP slices are extracted.
+
+Do not claim dashboard files are source of truth. Dashboard may only observe generated read models and call explicit graph delta APIs.
 
 Do not store private research data in the public plugin repo.

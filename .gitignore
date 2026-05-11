@@ -230,3 +230,6 @@ output/
 
 # Local plugin installation checkouts and symlink scratch
 .research-pilot-install/
+
+# Dashboard dependencies
+dashboard/node_modules/
