@@ -19,6 +19,7 @@ Current public extraction includes:
 - SQLite graph read-model generation;
 - read-only graph query commands;
 - read-only gap detection and next-action routing;
+- project understanding update and evidence synthesis workflow protocols;
 - gap-driven search contracts and user-facing gap discovery;
 - read-only experiment proposal generation;
 - Zotero bridge helpers for configurable metadata/status workflows;
@@ -91,6 +92,15 @@ Detect gaps and recommend next action:
 ```bash
 python3 tools/project_gap_cli.py detect --repo ~/Research/MyResearchWiki --project DemoProject --json
 python3 tools/project_next_action_cli.py suggest --repo ~/Research/MyResearchWiki --project DemoProject --json
+```
+
+Project understanding update and evidence synthesis are agent workflows, not direct approval shortcuts. Use:
+
+```text
+skills/project-understanding-update
+skills/project-evidence-synthesis
+wiki/_system/workflows/project-understanding-update.md
+wiki/_system/workflows/project-evidence-synthesis.md
 ```
 
 Generate gap-search leads and experiment proposals:

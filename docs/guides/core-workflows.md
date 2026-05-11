@@ -13,6 +13,56 @@ python3 tools/project_next_action_cli.py suggest --repo "$WORKSPACE" --project "
 python3 tools/project_gap_cli.py detect --repo "$WORKSPACE" --project "$PROJECT" --json
 ```
 
+Gap reports are read-only. If a gap should change project understanding, turn it into a D* delta.
+
+## Project Understanding Update
+
+Use when human discussion, evidence pressure, direction changes, or experiment results should update a project.
+
+Read the workspace protocol:
+
+```text
+wiki/_system/workflows/project-understanding-update.md
+```
+
+Workflow:
+
+```text
+classify input
+-> read project context and graph state
+-> update safe markdown context when appropriate
+-> propose D* for graph-level changes
+-> dry-run
+-> human accept/reject/park/revise
+```
+
+Graph-level question/claim/evidence/warrant/limitation changes must use the delta loop.
+
+## Project Evidence Synthesis
+
+Use when multiple papers, dossiers, or experiment notes need project-level interpretation.
+
+Read the workspace protocol:
+
+```text
+wiki/_system/workflows/project-evidence-synthesis.md
+```
+
+Required synthesis output:
+
+```text
+Current Project State
+Source Set
+Agreement and Conflict
+Claim/Evidence Table
+Evidence Pressure
+Proposed Project Understanding Delta
+Human Decision Queue
+Next Action Contract
+```
+
+This workflow prepares D* proposals. It does not approve papers or mutate graph truth.
+
 ## Paper Dossier
 
 ```bash
@@ -30,4 +80,3 @@ python3 tools/graph_delta_cli.py decide --repo "$WORKSPACE" --project "$PROJECT"
 ```
 
 Human approval is required before graph content changes.
-

@@ -19,6 +19,8 @@ Research Pilot is the primary router skill for agent-operated research memory.
 - Query project graph nodes, links, deltas, open deltas, and summaries.
 - Detect structural project graph gaps.
 - Recommend next workflow action.
+- Preserve and update project understanding from human intent, evidence pressure, and direction changes.
+- Synthesize paper sets into project-level claim/evidence pressure and D* proposals.
 - Generate gap-driven search contracts and project-gap discovery leads.
 - Generate read-only experiment proposals for claims.
 - Dry-run graph deltas.
@@ -111,6 +113,39 @@ python3 "$PLUGIN_ROOT/tools/project_next_action_cli.py" suggest --repo "$WORKSPA
 ```
 
 This router is read-only. It may recommend another workflow, but it must not run search, deep read, delta apply, Zotero writes, or experiments by itself.
+
+### Project Understanding Update
+
+When human input changes project direction, question framing, claim scope, evidence pressure, or boundaries:
+
+1. Read the workspace protocol:
+
+```text
+$WORKSPACE_PATH/wiki/_system/workflows/project-understanding-update.md
+```
+
+2. Read current project context and graph state.
+3. Classify the input as observation, intuition, question, claim, evidence pressure, limitation pressure, search need, experiment need, boundary, or decision.
+4. Preserve safe report/context changes in markdown.
+5. Route graph-level changes through D* dry-run, registration, and human decision.
+
+Do not silently promote human discussion into graph truth.
+
+### Project Evidence Synthesis
+
+When a set of papers, dossiers, or experiment notes should affect project understanding:
+
+1. Read the workspace protocol:
+
+```text
+$WORKSPACE_PATH/wiki/_system/workflows/project-evidence-synthesis.md
+```
+
+2. Compare sources against current Q/C/E/W/L state.
+3. Identify agreement, conflict, evidence pressure, and missing proof.
+4. Produce Project Understanding Delta proposals and a Human Decision Queue.
+
+Do not approve sources or mutate graph truth without explicit human decision.
 
 ### Gap-Driven Search
 
