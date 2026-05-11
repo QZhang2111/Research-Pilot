@@ -17,9 +17,10 @@ Current public extraction includes:
 - graph-event validation;
 - graph snapshot generation;
 - SQLite graph read-model generation;
-- read-only graph query commands.
+- read-only graph query commands;
+- human-gated delta dry-run, registration, and decision commands.
 
-Zotero workflows, dashboard support, human-gated delta apply, and full paper-to-delta automation are extracted in later MVP slices.
+Zotero workflows, dashboard support, and full paper-to-delta automation are extracted in later MVP slices.
 
 ## Mental Model
 
@@ -76,6 +77,20 @@ python3 tools/graph_validate.py --repo ~/Research/MyResearchWiki --project DemoP
 python3 tools/build_graph_snapshot.py --repo ~/Research/MyResearchWiki --project DemoProject
 python3 tools/build_graph_db.py --repo ~/Research/MyResearchWiki --project DemoProject
 python3 tools/graph_query_cli.py summary --repo ~/Research/MyResearchWiki --project DemoProject --json
+```
+
+Run the human-gated delta smoke test:
+
+```bash
+./scripts/smoke_mvp_c.sh
+```
+
+Preview, register, and accept a graph delta:
+
+```bash
+python3 tools/graph_delta_cli.py dry-run --repo ~/Research/MyResearchWiki --project DemoProject --delta examples/demo/deltas/refine-demo-claim.json --json
+python3 tools/graph_delta_cli.py register --repo ~/Research/MyResearchWiki --project DemoProject --delta examples/demo/deltas/refine-demo-claim.json --json
+python3 tools/graph_delta_cli.py decide --repo ~/Research/MyResearchWiki --project DemoProject --id D1 --decision accept --json
 ```
 
 ## Private Data Rule

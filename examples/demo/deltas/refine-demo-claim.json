@@ -1,0 +1,30 @@
+{
+  "delta_id": "project:DemoProject:D1",
+  "local_id": "D1",
+  "source_type": "manual_demo",
+  "source_graph_id": "",
+  "source_dossier": "examples/demo/deltas/refine-demo-claim.json",
+  "source_refs": ["examples/demo/deltas/refine-demo-claim.json"],
+  "operation": ["refine_node"],
+  "operation_type": "update_node",
+  "evolution_type": "refine",
+  "epistemic_effect": "clarifies",
+  "summary": "Refine the demo claim after evidence inspection.",
+  "source_paper_nodes": [],
+  "affected_nodes": ["project:DemoProject:C0"],
+  "affected_links": [],
+  "patch_ops": [
+    {
+      "op": "update_node",
+      "node_id": "project:DemoProject:C0",
+      "field": "text",
+      "before": "Demo claim needs evidence.",
+      "after": "Demo claim is supported by demo evidence."
+    }
+  ],
+  "rationale": "MVP-C demo delta shows human-gated graph update behavior.",
+  "caused_by": ["project:DemoProject:E0"],
+  "supersedes": [],
+  "confidence": "medium",
+  "human_review": "pending"
+}

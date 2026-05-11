@@ -17,8 +17,11 @@ Research Pilot is the primary router skill for agent-operated research memory.
 - Build generated graph snapshots.
 - Build generated SQLite graph read models.
 - Query project graph nodes, links, deltas, open deltas, and summaries.
+- Dry-run graph deltas.
+- Register proposed graph deltas.
+- Apply human decisions to registered graph deltas.
 
-Zotero paper workflows, dashboard launching, human-gated delta apply, and paper-to-delta automation are extracted in later MVP slices.
+Zotero paper workflows, dashboard launching, and paper-to-delta automation are extracted in later MVP slices.
 
 ## Workspace Detection
 
@@ -81,8 +84,28 @@ python3 "$PLUGIN_ROOT/tools/graph_query_cli.py" summary --repo "$WORKSPACE_PATH"
 python3 "$PLUGIN_ROOT/tools/graph_query_cli.py" open --repo "$WORKSPACE_PATH" --project "$PROJECT_ID" --json
 ```
 
+### Human-Gated Delta Loop
+
+When the user asks to preview a graph change:
+
+```bash
+python3 "$PLUGIN_ROOT/tools/graph_delta_cli.py" dry-run --repo "$WORKSPACE_PATH" --project "$PROJECT_ID" --delta "$DELTA_JSON" --json
+```
+
+When the user asks to register a proposed graph change:
+
+```bash
+python3 "$PLUGIN_ROOT/tools/graph_delta_cli.py" register --repo "$WORKSPACE_PATH" --project "$PROJECT_ID" --delta "$DELTA_JSON" --json
+```
+
+When the human explicitly approves, rejects, parks, or requests revision of a registered delta:
+
+```bash
+python3 "$PLUGIN_ROOT/tools/graph_delta_cli.py" decide --repo "$WORKSPACE_PATH" --project "$PROJECT_ID" --id "$DELTA_ID" --decision accept --json
+```
+
 ## Boundaries
 
-Do not claim Zotero workflows, dashboard support, human-gated delta apply, or paper deep-read automation are available until those MVP slices are extracted.
+Do not claim Zotero workflows, dashboard support, or paper deep-read automation are available until those MVP slices are extracted.
 
 Do not store private research data in the public plugin repo.
