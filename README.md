@@ -1,6 +1,6 @@
 <h1 align="center">Research Pilot</h1>
 
-<p align="center">
+<p align="center" style="max-width: 980px; margin: 0 auto;">
   <strong>Turn papers, research chats, experiments, and project notes into a private research memory your AI agent can understand, update, and use to plan the next move.</strong>
   <br />
   <em>Codex-compatible. Zotero-first. Local workspace. Human-gated project understanding.</em>
@@ -16,7 +16,7 @@
 </p>
 
 <p align="center">
-  <img src="asset/research-pilot-hero.png" alt="Research Pilot turns scattered papers, chats, claims, and experiments into agent-operated project memory with graph deltas and next research moves.">
+  <img src="asset/research-pilot-hero.png" width="92%" alt="Research Pilot turns scattered papers, chats, claims, and experiments into agent-operated project memory with graph deltas and next research moves.">
 </p>
 
 ---
