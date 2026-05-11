@@ -1,8 +1,25 @@
 # Research Pilot
 
-Research Pilot is an agent-operated research memory plugin.
+<p align="center">
+  <img src="asset/research-pilot-hero.png" alt="Research Pilot turns scattered papers, chats, claims, and experiments into agent-operated project memory with graph deltas and next research moves.">
+</p>
 
-It helps AI agents initialize and operate a private research workspace where papers, project questions, claims, evidence, warrants, limitations, graph deltas, and human decisions can accumulate over time.
+Research Pilot helps AI agents maintain and advance paper-heavy work through private project memory.
+
+It turns Zotero papers, paper dossiers, project claims, evidence, warrants, limitations, and human decisions into an append-only Project Understanding Graph that agents can inspect, update through human gates, and use to recommend next research moves.
+
+Stop re-explaining your project every session. Start from the current research state.
+
+## What It Gives Your Agent
+
+| Feature | What it means |
+| --- | --- |
+| Project Memory | Keep project direction, claims, evidence, gaps, and decisions in a durable workspace the agent can read. |
+| Evidence Gap Detection | Surface unsupported claims, weak warrants, missing paper evidence, and experiment needs before choosing the next action. |
+| Paper-to-Graph Reading | Convert a paper dossier into claim, evidence, limitation, and delta proposals tied to project context. |
+| Human-Gated Deltas | Let the agent propose graph changes while the human accepts, rejects, parks, or revises before memory changes. |
+| Next Research Move | Ask what to read, test, clarify, or update next based on the current project graph. |
+| Research Browser | Inspect papers, claims, graph snapshots, deltas, gaps, and project state through a local dashboard. |
 
 ## Status
 
