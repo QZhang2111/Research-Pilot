@@ -17,15 +17,17 @@ Research Pilot is the primary router skill for agent-operated research memory.
 - Build generated graph snapshots.
 - Build generated SQLite graph read models.
 - Query project graph nodes, links, deltas, open deltas, and summaries.
+- Detect structural project graph gaps.
+- Recommend next workflow action.
 - Dry-run graph deltas.
 - Register proposed graph deltas.
 - Apply human decisions to registered graph deltas.
 - Create and validate project-local paper dossiers.
 - Export paper-dossier graph delta JSON proposals.
-- Intake source identity with optional Zotero keys and manual fallback.
-- Build and serve the optional Research Browser dashboard.
+- Intake Zotero-first source identity, with manual source-reference capture for setup/dry-run cases.
+- Build and serve the Research Browser dashboard.
 
-Dashboard is an optional observer. It must not become graph truth.
+Dashboard is a required public component and a browser observer. It must not become graph truth.
 
 ## Workspace Detection
 
@@ -88,6 +90,26 @@ python3 "$PLUGIN_ROOT/tools/graph_query_cli.py" summary --repo "$WORKSPACE_PATH"
 python3 "$PLUGIN_ROOT/tools/graph_query_cli.py" open --repo "$WORKSPACE_PATH" --project "$PROJECT_ID" --json
 ```
 
+### Detect Graph Gaps
+
+When the user asks what evidence, warrant, answer, or translation is missing:
+
+```bash
+python3 "$PLUGIN_ROOT/tools/project_gap_cli.py" detect --repo "$WORKSPACE_PATH" --project "$PROJECT_ID" --json
+```
+
+Do not mutate graph state from a gap report. If the gap should change understanding, route through D*.
+
+### Recommend Next Action
+
+When the user asks what to do next:
+
+```bash
+python3 "$PLUGIN_ROOT/tools/project_next_action_cli.py" suggest --repo "$WORKSPACE_PATH" --project "$PROJECT_ID" --json
+```
+
+This router is read-only. It may recommend another workflow, but it must not run search, deep read, delta apply, Zotero writes, or experiments by itself.
+
 ### Human-Gated Delta Loop
 
 When the user asks to preview a graph change:
@@ -131,7 +153,7 @@ When the user asks to add a paper/source to a project:
 python3 "$PLUGIN_ROOT/tools/source_intake_cli.py" intake --repo "$WORKSPACE_PATH" --project "$PROJECT_ID" --paper "$PAPER_ID" --title "$TITLE" --zotero-key "$ZOTERO_ITEM_KEY" --doi "$DOI" --url "$URL" --json
 ```
 
-If Zotero credentials are unavailable, continue with DOI, arXiv, URL, or manual source refs.
+Normal paper management is Zotero-first. If Zotero credentials are not configured yet, DOI, arXiv, URL, or manual source refs may be recorded only as source identity capture; do not present this as a replacement paper manager.
 
 ### Dashboard
 
@@ -149,7 +171,7 @@ python3 "$PLUGIN_ROOT/tools/research_browser_server.py" --repo "$WORKSPACE_PATH"
 
 ## Boundaries
 
-Do not claim Zotero API workflows or full paper deep-read automation are available until those MVP slices are extracted.
+Do not claim full Zotero API automation beyond extracted source-identity and bridge behavior.
 
 Do not claim dashboard files are source of truth. Dashboard may only observe generated read models and call explicit graph delta APIs.
 

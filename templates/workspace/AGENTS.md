@@ -13,7 +13,7 @@ Zotero = paper metadata, PDFs, collections, tags, reading status mirror
 wiki = digested research understanding and project files
 wiki/graphs/events = append-only project understanding graph truth
 graph.db/snapshots/reports = rebuildable read models
-dashboard = optional browser view
+dashboard = required browser view over read models
 chat/agent = primary control surface
 ```
 

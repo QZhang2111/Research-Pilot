@@ -18,12 +18,13 @@ Current public extraction includes:
 - graph snapshot generation;
 - SQLite graph read-model generation;
 - read-only graph query commands;
+- read-only gap detection and next-action routing;
 - human-gated delta dry-run, registration, and decision commands;
 - project-local paper dossier creation, validation, and delta export;
-- public-safe source intake with optional Zotero identity and no-key fallback;
-- optional Research Browser dashboard served from plugin UI files over workspace read models.
+- Zotero-first source identity intake with manual source-reference capture for setup/dry-run cases;
+- required Research Browser dashboard served from plugin UI files over workspace read models.
 
-Dashboard is an optional observer. It reads `.dashboard/index.json`, graph snapshots, and graph.db; graph truth remains `wiki/graphs/events/**/*.jsonl`.
+Dashboard is a required public component and a browser observer. It reads `.dashboard/index.json`, graph snapshots, and graph.db; graph truth remains `wiki/graphs/events/**/*.jsonl`.
 
 ## Mental Model
 
@@ -43,7 +44,7 @@ Zotero = paper metadata, PDFs, collections, tags, reading status mirror
 wiki = digested research understanding and project files
 wiki/graphs/events = append-only project understanding graph truth
 graph.db/snapshots/reports = rebuildable read models
-dashboard = optional browser view over read models and wiki state
+dashboard = required browser view over read models and wiki state
 chat/agent = primary control surface
 ```
 
@@ -67,19 +68,26 @@ Then start your agent inside that workspace and ask:
 Use Research Pilot to inspect this workspace.
 ```
 
-Run the graph-core smoke test:
+Run the graph-core smoke test. The `examples/demo/` files are test fixtures, not a product demo workspace:
 
 ```bash
 ./scripts/smoke_mvp_b.sh
 ```
 
-Build graph read models in a workspace:
+Build graph read models in a workspace after adding project graph events:
 
 ```bash
 python3 tools/graph_validate.py --repo ~/Research/MyResearchWiki --project DemoProject
 python3 tools/build_graph_snapshot.py --repo ~/Research/MyResearchWiki --project DemoProject
 python3 tools/build_graph_db.py --repo ~/Research/MyResearchWiki --project DemoProject
 python3 tools/graph_query_cli.py summary --repo ~/Research/MyResearchWiki --project DemoProject --json
+```
+
+Detect gaps and recommend next action:
+
+```bash
+python3 tools/project_gap_cli.py detect --repo ~/Research/MyResearchWiki --project DemoProject --json
+python3 tools/project_next_action_cli.py suggest --repo ~/Research/MyResearchWiki --project DemoProject --json
 ```
 
 Run the human-gated delta smoke test:
@@ -104,7 +112,7 @@ python3 tools/paper_dossier_cli.py validate --dossier ~/Research/MyResearchWiki/
 python3 tools/paper_dossier_cli.py export-deltas --dossier ~/Research/MyResearchWiki/wiki/projects/DemoProject/papers/paper-a/index.md --output-dir ~/Research/MyResearchWiki/.research-pilot/generated/deltas --json
 ```
 
-Intake source identity with or without Zotero credentials:
+Intake source identity. Normal paper management is Zotero-first; DOI/arXiv/URL/manual refs are setup and emergency identity capture, not a replacement paper manager:
 
 ```bash
 python3 tools/source_intake_cli.py status --json
@@ -117,6 +125,21 @@ Build and serve the dashboard:
 python3 tools/build_dashboard_index.py --repo ~/Research/MyResearchWiki --output .dashboard/index.json
 python3 tools/research_browser_server.py --repo ~/Research/MyResearchWiki --port 8765
 ```
+
+Run release checks:
+
+```bash
+./scripts/release_check.sh
+```
+
+## Guides
+
+- [Install](docs/guides/install.md)
+- [Workspace](docs/guides/workspace.md)
+- [Zotero](docs/guides/zotero.md)
+- [Dashboard](docs/guides/dashboard.md)
+- [Core workflows](docs/guides/core-workflows.md)
+- [Source boundaries](docs/guides/source-boundaries.md)
 
 ## Private Data Rule
 

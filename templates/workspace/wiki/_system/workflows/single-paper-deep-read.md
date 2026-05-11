@@ -4,8 +4,8 @@ Use this workflow when a user asks an agent to read one paper into a project-loc
 
 ## Boundary
 
-- Source files may be local PDFs, exported text, URLs, DOI/arXiv identifiers, or manual notes.
-- Zotero is optional and not required in this public workflow.
+- Normal paper source management is Zotero-first.
+- DOI/arXiv/URL/manual notes may be used only as setup, dry-run, or emergency source identity capture.
 - The paper dossier is project-local working memory, not global approved memory.
 
 ## Output

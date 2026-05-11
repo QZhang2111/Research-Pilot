@@ -32,6 +32,8 @@ Use Research Pilot to inspect this workspace.
 
 ## Current Status
 
-MVP-A installs the router skill and workspace initializer only.
+The public extraction includes the router skill, workspace initializer, graph read models, human-gated delta loop, paper dossier workflow, source identity intake, gap/next-action commands, and dashboard server.
 
-Graph workflows, Zotero workflows, dashboard support, and deep-read automation are later MVP slices.
+Zotero remains the normal paper source of truth. Current public source intake records Zotero identity and supporting DOI/arXiv/URL refs; full Zotero bridge automation is a later extraction slice.
+
+Dashboard is a required public browser component, but graph truth remains `wiki/graphs/events/**/*.jsonl`.

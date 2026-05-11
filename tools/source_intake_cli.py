@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Public-safe source intake with optional Zotero identity fields."""
+"""Zotero-first source intake with manual source-reference capture."""
 
 from __future__ import annotations
 
@@ -41,7 +41,7 @@ def zotero_status() -> Dict[str, Any]:
         "library_id_present": bool(library_id),
         "api_key_present": bool(api_key),
         "library_type": library_type,
-        "mode": "zotero-env" if api_key and library_id else "manual-fallback",
+        "mode": "zotero-env" if api_key and library_id else "manual-source-identity",
     }
 
 
@@ -83,7 +83,7 @@ def main(argv: Optional[list[str]] = None) -> int:
     parser = argparse.ArgumentParser(description="Intake paper/source identity into a project-local dossier.")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
-    status = subparsers.add_parser("status", help="Show optional Zotero environment status.")
+    status = subparsers.add_parser("status", help="Show Zotero environment status.")
     status.add_argument("--json", action="store_true")
 
     intake = subparsers.add_parser("intake", help="Create a project-local dossier from source identity.")
