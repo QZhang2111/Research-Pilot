@@ -27,7 +27,7 @@ class HiddenInstallerTests(unittest.TestCase):
                 "RP_PLUGIN_LINK": str(self.home / ".research-pilot-plugin"),
                 "RP_BIN_DIR": str(self.home / ".research-pilot" / "bin"),
                 "RP_MARKETPLACE_PATH": str(self.home / ".agents" / "plugins" / "marketplace.json"),
-                "RP_CATALOG_LINK": str(self.home / ".agents" / "plugins" / "research-pilot"),
+                "RP_CATALOG_LINK": str(self.home / "plugins" / "research-pilot"),
             }
         )
 
@@ -77,18 +77,23 @@ class HiddenInstallerTests(unittest.TestCase):
         )
 
     def test_no_arg_install_clones_hidden_repo_and_links_codex_skills(self) -> None:
+        legacy_catalog_link = self.home / ".agents" / "plugins" / "research-pilot"
+        legacy_catalog_link.parent.mkdir(parents=True)
+        legacy_catalog_link.symlink_to(self.home / ".research-pilot" / "repo")
+
         self._run_install()
 
         repo_dir = self.home / ".research-pilot" / "repo"
         skill_link = self.home / ".agents" / "skills" / "alpha-skill"
         plugin_link = self.home / ".research-pilot-plugin"
-        catalog_link = self.home / ".agents" / "plugins" / "research-pilot"
+        catalog_link = self.home / "plugins" / "research-pilot"
         init_link = self.home / ".research-pilot" / "bin" / "research-pilot-init"
 
         self.assertTrue((repo_dir / ".git").exists())
         self.assertEqual(Path(os.readlink(skill_link)), repo_dir / "skills" / "alpha-skill")
         self.assertEqual(Path(os.readlink(plugin_link)), repo_dir)
         self.assertEqual(Path(os.readlink(catalog_link)), repo_dir)
+        self.assertFalse(legacy_catalog_link.is_symlink())
         self.assertEqual(Path(os.readlink(init_link)), repo_dir / "tools" / "research_pilot_init.py")
         self.assert_marketplace_entry_installed()
 
@@ -115,7 +120,7 @@ class HiddenInstallerTests(unittest.TestCase):
 
         self.assertFalse((self.home / ".agents" / "skills" / "alpha-skill").exists())
         self.assertFalse((self.home / ".research-pilot-plugin").exists())
-        self.assertFalse((self.home / ".agents" / "plugins" / "research-pilot").exists())
+        self.assertFalse((self.home / "plugins" / "research-pilot").exists())
         self.assertFalse((self.home / ".research-pilot" / "bin" / "research-pilot-init").exists())
         self.assertTrue((self.home / ".research-pilot" / "repo" / ".git").exists())
         self.assert_marketplace_entry_absent()
@@ -126,7 +131,7 @@ class HiddenInstallerTests(unittest.TestCase):
         entries = [item for item in data["plugins"] if item["name"] == "research-pilot"]
         self.assertEqual(len(entries), 1)
         entry = entries[0]
-        self.assertEqual(entry["source"], {"source": "local", "path": "./research-pilot"})
+        self.assertEqual(entry["source"], {"source": "local", "path": "./plugins/research-pilot"})
         self.assertEqual(entry["policy"]["installation"], "INSTALLED_BY_DEFAULT")
         self.assertEqual(entry["category"], "Productivity")
 

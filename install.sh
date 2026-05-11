@@ -11,7 +11,7 @@
 #   RP_PLUGIN_LINK   Override universal plugin symlink (default: $HOME/.research-pilot-plugin)
 #   RP_BIN_DIR       Override helper command directory (default: $HOME/.research-pilot/bin)
 #   RP_MARKETPLACE_PATH  Override plugin marketplace path (default: $HOME/.agents/plugins/marketplace.json)
-#   RP_CATALOG_LINK      Override plugin catalog symlink (default: $HOME/.agents/plugins/research-pilot)
+#   RP_CATALOG_LINK      Override plugin catalog symlink (default: $HOME/plugins/research-pilot)
 
 set -euo pipefail
 
@@ -20,7 +20,9 @@ REPO_DIR="${RP_DIR:-$HOME/.research-pilot/repo}"
 PLUGIN_LINK="${RP_PLUGIN_LINK:-$HOME/.research-pilot-plugin}"
 BIN_DIR="${RP_BIN_DIR:-$HOME/.research-pilot/bin}"
 MARKETPLACE_PATH="${RP_MARKETPLACE_PATH:-$HOME/.agents/plugins/marketplace.json}"
-CATALOG_LINK="${RP_CATALOG_LINK:-$HOME/.agents/plugins/research-pilot}"
+CATALOG_LINK="${RP_CATALOG_LINK:-$HOME/plugins/research-pilot}"
+LEGACY_CATALOG_LINK="${RP_LEGACY_CATALOG_LINK:-$HOME/.agents/plugins/research-pilot}"
+MARKETPLACE_SOURCE_PATH="${RP_MARKETPLACE_SOURCE_PATH:-./plugins/research-pilot}"
 
 platforms_table() {
   cat <<EOF
@@ -165,14 +167,25 @@ unlink_plugin_catalog() {
   [[ -L "$CATALOG_LINK" ]] && rm -f "$CATALOG_LINK"
 }
 
+cleanup_legacy_plugin_catalog() {
+  [[ "$LEGACY_CATALOG_LINK" != "$CATALOG_LINK" ]] || return 0
+  [[ -L "$LEGACY_CATALOG_LINK" ]] || return 0
+  local resolved
+  resolved="$(readlink "$LEGACY_CATALOG_LINK" 2>/dev/null || true)"
+  [[ "$resolved" == "$REPO_DIR" || "$resolved" == *"/.research-pilot/repo" ]] || return 0
+  rm -f "$LEGACY_CATALOG_LINK"
+  printf '  removed legacy catalog link %s\n' "$LEGACY_CATALOG_LINK"
+}
+
 write_marketplace_entry() {
   mkdir -p "$(dirname "$MARKETPLACE_PATH")"
-  MARKETPLACE_PATH="$MARKETPLACE_PATH" python3 - <<'PY'
+  MARKETPLACE_PATH="$MARKETPLACE_PATH" MARKETPLACE_SOURCE_PATH="$MARKETPLACE_SOURCE_PATH" python3 - <<'PY'
 import json
 import os
 from pathlib import Path
 
 path = Path(os.environ["MARKETPLACE_PATH"])
+source_path = os.environ["MARKETPLACE_SOURCE_PATH"]
 if path.exists():
     data = json.loads(path.read_text())
 else:
@@ -188,7 +201,7 @@ plugins = [item for item in data.get("plugins", []) if item.get("name") != "rese
 plugins.append(
     {
         "name": "research-pilot",
-        "source": {"source": "local", "path": "./research-pilot"},
+        "source": {"source": "local", "path": source_path},
         "policy": {
             "installation": "INSTALLED_BY_DEFAULT",
             "authentication": "ON_INSTALL",
@@ -239,6 +252,7 @@ link_installation() {
   printf -- '-> Linking plugin root\n'
   link_plugin_root
   printf -- '-> Registering plugin catalog\n'
+  cleanup_legacy_plugin_catalog
   link_plugin_catalog
   write_marketplace_entry
   printf -- '-> Linking helper commands\n'
@@ -281,6 +295,7 @@ cmd_uninstall() {
   unlink_skills "$target" "$style"
   unlink_plugin_root
   unlink_plugin_catalog
+  cleanup_legacy_plugin_catalog
   remove_marketplace_entry
   unlink_bins
 
@@ -310,7 +325,8 @@ Environment:
   RP_PLUGIN_LINK   Override plugin symlink (default: \$HOME/.research-pilot-plugin)
   RP_BIN_DIR       Override helper command directory (default: \$HOME/.research-pilot/bin)
   RP_MARKETPLACE_PATH  Override plugin marketplace path (default: \$HOME/.agents/plugins/marketplace.json)
-  RP_CATALOG_LINK      Override plugin catalog symlink (default: \$HOME/.agents/plugins/research-pilot)
+  RP_CATALOG_LINK      Override plugin catalog symlink (default: \$HOME/plugins/research-pilot)
+  RP_MARKETPLACE_SOURCE_PATH Override marketplace source path (default: ./plugins/research-pilot)
 USAGE
 }
 

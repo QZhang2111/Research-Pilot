@@ -32,8 +32,10 @@ It registers the plugin in:
 
 ```text
 ~/.agents/plugins/marketplace.json
-~/.agents/plugins/research-pilot
+~/plugins/research-pilot
 ```
+
+The marketplace entry uses `./plugins/research-pilot`; with a home-local marketplace this resolves to `~/plugins/research-pilot`.
 
 It also creates compatibility helper links:
 

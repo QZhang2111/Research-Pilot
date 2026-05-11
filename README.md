@@ -94,7 +94,7 @@ The agent proposes D* deltas. You accept, reject, park, or request revision. Onl
 curl -fsSL https://raw.githubusercontent.com/QZhang2111/Research-Pilot/main/install.sh | bash
 ```
 
-This clones or updates the plugin source in `~/.research-pilot/repo`, registers Research Pilot in the local plugin catalog, links skills into `~/.agents/skills/`, and exposes plugin commands such as `/research-init` and `/research-dashboard`.
+This clones or updates the plugin source in `~/.research-pilot/repo`, registers Research Pilot in the local plugin catalog, links `~/plugins/research-pilot` to the hidden checkout, links skills into `~/.agents/skills/`, and exposes plugin commands such as `/research-init` and `/research-dashboard`.
 
 ### 2. Start Codex and initialize a private workspace
 
@@ -237,7 +237,7 @@ skill = one agent instruction workflow
 plugin = packaged capability: manifest, commands, skills, assets, install metadata
 ```
 
-After installation, Research Pilot is registered through `~/.agents/plugins/marketplace.json` and should appear as a local plugin in Codex plugin views. If a Codex build only reads skills, the same workflows still work through the installed skills and `/research-init` command file in the hidden plugin checkout.
+After installation, Research Pilot is registered through `~/.agents/plugins/marketplace.json` with source path `./plugins/research-pilot`, which resolves to `~/plugins/research-pilot`. It should appear as a local plugin in Codex plugin views. If a Codex build only reads skills, the same workflows still work through the installed skills and `/research-init` command file in the hidden plugin checkout.
 
 ---
 
