@@ -8,6 +8,12 @@ argument-hint: "[workspace path] [project id]"
 
 Guide a user from plugin/repo confusion to the first project graph update.
 
+Primary command:
+
+```text
+/research-init [workspace_path]
+```
+
 ## Goal
 
 Create the minimum working research memory loop:

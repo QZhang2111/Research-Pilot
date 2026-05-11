@@ -31,13 +31,30 @@ It also creates:
 ~/.research-pilot/bin/research-pilot-init
 ```
 
-After install, create a private workspace:
+After install, start Codex and use the plugin command:
+
+```bash
+codex
+```
+
+```text
+/research-init ~/Research/MyResearchWiki
+```
+
+Manual fallback:
 
 ```bash
 ~/.research-pilot/bin/research-pilot-init ~/Research/MyResearchWiki
 ```
 
-Run the agent inside the private workspace and ask:
+Run the agent inside the private workspace after initialization:
+
+```bash
+cd ~/Research/MyResearchWiki
+codex
+```
+
+Then ask:
 
 ```text
 Use Research Pilot to inspect this workspace.

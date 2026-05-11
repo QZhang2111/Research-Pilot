@@ -6,7 +6,7 @@ This repo is a Codex plugin source. The plugin manifest lives at:
 .codex-plugin/plugin.json
 ```
 
-The installer keeps plugin source in a hidden checkout by default and links Research Pilot skills into Codex-compatible agents.
+The installer keeps plugin source in a hidden checkout by default and exposes Research Pilot skills and commands to Codex-compatible agents.
 
 ## Install
 
@@ -37,7 +37,13 @@ It also creates:
 
 ## Initialize A Workspace
 
-After installation, create a private workspace:
+After installation, use the plugin command:
+
+```text
+/research-init ~/Research/MyResearchWiki
+```
+
+Manual fallback:
 
 ```bash
 ~/.research-pilot/bin/research-pilot-init ~/Research/MyResearchWiki

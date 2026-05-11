@@ -25,7 +25,7 @@
 
 Research Pilot is an agent-operated research memory plugin. It gives your AI agent a private local workspace where project questions, claims, evidence, warrants, limitations, paper dossiers, experiments, graph deltas, and human decisions compound over time.
 
-This repo is the public plugin source. The installer keeps a local plugin checkout under `~/.research-pilot/repo` and links its skills into your agent environment. Your visible research files live in the private workspace you initialize after installation.
+This repo is the public plugin source. The installer keeps a local plugin checkout under `~/.research-pilot/repo` and exposes Research Pilot as an agent command. Your visible research files live in the private workspace created by `/research-init`.
 
 The goal is not another notes app. The goal is a research agent that knows your project well enough to tell what is missing, read new papers in context, propose updates, and stop for human approval before changing project understanding.
 
@@ -94,17 +94,25 @@ The agent proposes D* deltas. You accept, reject, park, or request revision. Onl
 curl -fsSL https://raw.githubusercontent.com/QZhang2111/Research-Pilot/main/install.sh | bash
 ```
 
-This clones or updates the plugin source in `~/.research-pilot/repo`, links skills into `~/.agents/skills/`, and creates `~/.research-pilot/bin/research-pilot-init`.
+This clones or updates the plugin source in `~/.research-pilot/repo`, links skills into `~/.agents/skills/`, and exposes plugin commands such as `/research-init`.
 
-### 2. Initialize a private research workspace
+### 2. Start Codex and initialize a private workspace
 
 ```bash
-~/.research-pilot/bin/research-pilot-init ~/Research/MyResearchWiki
+codex
 ```
 
-Your research data lives in that workspace, not in this public repo.
+Then ask:
 
-### 3. Start the agent inside your workspace
+```text
+/research-init ~/Research/MyResearchWiki
+```
+
+`/research-init` creates the workspace, collects minimum project context, and stops at the first human-gated graph update.
+
+Your research data lives in that workspace, not in the hidden plugin checkout.
+
+### 3. Continue inside your workspace
 
 ```bash
 cd ~/Research/MyResearchWiki
@@ -128,6 +136,12 @@ Add my first project question: does this model family encode interaction knowled
 ```
 
 The agent should propose a graph delta, dry-run it, and wait for your decision before updating project memory.
+
+Manual fallback:
+
+```bash
+~/.research-pilot/bin/research-pilot-init ~/Research/MyResearchWiki
+```
 
 ### 5. Open the Research Browser
 

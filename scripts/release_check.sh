@@ -27,6 +27,7 @@ fi
 
 python3 -m unittest \
   tests.test_codex_plugin_manifest \
+  tests.test_plugin_commands \
   tests.test_hidden_installer \
   tests.test_first_run_protocol \
   tests.test_graph_schema_contracts \

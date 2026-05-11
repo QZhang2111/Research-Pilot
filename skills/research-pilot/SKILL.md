@@ -47,6 +47,18 @@ wiki/log.md
 
 ## Intent Routing
 
+### Command Aliases
+
+Treat these as equivalent initialization intents:
+
+```text
+/research-init
+research-init
+init research memory
+initialize Research Pilot
+create a Research Pilot workspace
+```
+
 ### Initialize Workspace
 
 When the user asks to initialize/create/set up a research workspace:
