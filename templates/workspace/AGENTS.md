@@ -1,0 +1,35 @@
+# Research Pilot Workspace Instructions
+
+This directory is a private Research Pilot workspace.
+
+## Core Rule
+
+Agent operates the workspace through chat. Files are durable memory and execution state, not the main human UI.
+
+## Source Boundaries
+
+```text
+Zotero = paper metadata, PDFs, collections, tags, reading status mirror
+wiki = digested research understanding and project files
+wiki/graphs/events = append-only project understanding graph truth
+graph.db/snapshots/reports = rebuildable read models
+dashboard = optional browser view
+chat/agent = primary control surface
+```
+
+## Human Gate
+
+Agent may propose, summarize, lint, query, and draft graph deltas.
+
+Only the human may approve:
+
+- project-core papers;
+- global-core memory;
+- graph delta acceptance;
+- research direction changes;
+- experiment result interpretation.
+
+## Private Data
+
+Do not publish this workspace unless the human explicitly says it is sanitized.
+Do not commit PDFs, API keys, local Zotero databases, or generated SQLite/dashboard read models.

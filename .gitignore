@@ -216,3 +216,17 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Research Pilot private/generated data
+.research-pilot/config.toml
+.dashboard/
+wiki/graphs/graph.db
+wiki/graphs/snapshots/
+wiki/graphs/events/
+raw/papers/
+raw/**/*.pdf
+*.pdf
+output/
+
+# Local plugin installation checkouts and symlink scratch
+.research-pilot-install/

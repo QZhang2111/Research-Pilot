@@ -1,0 +1,15 @@
+[workspace]
+schema_version = "0.1"
+name = "Research Pilot Workspace"
+
+[paths]
+wiki = "wiki"
+graph_events = "wiki/graphs/events"
+graph_schema = "wiki/graphs/schema"
+generated = ".research-pilot/generated"
+
+[zotero]
+enabled = false
+
+[dashboard]
+enabled = false
