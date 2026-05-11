@@ -18,9 +18,10 @@ Current public extraction includes:
 - graph snapshot generation;
 - SQLite graph read-model generation;
 - read-only graph query commands;
-- human-gated delta dry-run, registration, and decision commands.
+- human-gated delta dry-run, registration, and decision commands;
+- project-local paper dossier creation, validation, and delta export.
 
-Zotero workflows, dashboard support, and full paper-to-delta automation are extracted in later MVP slices.
+Zotero workflows and dashboard support are extracted in later MVP slices.
 
 ## Mental Model
 
@@ -91,6 +92,14 @@ Preview, register, and accept a graph delta:
 python3 tools/graph_delta_cli.py dry-run --repo ~/Research/MyResearchWiki --project DemoProject --delta examples/demo/deltas/refine-demo-claim.json --json
 python3 tools/graph_delta_cli.py register --repo ~/Research/MyResearchWiki --project DemoProject --delta examples/demo/deltas/refine-demo-claim.json --json
 python3 tools/graph_delta_cli.py decide --repo ~/Research/MyResearchWiki --project DemoProject --id D1 --decision accept --json
+```
+
+Create a project-local paper dossier and export proposed deltas:
+
+```bash
+python3 tools/paper_dossier_cli.py create --repo ~/Research/MyResearchWiki --project DemoProject --paper paper-a --title "Paper A"
+python3 tools/paper_dossier_cli.py validate --dossier ~/Research/MyResearchWiki/wiki/projects/DemoProject/papers/paper-a/index.md --json
+python3 tools/paper_dossier_cli.py export-deltas --dossier ~/Research/MyResearchWiki/wiki/projects/DemoProject/papers/paper-a/index.md --output-dir ~/Research/MyResearchWiki/.research-pilot/generated/deltas --json
 ```
 
 ## Private Data Rule

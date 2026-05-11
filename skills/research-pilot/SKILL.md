@@ -20,8 +20,10 @@ Research Pilot is the primary router skill for agent-operated research memory.
 - Dry-run graph deltas.
 - Register proposed graph deltas.
 - Apply human decisions to registered graph deltas.
+- Create and validate project-local paper dossiers.
+- Export paper-dossier graph delta JSON proposals.
 
-Zotero paper workflows, dashboard launching, and paper-to-delta automation are extracted in later MVP slices.
+Zotero paper workflows and dashboard launching are extracted in later MVP slices.
 
 ## Workspace Detection
 
@@ -102,6 +104,21 @@ When the human explicitly approves, rejects, parks, or requests revision of a re
 
 ```bash
 python3 "$PLUGIN_ROOT/tools/graph_delta_cli.py" decide --repo "$WORKSPACE_PATH" --project "$PROJECT_ID" --id "$DELTA_ID" --decision accept --json
+```
+
+### Paper Dossier Workflow
+
+When the user asks to create a project-local paper dossier:
+
+```bash
+python3 "$PLUGIN_ROOT/tools/paper_dossier_cli.py" create --repo "$WORKSPACE_PATH" --project "$PROJECT_ID" --paper "$PAPER_ID" --title "$TITLE" --json
+```
+
+When the user asks to validate a dossier or export its proposed deltas:
+
+```bash
+python3 "$PLUGIN_ROOT/tools/paper_dossier_cli.py" validate --dossier "$DOSSIER" --json
+python3 "$PLUGIN_ROOT/tools/paper_dossier_cli.py" export-deltas --dossier "$DOSSIER" --output-dir "$WORKSPACE_PATH/.research-pilot/generated/deltas" --json
 ```
 
 ## Boundaries
