@@ -31,7 +31,9 @@ python3 -m unittest \
   tests.test_graph_delta_loop \
   tests.test_paper_dossier_cli \
   tests.test_dashboard_public \
-  tests.test_gap_next_action_cli
+  tests.test_gap_next_action_cli \
+  tests.test_gap_search_experiment_cli \
+  tests.test_zotero_bridge_public
 
 for smoke in \
   scripts/smoke_mvp_a.sh \
@@ -40,6 +42,7 @@ for smoke in \
   scripts/smoke_mvp_d.sh \
   scripts/smoke_mvp_e.sh \
   scripts/smoke_mvp_f.sh \
+  scripts/smoke_mvp_g.sh \
   scripts/smoke_dashboard.sh; do
   "$smoke"
 done

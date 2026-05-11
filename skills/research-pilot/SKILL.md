@@ -19,6 +19,8 @@ Research Pilot is the primary router skill for agent-operated research memory.
 - Query project graph nodes, links, deltas, open deltas, and summaries.
 - Detect structural project graph gaps.
 - Recommend next workflow action.
+- Generate gap-driven search contracts and project-gap discovery leads.
+- Generate read-only experiment proposals for claims.
 - Dry-run graph deltas.
 - Register proposed graph deltas.
 - Apply human decisions to registered graph deltas.
@@ -109,6 +111,26 @@ python3 "$PLUGIN_ROOT/tools/project_next_action_cli.py" suggest --repo "$WORKSPA
 ```
 
 This router is read-only. It may recommend another workflow, but it must not run search, deep read, delta apply, Zotero writes, or experiments by itself.
+
+### Gap-Driven Search
+
+When the user asks to find papers for a graph gap:
+
+```bash
+python3 "$PLUGIN_ROOT/tools/research_gap_discovery_cli.py" run --repo "$WORKSPACE_PATH" --project "$PROJECT_ID" --gap "$GAP_TARGET" --source memory --json
+```
+
+Use `--source arxiv`, `--source openreview`, or `--source all` only when the user expects external network search. Candidate leads are not Zotero approval and not graph truth.
+
+### Experiment Proposal
+
+When the user asks what experiment could test a claim:
+
+```bash
+python3 "$PLUGIN_ROOT/tools/project_experiment_cli.py" suggest --repo "$WORKSPACE_PATH" --project "$PROJECT_ID" --target "$CLAIM_ID" --json
+```
+
+Experiment proposals are planning artifacts. Completed experiment results still need D* human gate before entering graph truth.
 
 ### Human-Gated Delta Loop
 

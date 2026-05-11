@@ -19,6 +19,9 @@ Current public extraction includes:
 - SQLite graph read-model generation;
 - read-only graph query commands;
 - read-only gap detection and next-action routing;
+- gap-driven search contracts and user-facing gap discovery;
+- read-only experiment proposal generation;
+- Zotero bridge helpers for configurable metadata/status workflows;
 - human-gated delta dry-run, registration, and decision commands;
 - project-local paper dossier creation, validation, and delta export;
 - Zotero-first source identity intake with manual source-reference capture for setup/dry-run cases;
@@ -88,6 +91,14 @@ Detect gaps and recommend next action:
 ```bash
 python3 tools/project_gap_cli.py detect --repo ~/Research/MyResearchWiki --project DemoProject --json
 python3 tools/project_next_action_cli.py suggest --repo ~/Research/MyResearchWiki --project DemoProject --json
+```
+
+Generate gap-search leads and experiment proposals:
+
+```bash
+python3 tools/gap_search_cli.py contract --repo ~/Research/MyResearchWiki --project DemoProject --target RL0 --json
+python3 tools/research_gap_discovery_cli.py run --repo ~/Research/MyResearchWiki --project DemoProject --gap RL0 --source memory --json
+python3 tools/project_experiment_cli.py suggest --repo ~/Research/MyResearchWiki --project DemoProject --target C0 --json
 ```
 
 Run the human-gated delta smoke test:

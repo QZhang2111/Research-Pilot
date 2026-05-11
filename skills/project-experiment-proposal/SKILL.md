@@ -8,13 +8,16 @@ argument-hint: "<project> <claim-id>"
 
 Experiment proposals are planning artifacts, not graph evidence.
 
-In the current public extraction, use `project-gap-analysis` to identify bounded claims:
+Generate an experiment proposal:
 
 ```bash
-python3 "$PLUGIN_ROOT/tools/project_gap_cli.py" detect --repo "$WORKSPACE_PATH" --project "$PROJECT_ID" --json
+python3 "$PLUGIN_ROOT/tools/project_experiment_cli.py" suggest --repo "$WORKSPACE_PATH" --project "$PROJECT_ID" --target "$CLAIM_ID" --json
 ```
 
-Full experiment proposal tooling is a later extraction slice unless present in this plugin version.
+Optional artifact:
+
+```bash
+python3 "$PLUGIN_ROOT/tools/project_experiment_cli.py" suggest --repo "$WORKSPACE_PATH" --project "$PROJECT_ID" --target "$CLAIM_ID" --save-artifact --json
+```
 
 Do not append graph events or claim experiment results.
-

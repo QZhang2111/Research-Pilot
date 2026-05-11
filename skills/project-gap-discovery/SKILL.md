@@ -12,7 +12,10 @@ This skill owns the user-facing path:
 graph gap -> evidence need -> search -> lead scoring -> human chooses deep-read
 ```
 
-In the current public extraction, use `project-gap-analysis` to expose the gap first. Full search/lead tooling is a later extraction slice unless installed.
+Run the user-facing discovery command:
+
+```bash
+python3 "$PLUGIN_ROOT/tools/research_gap_discovery_cli.py" run --repo "$WORKSPACE_PATH" --project "$PROJECT_ID" --gap "$GAP_TARGET" --source memory --json
+```
 
 Do not add papers to Zotero, approve candidates, or append graph events.
-
