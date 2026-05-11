@@ -42,6 +42,8 @@ This repo is the plugin source. Your research data belongs in a separate private
 
 Then ask for or infer a workspace path.
 
+In normal installed use, the plugin repo is hidden at `~/.research-pilot/repo`; the optional plugin-root symlink is `~/.research-pilot-plugin`. User-visible research data belongs in the initialized workspace.
+
 ## First-Run Flow
 
 ### 1. Initialize or confirm workspace
@@ -50,6 +52,14 @@ If workspace does not exist, run:
 
 ```bash
 python3 "$PLUGIN_ROOT/tools/research_pilot_init.py" "$WORKSPACE_PATH"
+```
+
+Resolve `PLUGIN_ROOT` in this order:
+
+```text
+~/.research-pilot/repo
+~/.research-pilot-plugin
+current directory, only if it is the plugin repo
 ```
 
 If the user is already in a workspace, inspect it and continue.

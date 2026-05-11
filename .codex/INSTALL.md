@@ -6,26 +6,33 @@ This repo is a Codex plugin source. The plugin manifest lives at:
 .codex-plugin/plugin.json
 ```
 
-The local installer below makes Research Pilot skills available to Codex-compatible agents while plugin-manager distribution matures.
+The installer keeps plugin source in a hidden checkout by default and links Research Pilot skills into Codex-compatible agents.
 
-## Install From A Local Checkout
+## Install
 
-From the Research Pilot repo root:
+From any shell:
 
 ```bash
-./install.sh codex
+curl -fsSL https://raw.githubusercontent.com/QZhang2111/Research-Pilot/main/install.sh | bash
 ```
 
-The installer links each skill directory from this repo into:
+The installer clones or updates plugin source into:
+
+```text
+~/.research-pilot/repo
+```
+
+It links each skill directory into:
 
 ```text
 ~/.agents/skills/
 ```
 
-The plugin manifest points Codex-compatible plugin tooling at the same skill directory:
+It also creates:
 
 ```text
-skills/
+~/.research-pilot-plugin
+~/.research-pilot/bin/research-pilot-init
 ```
 
 ## Initialize A Workspace
@@ -33,7 +40,7 @@ skills/
 After installation, create a private workspace:
 
 ```bash
-python3 tools/research_pilot_init.py ~/Research/MyResearchWiki
+~/.research-pilot/bin/research-pilot-init ~/Research/MyResearchWiki
 ```
 
 Then run Codex from inside the workspace and ask:

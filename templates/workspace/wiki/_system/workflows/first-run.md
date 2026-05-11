@@ -36,6 +36,8 @@ Classify the current directory:
 | plain_directory | no Research Pilot markers | ask whether to initialize here or elsewhere |
 | unknown | conflicting markers | explain uncertainty and ask before writing |
 
+In normal installed use, the plugin repo is hidden at `~/.research-pilot/repo`; the optional plugin-root symlink is `~/.research-pilot-plugin`. User-visible research data belongs in the initialized workspace.
+
 ## Minimum Project Intake
 
 Ask only for missing essentials:

@@ -25,7 +25,7 @@
 
 Research Pilot is an agent-operated research memory plugin. It gives your AI agent a private local workspace where project questions, claims, evidence, warrants, limitations, paper dossiers, experiments, graph deltas, and human decisions compound over time.
 
-This repo is the public plugin source. Its Codex plugin manifest is in `.codex-plugin/plugin.json`; current local installation still uses `./install.sh codex` to link the included skills.
+This repo is the public plugin source. The installer keeps a local plugin checkout under `~/.research-pilot/repo` and links its skills into your agent environment. Your visible research files live in the private workspace you initialize after installation.
 
 The goal is not another notes app. The goal is a research agent that knows your project well enough to tell what is missing, read new papers in context, propose updates, and stop for human approval before changing project understanding.
 
@@ -88,18 +88,18 @@ The agent proposes D* deltas. You accept, reject, park, or request revision. Onl
 
 ## 🚀 Quick Start
 
-### 1. Install Research Pilot skills
+### 1. Install Research Pilot
 
 ```bash
-git clone https://github.com/QZhang2111/Research-Pilot.git
-cd Research-Pilot
-./install.sh codex
+curl -fsSL https://raw.githubusercontent.com/QZhang2111/Research-Pilot/main/install.sh | bash
 ```
+
+This clones or updates the plugin source in `~/.research-pilot/repo`, links skills into `~/.agents/skills/`, and creates `~/.research-pilot/bin/research-pilot-init`.
 
 ### 2. Initialize a private research workspace
 
 ```bash
-python3 tools/research_pilot_init.py ~/Research/MyResearchWiki
+~/.research-pilot/bin/research-pilot-init ~/Research/MyResearchWiki
 ```
 
 Your research data lives in that workspace, not in this public repo.
@@ -131,11 +131,11 @@ The agent should propose a graph delta, dry-run it, and wait for your decision b
 
 ### 5. Open the Research Browser
 
-From the Research Pilot repo:
+From anywhere:
 
 ```bash
-python3 tools/build_dashboard_index.py --repo ~/Research/MyResearchWiki --output .dashboard/index.json
-python3 tools/research_browser_server.py --repo ~/Research/MyResearchWiki --port 8765
+python3 ~/.research-pilot/repo/tools/build_dashboard_index.py --repo ~/Research/MyResearchWiki --output ~/.research-pilot/repo/.dashboard/index.json
+python3 ~/.research-pilot/repo/tools/research_browser_server.py --repo ~/Research/MyResearchWiki --port 8765
 ```
 
 Then visit:
@@ -200,7 +200,7 @@ The graph event log is the source of truth for project understanding. Snapshots,
 ## 🧱 Mental Model
 
 ```text
-Research Pilot repo = plugin source and tools
+Research Pilot repo = hidden plugin source and tools
 User research workspace = private research memory
 Agent chat = primary interface
 Zotero = paper metadata, PDFs, collections, tags
@@ -209,7 +209,7 @@ Graph events = append-only project-understanding truth
 Generated DB/reports/dashboard = rebuildable read models
 ```
 
-This repo is the tool factory. Your private workspace is the research site.
+The hidden plugin checkout is the tool factory. Your private workspace is the research site.
 
 ---
 
@@ -254,7 +254,7 @@ wiki/graphs/events/**/*.jsonl
 ## 📦 What Is Included
 
 - Codex plugin manifest at `.codex-plugin/plugin.json`.
-- Codex-compatible install instructions.
+- Curl-based Codex-compatible installer.
 - `research-pilot` router skill.
 - Private workspace initializer.
 - Workspace templates with no private research data.

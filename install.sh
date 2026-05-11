@@ -1,57 +1,268 @@
 #!/usr/bin/env bash
+# Research Pilot installer (macOS / Linux)
+#
+# Curl-pipe usage:
+#   curl -fsSL https://raw.githubusercontent.com/QZhang2111/Research-Pilot/main/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/QZhang2111/Research-Pilot/main/install.sh | bash -s codex
+#
+# Environment:
+#   RP_REPO_URL      Override clone URL (default: official GitHub repo)
+#   RP_DIR           Override clone destination (default: $HOME/.research-pilot/repo)
+#   RP_PLUGIN_LINK   Override universal plugin symlink (default: $HOME/.research-pilot-plugin)
+#   RP_BIN_DIR       Override helper command directory (default: $HOME/.research-pilot/bin)
+
 set -euo pipefail
 
-usage() {
-  cat <<'EOF'
-Usage:
-  ./install.sh codex
-  ./install.sh --help
+REPO_URL="${RP_REPO_URL:-https://github.com/QZhang2111/Research-Pilot.git}"
+REPO_DIR="${RP_DIR:-$HOME/.research-pilot/repo}"
+PLUGIN_LINK="${RP_PLUGIN_LINK:-$HOME/.research-pilot-plugin}"
+BIN_DIR="${RP_BIN_DIR:-$HOME/.research-pilot/bin}"
 
-Installs Research Pilot skills for Codex-compatible agents by linking
-repo-local skills into ~/.agents/skills.
+platforms_table() {
+  cat <<EOF
+codex|$HOME/.agents/skills|per-skill
 EOF
 }
 
-if [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
-  usage
-  exit 0
-fi
+platform_ids() {
+  platforms_table | cut -d'|' -f1
+}
 
-if [[ "${1:-}" != "codex" ]]; then
-  usage >&2
-  exit 2
-fi
-
-repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
-source_dir="$repo_root/skills"
-target_dir="$HOME/.agents/skills"
-
-if [[ ! -d "$source_dir" ]]; then
-  echo "skills directory not found: $source_dir" >&2
-  exit 1
-fi
-
-mkdir -p "$target_dir"
-
-linked=0
-for skill_dir in "$source_dir"/*; do
-  [[ -d "$skill_dir" ]] || continue
-  skill_name="$(basename "$skill_dir")"
-  target="$target_dir/$skill_name"
-
-  if [[ -e "$target" && ! -L "$target" ]]; then
-    echo "refusing to replace non-symlink skill: $target" >&2
+resolve_platform() {
+  local id="$1"
+  local row
+  row="$(platforms_table | awk -F'|' -v id="$id" '$1==id {print; exit}')"
+  if [[ -z "$row" ]]; then
+    printf 'Unknown platform: %s\n' "$id" >&2
+    printf 'Supported: %s\n' "$(platform_ids | tr '\n' ' ')" >&2
     exit 1
   fi
+  printf '%s\n' "$row"
+}
 
-  ln -sfn "$skill_dir" "$target"
-  echo "linked $target -> $skill_dir"
-  linked=$((linked + 1))
-done
+ensure_git() {
+  if ! command -v git >/dev/null 2>&1; then
+    printf 'git is required to install Research Pilot.\n' >&2
+    exit 1
+  fi
+}
 
-if [[ "$linked" -eq 0 ]]; then
-  echo "no skills found in $source_dir" >&2
-  exit 1
-fi
+clone_or_update() {
+  ensure_git
+  if [[ -d "$REPO_DIR/.git" ]]; then
+    printf -- '-> Updating Research Pilot checkout at %s\n' "$REPO_DIR"
+    git -C "$REPO_DIR" pull --ff-only
+  else
+    printf -- '-> Cloning %s -> %s\n' "$REPO_URL" "$REPO_DIR"
+    mkdir -p "$(dirname "$REPO_DIR")"
+    git clone "$REPO_URL" "$REPO_DIR"
+  fi
+}
 
-echo "Research Pilot Codex skills installed."
+skills_root() {
+  printf '%s\n' "$REPO_DIR/skills"
+}
+
+list_skills() {
+  local root
+  root="$(skills_root)"
+  if [[ ! -d "$root" ]]; then
+    printf 'skills directory not found: %s\n' "$root" >&2
+    exit 1
+  fi
+  local d
+  for d in "$root"/*/; do
+    [[ -d "$d" ]] || continue
+    basename "$d"
+  done
+}
+
+safe_symlink() {
+  local source="$1"
+  local target="$2"
+  if [[ -e "$target" && ! -L "$target" ]]; then
+    printf 'refusing to replace non-symlink path: %s\n' "$target" >&2
+    exit 1
+  fi
+  ln -sfn "$source" "$target"
+}
+
+link_skills() {
+  local target="$1"
+  local style="$2"
+  local root
+  root="$(skills_root)"
+  mkdir -p "$target"
+  case "$style" in
+    per-skill)
+      local skill
+      local linked=0
+      while IFS= read -r skill; do
+        safe_symlink "$root/$skill" "$target/$skill"
+        printf '  linked %s -> %s\n' "$target/$skill" "$root/$skill"
+        linked=$((linked + 1))
+      done < <(list_skills)
+      if [[ "$linked" -eq 0 ]]; then
+        printf 'no skills found in %s\n' "$root" >&2
+        exit 1
+      fi
+      ;;
+    *)
+      printf 'Unknown install style: %s\n' "$style" >&2
+      exit 1
+      ;;
+  esac
+}
+
+unlink_skills() {
+  local target="$1"
+  local style="$2"
+  [[ -d "$target" ]] || return 0
+  case "$style" in
+    per-skill)
+      if [[ -d "$(skills_root)" ]]; then
+        local skill
+        while IFS= read -r skill; do
+          [[ -L "$target/$skill" ]] && rm -f "$target/$skill"
+        done < <(list_skills)
+      else
+        local link resolved
+        for link in "$target"/*; do
+          [[ -L "$link" ]] || continue
+          resolved="$(readlink "$link" 2>/dev/null || true)"
+          [[ "$resolved" == *"/.research-pilot/repo/skills/"* || "$resolved" == "$REPO_DIR/skills/"* ]] || continue
+          rm -f "$link"
+        done
+      fi
+      ;;
+    *)
+      printf 'Unknown uninstall style: %s\n' "$style" >&2
+      exit 1
+      ;;
+  esac
+}
+
+link_plugin_root() {
+  safe_symlink "$REPO_DIR" "$PLUGIN_LINK"
+  printf '  linked %s -> %s\n' "$PLUGIN_LINK" "$REPO_DIR"
+}
+
+unlink_plugin_root() {
+  [[ -L "$PLUGIN_LINK" ]] && rm -f "$PLUGIN_LINK"
+}
+
+link_bins() {
+  mkdir -p "$BIN_DIR"
+  safe_symlink "$REPO_DIR/tools/research_pilot_init.py" "$BIN_DIR/research-pilot-init"
+  printf '  linked %s -> %s\n' "$BIN_DIR/research-pilot-init" "$REPO_DIR/tools/research_pilot_init.py"
+}
+
+unlink_bins() {
+  [[ -L "$BIN_DIR/research-pilot-init" ]] && rm -f "$BIN_DIR/research-pilot-init"
+}
+
+link_installation() {
+  local id="${1:-codex}"
+  local row target style
+  row="$(resolve_platform "$id")"
+  target="$(printf '%s\n' "$row" | cut -d'|' -f2)"
+  style="$(printf '%s\n' "$row" | cut -d'|' -f3)"
+
+  printf -- '-> Linking skills for %s\n' "$id"
+  link_skills "$target" "$style"
+  printf -- '-> Linking plugin root\n'
+  link_plugin_root
+  printf -- '-> Linking helper commands\n'
+  link_bins
+}
+
+cmd_install() {
+  local id="${1:-codex}"
+  clone_or_update
+  link_installation "$id"
+
+  printf '\nInstalled Research Pilot for %s\n' "$id"
+  printf 'Plugin source: %s\n' "$REPO_DIR"
+  printf 'Initialize a private workspace:\n'
+  printf '  %s/research-pilot-init ~/Research/MyResearchWiki\n' "$BIN_DIR"
+  printf 'Then run Codex from inside that workspace.\n'
+}
+
+cmd_update() {
+  if [[ ! -d "$REPO_DIR/.git" ]]; then
+    printf 'No Research Pilot installation found at %s. Run install first.\n' "$REPO_DIR" >&2
+    exit 1
+  fi
+  clone_or_update
+  link_installation codex
+  printf '\nUpdated Research Pilot for codex\n'
+  printf 'Plugin source: %s\n' "$REPO_DIR"
+}
+
+cmd_uninstall() {
+  local id="${1:-codex}"
+  local row target style
+  row="$(resolve_platform "$id")"
+  target="$(printf '%s\n' "$row" | cut -d'|' -f2)"
+  style="$(printf '%s\n' "$row" | cut -d'|' -f3)"
+
+  printf -- '-> Removing Research Pilot links for %s\n' "$id"
+  unlink_skills "$target" "$style"
+  unlink_plugin_root
+  unlink_bins
+
+  printf '\nUninstalled Research Pilot links for %s\n' "$id"
+  printf 'Hidden checkout kept: %s\n' "$REPO_DIR"
+  printf 'Remove it manually if wanted:\n'
+  printf '  rm -rf "%s"\n' "$(dirname "$REPO_DIR")"
+}
+
+usage() {
+  cat <<USAGE
+Research Pilot installer
+
+Usage:
+  install.sh [codex]                 Install for Codex (default)
+  install.sh --update                Pull latest hidden checkout and relink
+  install.sh --uninstall [codex]     Remove links, keep hidden checkout
+  install.sh --help
+
+Curl-pipe:
+  curl -fsSL https://raw.githubusercontent.com/QZhang2111/Research-Pilot/main/install.sh | bash
+  curl -fsSL https://raw.githubusercontent.com/QZhang2111/Research-Pilot/main/install.sh | bash -s codex
+
+Environment:
+  RP_REPO_URL      Override clone URL (default: official GitHub repo)
+  RP_DIR           Override clone destination (default: \$HOME/.research-pilot/repo)
+  RP_PLUGIN_LINK   Override plugin symlink (default: \$HOME/.research-pilot-plugin)
+  RP_BIN_DIR       Override helper command directory (default: \$HOME/.research-pilot/bin)
+USAGE
+}
+
+main() {
+  case "${1:-}" in
+    -h|--help)
+      usage
+      ;;
+    --update)
+      cmd_update
+      ;;
+    --uninstall)
+      shift || true
+      cmd_uninstall "${1:-codex}"
+      ;;
+    "")
+      cmd_install codex
+      ;;
+    -*)
+      printf 'Unknown option: %s\n' "$1" >&2
+      usage >&2
+      exit 1
+      ;;
+    *)
+      cmd_install "$1"
+      ;;
+  esac
+}
+
+main "$@"
