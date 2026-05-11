@@ -59,6 +59,16 @@ initialize Research Pilot
 create a Research Pilot workspace
 ```
 
+Treat these as equivalent dashboard intents:
+
+```text
+/research-dashboard
+research-dashboard
+open Research Pilot dashboard
+open research browser
+show dashboard
+```
+
 ### Initialize Workspace
 
 When the user asks to initialize/create/set up a research workspace:
@@ -244,6 +254,8 @@ python3 "$PLUGIN_ROOT/tools/source_intake_cli.py" intake --repo "$WORKSPACE_PATH
 Normal paper management is Zotero-first. If Zotero credentials are not configured yet, DOI, arXiv, URL, or manual source refs may be recorded only as source identity capture; do not present this as a replacement paper manager.
 
 ### Dashboard
+
+When the user invokes `/research-dashboard`, read `commands/research-dashboard.md` and follow it.
 
 When the user asks to build or refresh the dashboard read model:
 

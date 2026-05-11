@@ -62,6 +62,12 @@ Then run Codex from inside the workspace and ask:
 Use Research Pilot to inspect this workspace.
 ```
 
+Open the dashboard:
+
+```text
+/research-dashboard ~/Research/MyResearchWiki
+```
+
 ## Current Status
 
 The public extraction includes the plugin manifest, router skill, first-run skill, workspace initializer, graph read models, human-gated delta loop, paper dossier workflow, source identity intake, gap/next-action commands, and dashboard server.

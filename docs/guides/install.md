@@ -69,6 +69,12 @@ Then ask:
 Use Research Pilot to inspect this workspace.
 ```
 
+Open the dashboard:
+
+```text
+/research-dashboard ~/Research/MyResearchWiki
+```
+
 Update plugin source:
 
 ```bash

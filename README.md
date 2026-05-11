@@ -94,7 +94,7 @@ The agent proposes D* deltas. You accept, reject, park, or request revision. Onl
 curl -fsSL https://raw.githubusercontent.com/QZhang2111/Research-Pilot/main/install.sh | bash
 ```
 
-This clones or updates the plugin source in `~/.research-pilot/repo`, registers Research Pilot in the local plugin catalog, links skills into `~/.agents/skills/`, and exposes plugin commands such as `/research-init`.
+This clones or updates the plugin source in `~/.research-pilot/repo`, registers Research Pilot in the local plugin catalog, links skills into `~/.agents/skills/`, and exposes plugin commands such as `/research-init` and `/research-dashboard`.
 
 ### 2. Start Codex and initialize a private workspace
 
@@ -145,14 +145,13 @@ Manual fallback:
 
 ### 5. Open the Research Browser
 
-From anywhere:
+Ask:
 
-```bash
-python3 ~/.research-pilot/repo/tools/build_dashboard_index.py --repo ~/Research/MyResearchWiki --output ~/.research-pilot/repo/.dashboard/index.json
-python3 ~/.research-pilot/repo/tools/research_browser_server.py --repo ~/Research/MyResearchWiki --port 8765
+```text
+/research-dashboard ~/Research/MyResearchWiki
 ```
 
-Then visit:
+The agent starts the local dashboard server and opens:
 
 ```text
 http://127.0.0.1:8765/dashboard/index.html
@@ -188,6 +187,10 @@ What experiment would most reduce uncertainty?
 
 ```text
 Based on current graph state, what should I do next?
+```
+
+```text
+/research-dashboard
 ```
 
 ---
@@ -280,6 +283,7 @@ wiki/graphs/events/**/*.jsonl
 
 - Codex plugin manifest at `.codex-plugin/plugin.json`.
 - Plugin command `/research-init`.
+- Plugin command `/research-dashboard`.
 - Curl-based Codex-compatible installer.
 - `research-pilot` router skill.
 - Private workspace initializer.
