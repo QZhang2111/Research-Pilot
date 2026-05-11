@@ -22,8 +22,9 @@ Research Pilot is the primary router skill for agent-operated research memory.
 - Apply human decisions to registered graph deltas.
 - Create and validate project-local paper dossiers.
 - Export paper-dossier graph delta JSON proposals.
+- Intake source identity with optional Zotero keys and manual fallback.
 
-Zotero paper workflows and dashboard launching are extracted in later MVP slices.
+Dashboard launching is extracted in a later MVP slice.
 
 ## Workspace Detection
 
@@ -120,6 +121,16 @@ When the user asks to validate a dossier or export its proposed deltas:
 python3 "$PLUGIN_ROOT/tools/paper_dossier_cli.py" validate --dossier "$DOSSIER" --json
 python3 "$PLUGIN_ROOT/tools/paper_dossier_cli.py" export-deltas --dossier "$DOSSIER" --output-dir "$WORKSPACE_PATH/.research-pilot/generated/deltas" --json
 ```
+
+### Source Intake
+
+When the user asks to add a paper/source to a project:
+
+```bash
+python3 "$PLUGIN_ROOT/tools/source_intake_cli.py" intake --repo "$WORKSPACE_PATH" --project "$PROJECT_ID" --paper "$PAPER_ID" --title "$TITLE" --zotero-key "$ZOTERO_ITEM_KEY" --doi "$DOI" --url "$URL" --json
+```
+
+If Zotero credentials are unavailable, continue with DOI, arXiv, URL, or manual source refs.
 
 ## Boundaries
 

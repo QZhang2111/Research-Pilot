@@ -19,9 +19,10 @@ Current public extraction includes:
 - SQLite graph read-model generation;
 - read-only graph query commands;
 - human-gated delta dry-run, registration, and decision commands;
-- project-local paper dossier creation, validation, and delta export.
+- project-local paper dossier creation, validation, and delta export;
+- public-safe source intake with optional Zotero identity and no-key fallback.
 
-Zotero workflows and dashboard support are extracted in later MVP slices.
+Dashboard support is extracted in a later slice.
 
 ## Mental Model
 
@@ -100,6 +101,13 @@ Create a project-local paper dossier and export proposed deltas:
 python3 tools/paper_dossier_cli.py create --repo ~/Research/MyResearchWiki --project DemoProject --paper paper-a --title "Paper A"
 python3 tools/paper_dossier_cli.py validate --dossier ~/Research/MyResearchWiki/wiki/projects/DemoProject/papers/paper-a/index.md --json
 python3 tools/paper_dossier_cli.py export-deltas --dossier ~/Research/MyResearchWiki/wiki/projects/DemoProject/papers/paper-a/index.md --output-dir ~/Research/MyResearchWiki/.research-pilot/generated/deltas --json
+```
+
+Intake source identity with or without Zotero credentials:
+
+```bash
+python3 tools/source_intake_cli.py status --json
+python3 tools/source_intake_cli.py intake --repo ~/Research/MyResearchWiki --project DemoProject --paper paper-a --title "Paper A" --zotero-key ABC123 --doi 10.000/demo --json
 ```
 
 ## Private Data Rule
