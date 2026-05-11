@@ -17,7 +17,6 @@ Research Pilot owns:
 - claims, evidence, warrants, limitations;
 - human-gated graph deltas.
 
-Current public source intake records durable source identity and can run without credentials for setup/dry-run checks. This is not a replacement paper manager.
+Public source intake records durable source identity and can run without credentials for setup/dry-run checks. This is not a replacement paper manager.
 
-Full Zotero bridge automation is a later extraction slice unless present in the installed plugin version.
-
+Public tooling also includes configurable Zotero bridge helpers for metadata, collection, and status-mirror workflows. Credentialed Zotero operations require user-provided local config.

@@ -25,7 +25,6 @@ Good targets:
 - claim supported only by paper evidence;
 - claim whose limitation implies missing benchmark, dataset, metric, or intervention.
 
-## Status
+## Tooling
 
-Public MVP includes the protocol boundary. Full proposal tooling is a later extraction slice unless already present.
-
+Use `tools/project_experiment_cli.py` when command-line support is useful. Tool output remains a planning proposal until a real experiment is run and routed back through a human-gated graph delta.

@@ -1,0 +1,45 @@
+{
+  "name": "research-pilot",
+  "version": "0.1.0",
+  "description": "Agent-operated research memory for project-based research.",
+  "author": {
+    "name": "Qing Zhang",
+    "url": "https://github.com/QZhang2111"
+  },
+  "homepage": "https://github.com/QZhang2111/Research-Pilot",
+  "repository": "https://github.com/QZhang2111/Research-Pilot",
+  "license": "MIT",
+  "keywords": [
+    "research",
+    "papers",
+    "zotero",
+    "knowledge-graph",
+    "agent-memory",
+    "codex"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Research Pilot",
+    "shortDescription": "Private research memory for agent-assisted projects.",
+    "longDescription": "Research Pilot helps Codex-compatible agents initialize and operate a private research workspace where papers, project questions, claims, evidence, limitations, graph deltas, and human decisions accumulate over time. Zotero remains the paper source of truth; graph updates are human-gated.",
+    "developerName": "Qing Zhang",
+    "category": "Productivity",
+    "capabilities": [
+      "Interactive",
+      "Read",
+      "Write"
+    ],
+    "websiteURL": "https://github.com/QZhang2111/Research-Pilot",
+    "privacyPolicyURL": "https://github.com/QZhang2111/Research-Pilot#private-by-design",
+    "termsOfServiceURL": "https://github.com/QZhang2111/Research-Pilot#license",
+    "defaultPrompt": [
+      "Start a Research Pilot workspace.",
+      "Inspect my project and find missing evidence.",
+      "Read this paper in context and propose graph updates."
+    ],
+    "brandColor": "#0A7ACA",
+    "composerIcon": "./assets/research-pilot-icon.svg",
+    "logo": "./assets/research-pilot-logo.svg",
+    "screenshots": []
+  }
+}

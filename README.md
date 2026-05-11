@@ -25,6 +25,8 @@
 
 Research Pilot is an agent-operated research memory plugin. It gives your AI agent a private local workspace where project questions, claims, evidence, warrants, limitations, paper dossiers, experiments, graph deltas, and human decisions compound over time.
 
+This repo is the public plugin source. Its Codex plugin manifest is in `.codex-plugin/plugin.json`; current local installation still uses `./install.sh codex` to link the included skills.
+
 The goal is not another notes app. The goal is a research agent that knows your project well enough to tell what is missing, read new papers in context, propose updates, and stop for human approval before changing project understanding.
 
 > **Research Pilot does not replace Zotero, your judgment, or your research taste. It gives the agent a durable memory structure so every paper and decision can update the project instead of vanishing into chat history.**
@@ -251,6 +253,7 @@ wiki/graphs/events/**/*.jsonl
 
 ## 📦 What Is Included
 
+- Codex plugin manifest at `.codex-plugin/plugin.json`.
 - Codex-compatible install instructions.
 - `research-pilot` router skill.
 - Private workspace initializer.

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Research Pilot icon">
+  <rect width="128" height="128" rx="28" fill="#07111F"/>
+  <circle cx="64" cy="64" r="40" fill="none" stroke="#0A7ACA" stroke-width="8"/>
+  <path d="M39 69h50M64 38v52M47 49l34 30M81 49 47 79" stroke="#D4A017" stroke-width="8" stroke-linecap="round"/>
+  <circle cx="64" cy="64" r="12" fill="#F8FAFC"/>
+</svg>

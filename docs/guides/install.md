@@ -1,12 +1,18 @@
 # Install Guide
 
-Install Research Pilot from a local checkout:
+Research Pilot is packaged as a Codex plugin source with a manifest at:
+
+```text
+.codex-plugin/plugin.json
+```
+
+For current local use, install Research Pilot from a checkout:
 
 ```bash
 ./install.sh codex
 ```
 
-This links skill directories into the Codex-compatible skill directory.
+This links skill directories into the Codex-compatible skill directory. The plugin manifest points future plugin tooling at the same `skills/` directory.
 
 After install, create a private workspace:
 
@@ -19,4 +25,3 @@ Run the agent inside the private workspace and ask:
 ```text
 Use Research Pilot to inspect this workspace.
 ```
-

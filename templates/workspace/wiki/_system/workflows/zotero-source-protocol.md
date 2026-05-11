@@ -9,9 +9,9 @@ wiki = source of truth for digested research knowledge, claims, project reasonin
 
 Research Pilot does not reimplement citation management.
 
-## Public MVP Boundary
+## Public Boundary
 
-Current public source intake records durable source identity:
+Public source intake records durable source identity:
 
 - Zotero item key;
 - DOI;
@@ -19,9 +19,8 @@ Current public source intake records durable source identity:
 - URL;
 - manual source refs.
 
-Full Zotero bridge automation is a later extraction slice unless explicitly present in the installed plugin version.
+Public tooling includes configurable Zotero bridge helpers for metadata, collection, and status-mirror workflows. Credentialed Zotero operations require user-provided local config and must preserve the Zotero-first boundary.
 
 ## Human Gate
 
 Agent may intake, summarize, and propose. Human decides approval, project-core status, and graph delta acceptance.
-

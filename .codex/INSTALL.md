@@ -1,6 +1,12 @@
 # Research Pilot Codex Install
 
-This installer makes Research Pilot skills available to Codex-compatible agents.
+This repo is a Codex plugin source. The plugin manifest lives at:
+
+```text
+.codex-plugin/plugin.json
+```
+
+The local installer below makes Research Pilot skills available to Codex-compatible agents while plugin-manager distribution matures.
 
 ## Install From A Local Checkout
 
@@ -14,6 +20,12 @@ The installer links each skill directory from this repo into:
 
 ```text
 ~/.agents/skills/
+```
+
+The plugin manifest points Codex-compatible plugin tooling at the same skill directory:
+
+```text
+skills/
 ```
 
 ## Initialize A Workspace
@@ -32,8 +44,8 @@ Use Research Pilot to inspect this workspace.
 
 ## Current Status
 
-The public extraction includes the router skill, workspace initializer, graph read models, human-gated delta loop, paper dossier workflow, source identity intake, gap/next-action commands, and dashboard server.
+The public extraction includes the plugin manifest, router skill, first-run skill, workspace initializer, graph read models, human-gated delta loop, paper dossier workflow, source identity intake, gap/next-action commands, and dashboard server.
 
-Zotero remains the normal paper source of truth. Current public source intake records Zotero identity and supporting DOI/arXiv/URL refs; full Zotero bridge automation is a later extraction slice.
+Zotero remains the normal paper source of truth. Public tooling includes source identity intake plus configurable Zotero bridge helpers for metadata, collection, and status-mirror workflows. Credentialed Zotero operations require user-provided local config.
 
 Dashboard is a required public browser component, but graph truth remains `wiki/graphs/events/**/*.jsonl`.
