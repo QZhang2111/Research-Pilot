@@ -13,6 +13,7 @@ Research Pilot is the primary router skill for agent-operated research memory.
 - Explain plugin vs workspace boundary.
 - Initialize a private research workspace.
 - Inspect whether the current directory looks like a Research Pilot workspace.
+- Guide first-run setup from plugin source or empty directory to first human-gated graph update.
 - Validate project graph-event JSONL.
 - Build generated graph snapshots.
 - Build generated SQLite graph read models.
@@ -59,6 +60,24 @@ python3 "$PLUGIN_ROOT/tools/research_pilot_init.py" "$WORKSPACE_PATH"
 ```
 
 4. Report the workspace path and next steps.
+
+### First Run
+
+When the user asks to start from scratch, create the first project, initialize a new research memory, or is confused about repo/plugin/workspace boundaries:
+
+1. Use the `research-pilot-first-run` skill.
+2. If already inside a workspace, read:
+
+```text
+$WORKSPACE_PATH/wiki/_system/workflows/first-run.md
+```
+
+3. Detect state: plugin repo, initialized workspace, plain directory, or unknown.
+4. Create or confirm a private workspace.
+5. Collect only minimum project intake: project id/name, one-sentence direction, first question/claim, Zotero now/later.
+6. Route the first graph-level question or claim through D* dry-run and human gate.
+
+Do not start paper search or dashboard work before a first project question or claim exists.
 
 ### Inspect Workspace
 

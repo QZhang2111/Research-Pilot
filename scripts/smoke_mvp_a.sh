@@ -12,10 +12,11 @@ python3 tools/research_pilot_init.py "$tmp_workspace" --no-git >/tmp/research-pi
 test -f "$tmp_workspace/AGENTS.md"
 test -f "$tmp_workspace/wiki/index.md"
 test -f "$tmp_workspace/wiki/log.md"
+test -f "$tmp_workspace/wiki/_system/workflows/first-run.md"
 test -f "$tmp_workspace/.research-pilot/config.example.toml"
 test -f "$tmp_workspace/.gitignore"
 
-rg -n "Research Pilot" "$tmp_workspace/AGENTS.md" "$tmp_workspace/wiki/index.md" >/dev/null
+rg -n "Research Pilot" "$tmp_workspace/AGENTS.md" "$tmp_workspace/wiki/index.md" "$tmp_workspace/wiki/_system/workflows/first-run.md" >/dev/null
 
 for pattern in \
   "/Users/" \

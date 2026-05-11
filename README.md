@@ -115,6 +115,8 @@ Ask:
 Use Research Pilot to inspect this workspace and help me start a project.
 ```
 
+This triggers the first-run flow: the agent checks workspace state, collects minimum project context, creates the first project skeleton, and stops for human approval before changing graph truth.
+
 ### 4. Make the first project update through human gate
 
 Ask:

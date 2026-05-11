@@ -26,6 +26,7 @@ if find . -path ./.git -prune -o \( -name '*.pdf' -o -name '*.sqlite' -o -name '
 fi
 
 python3 -m unittest \
+  tests.test_first_run_protocol \
   tests.test_source_intake_cli \
   tests.test_graph_core \
   tests.test_project_graph_report \
