@@ -3,36 +3,392 @@
   "$id": "https://research-pilot.local/schema/graph-event-v1",
   "title": "Research Pilot Graph Event v1",
   "type": "object",
-  "required": ["schema_version", "event_id", "event_type", "created_at", "actor", "graph_id", "scope", "payload", "provenance", "human_review"],
+  "required": [
+    "schema_version",
+    "event_id",
+    "event_type",
+    "created_at",
+    "actor",
+    "graph_id",
+    "scope",
+    "payload",
+    "provenance",
+    "human_review"
+  ],
   "properties": {
-    "schema_version": {"const": "graph-event-v1"},
-    "event_id": {"type": "string", "minLength": 1},
+    "schema_version": {
+      "const": "graph-event-v1"
+    },
+    "event_id": {
+      "type": "string",
+      "minLength": 1
+    },
     "event_type": {
       "type": "string",
       "enum": [
-        "node.created", "node.updated", "node.retired", "node.superseded",
-        "link.created", "link.updated", "link.retired", "link.superseded",
-        "delta.proposed", "delta.registered", "delta.accepted", "delta.integrated",
-        "delta.partially_integrated", "delta.rejected", "delta.parked", "delta.revised", "delta.superseded",
-        "human.reviewed", "source.attached", "graph.imported_from_markdown"
+        "node.created",
+        "node.updated",
+        "node.retired",
+        "node.superseded",
+        "link.created",
+        "link.updated",
+        "link.retired",
+        "link.superseded",
+        "delta.proposed",
+        "delta.registered",
+        "delta.accepted",
+        "delta.integrated",
+        "delta.partially_integrated",
+        "delta.rejected",
+        "delta.parked",
+        "delta.revised",
+        "delta.superseded",
+        "human.reviewed",
+        "source.attached",
+        "graph.imported_from_markdown"
       ]
     },
-    "created_at": {"type": "string"},
-    "actor": {"type": "string", "enum": ["agent", "human", "system"]},
-    "graph_id": {"type": "string", "minLength": 1},
-    "scope": {"type": "string", "enum": ["paper", "project", "program"]},
-    "payload": {"type": "object"},
-    "provenance": {"type": "array", "items": {"type": "string"}},
-    "human_review": {"$ref": "#/$defs/humanReview"}
+    "created_at": {
+      "type": "string"
+    },
+    "actor": {
+      "type": "string",
+      "enum": ["agent", "human", "system"]
+    },
+    "graph_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "scope": {
+      "type": "string",
+      "enum": ["paper", "project", "program"]
+    },
+    "payload": {
+      "type": "object"
+    },
+    "provenance": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "human_review": {
+      "$ref": "#/$defs/humanReview"
+    }
   },
   "$defs": {
-    "humanReview": {"type": "string", "enum": ["pending", "approved", "rejected"]},
-    "confidence": {"type": "string", "enum": ["low", "medium", "high", "unknown"]},
-    "deltaLifecycleStatus": {"type": "string", "enum": ["proposed", "accepted", "rejected", "parked", "revised"]},
-    "nodeLifecycleStatus": {"type": "string", "enum": ["active", "retired", "superseded", "merged", "split_from"]},
+    "humanReview": {
+      "type": "string",
+      "enum": ["pending", "approved", "rejected"]
+    },
+    "confidence": {
+      "type": "string",
+      "enum": ["low", "medium", "high", "unknown"]
+    },
+    "deltaLifecycleStatus": {
+      "type": "string",
+      "enum": ["proposed", "accepted", "rejected", "parked", "revised"]
+    },
+    "nodeLifecycleStatus": {
+      "type": "string",
+      "enum": ["active", "retired", "superseded", "merged", "split_from"]
+    },
     "evolutionType": {
       "type": "string",
-      "enum": ["add", "refine", "split", "merge", "promote", "demote", "reframe", "decompose", "retire", "connect", "bound", "clarify", "clarify_translation", "strengthen", "weaken"]
+      "enum": [
+        "add",
+        "refine",
+        "split",
+        "merge",
+        "promote",
+        "demote",
+        "reframe",
+        "decompose",
+        "retire",
+        "connect",
+        "bound",
+        "clarify",
+        "clarify_translation",
+        "strengthen",
+        "weaken"
+      ]
+    },
+    "nodePayload": {
+      "type": "object",
+      "required": [
+        "node_id",
+        "local_id",
+        "node_type",
+        "text",
+        "scope",
+        "status",
+        "confidence",
+        "human_review",
+        "source_refs"
+      ],
+      "properties": {
+        "node_id": {
+          "type": "string"
+        },
+        "local_id": {
+          "type": "string"
+        },
+        "node_type": {
+          "type": "string",
+          "enum": ["Question", "Claim", "Evidence", "Warrant", "Limitation"]
+        },
+        "text": {
+          "type": "string"
+        },
+        "scope": {
+          "type": "string",
+          "enum": ["paper", "project", "program"]
+        },
+        "project_id": {
+          "type": ["string", "null"]
+        },
+        "paper_id": {
+          "type": ["string", "null"]
+        },
+        "status": {
+          "type": "string"
+        },
+        "lifecycle_status": {
+          "$ref": "#/$defs/nodeLifecycleStatus"
+        },
+        "confidence": {
+          "$ref": "#/$defs/confidence"
+        },
+        "human_review": {
+          "$ref": "#/$defs/humanReview"
+        },
+        "source_refs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "supersedes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "superseded_by": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "derived_from": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "metadata": {
+          "type": "object"
+        }
+      }
+    },
+    "linkPayload": {
+      "type": "object",
+      "required": [
+        "link_id",
+        "local_id",
+        "link_type",
+        "relation",
+        "from_nodes",
+        "to_nodes",
+        "confidence",
+        "human_review",
+        "source_refs"
+      ],
+      "properties": {
+        "link_id": {
+          "type": "string"
+        },
+        "local_id": {
+          "type": "string"
+        },
+        "link_type": {
+          "type": "string",
+          "enum": ["ReasoningLink", "TranslationLink"]
+        },
+        "relation": {
+          "type": "string"
+        },
+        "from_nodes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "to_nodes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "warrant_nodes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "limitation_nodes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "project_warrant_nodes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "project_limitation_nodes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "confidence": {
+          "$ref": "#/$defs/confidence"
+        },
+        "human_review": {
+          "$ref": "#/$defs/humanReview"
+        },
+        "source_refs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "deltaPayload": {
+      "type": "object",
+      "required": [
+        "delta_id",
+        "local_id",
+        "operation",
+        "operation_type",
+        "evolution_type",
+        "epistemic_effect",
+        "status",
+        "human_review",
+        "summary",
+        "patch_ops"
+      ],
+      "properties": {
+        "delta_id": {
+          "type": "string"
+        },
+        "local_id": {
+          "type": "string"
+        },
+        "source_graph_id": {
+          "type": "string"
+        },
+        "source_dossier": {
+          "type": "string"
+        },
+        "operation": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "operation_type": {
+          "type": "string"
+        },
+        "evolution_type": {
+          "$ref": "#/$defs/evolutionType"
+        },
+        "epistemic_effect": {
+          "type": "string"
+        },
+        "source_paper_nodes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "affected_nodes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "affected_links": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "patch_ops": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "before": {
+          "type": "object"
+        },
+        "after": {
+          "type": "object"
+        },
+        "rationale": {
+          "type": "string"
+        },
+        "caused_by": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "supersedes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "proposed",
+            "registered",
+            "accepted",
+            "integrated",
+            "partially_integrated",
+            "rejected",
+            "parked",
+            "revised",
+            "superseded"
+          ]
+        },
+        "lifecycle_status": {
+          "$ref": "#/$defs/deltaLifecycleStatus"
+        },
+        "decision": {
+          "type": "string",
+          "enum": ["pending", "accepted", "rejected", "parked", "revised"]
+        },
+        "decision_note": {
+          "type": "string"
+        },
+        "decided_at": {
+          "type": "string"
+        },
+        "human_review": {
+          "$ref": "#/$defs/humanReview"
+        },
+        "summary": {
+          "type": "string"
+        }
+      }
     }
   }
 }

@@ -35,9 +35,11 @@ sleep 0.8
 curl -fsS "http://127.0.0.1:${port}/dashboard/index.html" >/tmp/research-pilot-dashboard-page.html
 curl -fsS "http://127.0.0.1:${port}/.dashboard/index.json" >/tmp/research-pilot-dashboard-index-response.json
 curl -fsS "http://127.0.0.1:${port}/api/project-graph?project=DemoProject" >/tmp/research-pilot-dashboard-project-graph.json
+curl -fsS "http://127.0.0.1:${port}/api/project-graph-maintenance?project=DemoProject" >/tmp/research-pilot-dashboard-project-maintenance.json
 
 rg -n "研究浏览器|项目论文审阅" /tmp/research-pilot-dashboard-page.html >/dev/null
 rg -n '"projects"|"project_graphs"' /tmp/research-pilot-dashboard-index-response.json >/dev/null
 rg -n '"project": "DemoProject"' /tmp/research-pilot-dashboard-project-graph.json >/dev/null
+rg -n '"schema_version": "graph-maintenance-v1"|"open_deltas"' /tmp/research-pilot-dashboard-project-maintenance.json >/dev/null
 
 echo "Dashboard smoke passed"

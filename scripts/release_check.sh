@@ -27,6 +27,7 @@ fi
 
 python3 -m unittest \
   tests.test_first_run_protocol \
+  tests.test_graph_schema_contracts \
   tests.test_source_intake_cli \
   tests.test_graph_core \
   tests.test_project_graph_report \

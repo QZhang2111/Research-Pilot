@@ -639,6 +639,346 @@ def build_graph_db_from_event_files(paths: Sequence[Path], db_path: Path) -> Dic
     return build_graph_db_from_events(events, db_path)
 
 
+def read_json_value(value: str, fallback: Any) -> Any:
+    try:
+        return json.loads(value or "")
+    except json.JSONDecodeError:
+        return fallback
+
+
+def graph_ref_local_ids(refs: Sequence[str]) -> List[str]:
+    return [str(ref or "").rsplit(":", 1)[-1] for ref in refs]
+
+
+def positioned_values(conn: sqlite3.Connection, table: str, owner_column: str, owner_id: str, value_column: str) -> List[str]:
+    rows = conn.execute(f"select {value_column} from {table} where {owner_column} = ? order by position", (owner_id,)).fetchall()
+    return [str(row[0]) for row in rows]
+
+
+def dashboard_node_subtitle(node_type: str, status: str, metadata: Dict[str, Any]) -> str:
+    if node_type == "Evidence":
+        return str(metadata.get("evidence_kind") or status or "")
+    if node_type == "Warrant":
+        return str(metadata.get("basis") or status or "")
+    if node_type == "Limitation":
+        return str(metadata.get("severity") or status or "")
+    return str(metadata.get("role") or status or "")
+
+
+def graph_node_cards_by_id(conn: sqlite3.Connection, graph_id: str) -> Dict[str, Dict[str, Any]]:
+    rows = conn.execute("select * from nodes where graph_id = ?", (graph_id,)).fetchall()
+    cards: Dict[str, Dict[str, Any]] = {}
+    for row in rows:
+        metadata = read_json_value(row["metadata_json"], {})
+        cards[row["node_id"]] = {
+            "id": row["local_id"],
+            "global_id": row["node_id"],
+            "kind": str(row["node_type"] or "").lower(),
+            "label": row["text"],
+            "subtitle": dashboard_node_subtitle(row["node_type"], row["status"], metadata),
+            "status": row["status"],
+            "lifecycle_status": row["lifecycle_status"],
+            "confidence": row["confidence"],
+            "human_review": row["human_review"],
+            "bounds": graph_ref_local_ids(metadata.get("bounds", [])),
+            "supersedes": read_json_value(row["supersedes_json"], []),
+            "superseded_by": read_json_value(row["superseded_by_json"], []),
+            "derived_from": read_json_value(row["derived_from_json"], []),
+            "metadata": metadata,
+        }
+    return cards
+
+
+def append_unique_card(items: List[Dict[str, Any]], card: Dict[str, Any]) -> None:
+    if not any(item.get("id") == card.get("id") for item in items):
+        items.append(card)
+
+
+def add_limitation_source(sources: Dict[str, List[str]], limitation_id: str, via: str) -> None:
+    if not limitation_id:
+        return
+    values = sources.setdefault(limitation_id, [])
+    if via not in values:
+        values.append(via)
+
+
+def limitation_cards_bounding_node(node_cards: Dict[str, Dict[str, Any]], node_id: str) -> List[Dict[str, Any]]:
+    target_local = str(node_id or "").rsplit(":", 1)[-1]
+    target_values = {target_local, node_id}
+    limitations: List[Dict[str, Any]] = []
+    for card in node_cards.values():
+        if card.get("kind") != "limitation":
+            continue
+        bounds = set(str(value) for value in card.get("bounds", []))
+        if bounds.intersection(target_values):
+            limitations.append(card)
+    return sorted(limitations, key=lambda item: str(item.get("id") or ""))
+
+
+def translation_links_for_claim_from_db(
+    conn: sqlite3.Connection,
+    graph_id: str,
+    claim_node_id: str,
+    node_cards: Dict[str, Dict[str, Any]],
+) -> List[Dict[str, Any]]:
+    rows = conn.execute(
+        """
+        select l.*
+        from links l
+        join link_to_nodes t on t.link_id = l.link_id
+        where l.graph_id = ?
+          and l.link_type = 'TranslationLink'
+          and t.node_id = ?
+        order by l.local_id
+        """,
+        (graph_id, claim_node_id),
+    ).fetchall()
+    links: List[Dict[str, Any]] = []
+    for row in rows:
+        warrant_ids = positioned_values(conn, "link_project_warrants", "link_id", row["link_id"], "node_id")
+        limitation_ids = positioned_values(conn, "link_project_limitations", "link_id", row["link_id"], "node_id")
+        links.append(
+            {
+                "id": row["local_id"],
+                "global_id": row["link_id"],
+                "relation": row["relation"],
+                "project_warrants": [node_cards[node_id] for node_id in warrant_ids if node_id in node_cards],
+                "project_limitations": [node_cards[node_id] for node_id in limitation_ids if node_id in node_cards],
+                "confidence": row["confidence"],
+                "human_review": row["human_review"],
+            }
+        )
+    return links
+
+
+def graph_delta_from_row(conn: sqlite3.Connection, row: sqlite3.Row) -> Dict[str, Any]:
+    affected_nodes = positioned_values(conn, "delta_affected_nodes", "delta_id", row["delta_id"], "node_id")
+    affected_links = positioned_values(conn, "delta_affected_links", "delta_id", row["delta_id"], "link_id")
+    payload = read_json_value(row["payload_json"], {})
+    delta = dict(payload) if isinstance(payload, dict) else {}
+    delta.update(
+        {
+            "id": row["local_id"],
+            "global_id": row["delta_id"],
+            "source_graph_id": row["source_graph_id"],
+            "source_dossier": row["source_dossier"],
+            "operation": read_json_value(row["operation_json"], []),
+            "summary": row["summary"],
+            "evolution_type": row["evolution_type"],
+            "rationale": row["rationale"],
+            "before": read_json_value(row["before_json"], {}),
+            "after": read_json_value(row["after_json"], {}),
+            "caused_by": read_json_value(row["caused_by_json"], []),
+            "supersedes": read_json_value(row["supersedes_json"], []),
+            "source_paper_nodes": read_json_value(row["source_paper_nodes_json"], []),
+            "affected_nodes": graph_ref_local_ids(affected_nodes),
+            "affected_links": graph_ref_local_ids(affected_links),
+            "status": row["status"],
+            "lifecycle_status": row["lifecycle_status"],
+            "decision": row["decision"],
+            "human_review": row["human_review"],
+            "created_at": row["created_at"],
+            "decided_at": row["decided_at"],
+        }
+    )
+    return delta
+
+
+def maintenance_deltas_from_db(conn: sqlite3.Connection, graph_id: str) -> List[Dict[str, Any]]:
+    rows = conn.execute("select * from deltas where graph_id = ? order by created_at, local_id", (graph_id,)).fetchall()
+    return [graph_delta_from_row(conn, row) for row in rows]
+
+
+def maintenance_review_queue_from_db(conn: sqlite3.Connection, graph_id: str) -> Dict[str, List[Dict[str, Any]]]:
+    node_cards = graph_node_cards_by_id(conn, graph_id)
+    pending_nodes = [node for node in node_cards.values() if node["human_review"] == "pending"]
+    link_rows = conn.execute(
+        "select * from links where graph_id = ? and human_review = ? order by local_id",
+        (graph_id, "pending"),
+    ).fetchall()
+    pending_links = [
+        {
+            "id": row["local_id"],
+            "global_id": row["link_id"],
+            "kind": row["link_type"],
+            "relation": row["relation"],
+            "human_review": row["human_review"],
+        }
+        for row in link_rows
+    ]
+    placeholders = ",".join("?" for _ in OPEN_DELTA_LIFECYCLES)
+    delta_rows = conn.execute(
+        f"""
+        select *
+        from deltas
+        where graph_id = ?
+          and human_review = ?
+          and lifecycle_status in ({placeholders})
+        order by created_at, local_id
+        """,
+        (graph_id, "pending", *sorted(OPEN_DELTA_LIFECYCLES)),
+    ).fetchall()
+    return {
+        "nodes": pending_nodes,
+        "links": pending_links,
+        "deltas": [graph_delta_from_row(conn, row) for row in delta_rows],
+    }
+
+
+def maintenance_paper_contributions_from_deltas(deltas: Sequence[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    grouped: Dict[str, Dict[str, Any]] = {}
+    for delta in deltas:
+        source_dossier = str(delta.get("source_dossier") or "")
+        source_graph_id = str(delta.get("source_graph_id") or "")
+        key = source_dossier or source_graph_id or "unknown"
+        item = grouped.setdefault(
+            key,
+            {
+                "source_dossier": source_dossier,
+                "source_graph_id": source_graph_id,
+                "delta_count": 0,
+                "open_count": 0,
+                "accepted_count": 0,
+                "rejected_count": 0,
+                "affected": [],
+                "deltas": [],
+            },
+        )
+        item["delta_count"] += 1
+        lifecycle_status = str(delta.get("lifecycle_status") or "")
+        if lifecycle_status in OPEN_DELTA_LIFECYCLES:
+            item["open_count"] += 1
+        elif lifecycle_status == "accepted":
+            item["accepted_count"] += 1
+        elif lifecycle_status == "rejected":
+            item["rejected_count"] += 1
+        for ref in list(delta.get("affected_nodes") or []) + list(delta.get("affected_links") or []):
+            if ref not in item["affected"]:
+                item["affected"].append(ref)
+        item["deltas"].append(delta["id"])
+    return sorted(grouped.values(), key=lambda item: str(item["source_dossier"] or item["source_graph_id"]))
+
+
+def maintenance_claim_paths_from_db(conn: sqlite3.Connection, graph_id: str) -> List[Dict[str, Any]]:
+    node_cards = graph_node_cards_by_id(conn, graph_id)
+    claim_rows = conn.execute(
+        "select * from nodes where graph_id = ? and node_type = ? order by local_id",
+        (graph_id, "Claim"),
+    ).fetchall()
+    paths: List[Dict[str, Any]] = []
+    for claim_row in claim_rows:
+        link_rows = conn.execute(
+            """
+            select *
+            from links
+            where graph_id = ?
+              and link_type = 'ReasoningLink'
+              and to_node = ?
+            order by local_id
+            """,
+            (graph_id, claim_row["node_id"]),
+        ).fetchall()
+        supporting_links: List[Dict[str, Any]] = []
+        challenging_links: List[Dict[str, Any]] = []
+        qualifying_links: List[Dict[str, Any]] = []
+        propagated_limitations: List[Dict[str, Any]] = []
+        limitation_sources: Dict[str, List[str]] = {}
+        for link_row in link_rows:
+            link_limitation_cards = [
+                node_cards[node_id]
+                for node_id in positioned_values(conn, "link_limitations", "link_id", link_row["link_id"], "node_id")
+                if node_id in node_cards
+            ]
+            for limitation in link_limitation_cards:
+                append_unique_card(propagated_limitations, limitation)
+                add_limitation_source(limitation_sources, limitation["id"], link_row["local_id"])
+            link = {
+                "id": link_row["local_id"],
+                "global_id": link_row["link_id"],
+                "relation": link_row["relation"],
+                "premises": [
+                    node_cards[node_id]
+                    for node_id in positioned_values(conn, "link_from_nodes", "link_id", link_row["link_id"], "node_id")
+                    if node_id in node_cards
+                ],
+                "warrants": [
+                    node_cards[node_id]
+                    for node_id in positioned_values(conn, "link_warrants", "link_id", link_row["link_id"], "node_id")
+                    if node_id in node_cards
+                ],
+                "limitations": link_limitation_cards,
+                "confidence": link_row["confidence"],
+                "human_review": link_row["human_review"],
+            }
+            relation = str(link_row["relation"] or "")
+            if relation in {"supports", "answers", "partially_answers", "strengthens"}:
+                supporting_links.append(link)
+            elif relation in {"challenges", "weakens"}:
+                challenging_links.append(link)
+            else:
+                qualifying_links.append(link)
+        direct_limitations = limitation_cards_bounding_node(node_cards, claim_row["node_id"])
+        for limitation in direct_limitations:
+            append_unique_card(propagated_limitations, limitation)
+            add_limitation_source(limitation_sources, limitation["id"], "metadata.bounds")
+        translation_links = translation_links_for_claim_from_db(conn, graph_id, claim_row["node_id"], node_cards)
+        for link in translation_links:
+            for limitation in link["project_limitations"]:
+                append_unique_card(propagated_limitations, limitation)
+                add_limitation_source(limitation_sources, limitation["id"], link["id"])
+        propagated_limitations = sorted(propagated_limitations, key=lambda item: str(item.get("id") or ""))
+        paths.append(
+            {
+                "claim": node_cards[claim_row["node_id"]],
+                "supporting_links": supporting_links,
+                "challenging_links": challenging_links,
+                "qualifying_links": qualifying_links,
+                "translation_links": translation_links,
+                "direct_limitations": direct_limitations,
+                "propagated_limitations": propagated_limitations,
+                "limitation_sources": [
+                    {"limitation": limitation_id, "via": limitation_sources[limitation_id]}
+                    for limitation_id in sorted(limitation_sources)
+                ],
+            }
+        )
+    return paths
+
+
+def load_project_graph_maintenance_from_db(root: Path, project_id: str, db_path: Optional[Path] = None) -> Optional[Dict[str, Any]]:
+    root = root.resolve()
+    db = (db_path if db_path is not None else root / "wiki" / "graphs" / "graph.db").resolve()
+    if not db.exists():
+        return None
+    graph_id = graph_id_for_project(project_id)
+    conn = sqlite3.connect(db)
+    conn.row_factory = sqlite3.Row
+    try:
+        graph_row = conn.execute("select * from graphs where graph_id = ?", (graph_id,)).fetchone()
+        if not graph_row:
+            return None
+        deltas = maintenance_deltas_from_db(conn, graph_id)
+        open_deltas = [delta for delta in deltas if delta["lifecycle_status"] in OPEN_DELTA_LIFECYCLES]
+        accepted_history = [delta for delta in deltas if delta["lifecycle_status"] == "accepted"]
+        review_queue = maintenance_review_queue_from_db(conn, graph_id)
+        claim_paths = maintenance_claim_paths_from_db(conn, graph_id)
+    finally:
+        conn.close()
+    return {
+        "schema_version": "graph-maintenance-v1",
+        "project": project_id,
+        "graph_id": graph_id,
+        "source": "sqlite",
+        "path": relpath(db, root),
+        "updated": str(graph_row["updated_at"] or ""),
+        "open_deltas": open_deltas,
+        "accepted_history": accepted_history,
+        "paper_contributions": maintenance_paper_contributions_from_deltas(deltas),
+        "review_queue": review_queue,
+        "claim_paths": claim_paths,
+    }
+
+
 def graph_event_paths(root: Path, project_id: Optional[str] = None) -> List[Path]:
     if project_id:
         path = root / "wiki" / "graphs" / "events" / "projects" / f"{project_id}.jsonl"

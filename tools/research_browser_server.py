@@ -19,7 +19,7 @@ if str(ROOT_DIR) not in sys.path:
 
 from tools.build_dashboard_index import build_index, extract_section, read_markdown, relpath
 from tools.graph_delta_api import decide_graph_delta, dry_run_graph_delta
-from tools.graph_store import build_snapshot_from_event_files, graph_event_paths
+from tools.graph_store import build_snapshot_from_event_files, graph_event_paths, load_project_graph_maintenance_from_db
 
 
 DEFAULT_INDEX_PATH = ".dashboard/index.json"
@@ -99,6 +99,16 @@ def handle_project_graph_request(root: Path, request_path: str) -> Tuple[int, by
     return json_response(graph)
 
 
+def handle_project_graph_maintenance_request(root: Path, request_path: str) -> Tuple[int, bytes]:
+    project_id = parse_qs(urlsplit(request_path).query).get("project", [""])[0].strip()
+    if not valid_project_id(project_id):
+        return json_response({"error": "Not Found"}, HTTPStatus.NOT_FOUND)
+    model = load_project_graph_maintenance_from_db(root, project_id)
+    if model is None:
+        return json_response({"error": "Not Found"}, HTTPStatus.NOT_FOUND)
+    return json_response(model)
+
+
 def handle_experiment_proposals_request(root: Path, request_path: str) -> Tuple[int, bytes]:
     project_id = parse_qs(urlsplit(request_path).query).get("project", [""])[0].strip()
     if not valid_project_id(project_id):
@@ -143,9 +153,11 @@ class ResearchBrowserHandler(SimpleHTTPRequestHandler):
             status, payload = handle_wiki_page_request(root, self.path)
         elif request_api_path == "/api/project-graph":
             status, payload = handle_project_graph_request(root, self.path)
+        elif request_api_path == "/api/project-graph-maintenance":
+            status, payload = handle_project_graph_maintenance_request(root, self.path)
         elif request_api_path == "/api/experiment-proposals":
             status, payload = handle_experiment_proposals_request(root, self.path)
-        elif request_api_path in {"/api/project-graph-maintenance", "/api/paper-graph", "/api/graph-delta/propose-from-dossier"}:
+        elif request_api_path in {"/api/paper-graph", "/api/graph-delta/propose-from-dossier"}:
             status, payload = json_response({"error": "Not Found"}, HTTPStatus.NOT_FOUND)
         else:
             if request_api_path == "/":
