@@ -1,9 +1,9 @@
-# Research Pilot
+<h1 align="center">Research Pilot</h1>
 
 <p align="center">
-  <strong>Turn papers, notes, research chats, and experiments into a private project memory your AI agent can explore, update, and use to choose the next research move.</strong>
-  <br>
-  <em>Works with Codex-compatible agents. Zotero-first. Local workspace. Human-gated updates.</em>
+  <strong>Turn papers, research chats, experiments, and project notes into a private research memory your AI agent can understand, update, and use to plan the next move.</strong>
+  <br />
+  <em>Codex-compatible. Zotero-first. Local workspace. Human-gated project understanding.</em>
 </p>
 
 <p align="center">
@@ -19,44 +19,115 @@
   <img src="asset/research-pilot-hero.png" alt="Research Pilot turns scattered papers, chats, claims, and experiments into agent-operated project memory with graph deltas and next research moves.">
 </p>
 
-Research Pilot does not just store papers. It keeps your research project oriented.
+---
 
-It gives an AI agent a durable workspace for project direction, Zotero-managed papers, paper dossiers, claims, evidence, warrants, limitations, open gaps, graph deltas, and human decisions. The public repo is the plugin; your research memory stays in your private workspace.
+**You are starting a research project. Papers pile up. Chats disappear. Claims drift. Evidence gaps are hard to see. Where should your agent begin?**
 
-## 🧭 Analyze Research Projects
+Research Pilot is an agent-operated research memory plugin. It gives your AI agent a private local workspace where project questions, claims, evidence, warrants, limitations, paper dossiers, experiments, graph deltas, and human decisions compound over time.
 
-Point Research Pilot at a private research workspace and let the agent work from the current project state, not a blank chat. The agent can inspect the Project Understanding Graph, find missing evidence, read papers in context, propose graph updates, and recommend what to do next.
+The goal is not another notes app. The goal is a research agent that knows your project well enough to tell what is missing, read new papers in context, propose updates, and stop for human approval before changing project understanding.
 
-|  |  |
-| --- | --- |
-| 🔎 **Find Missing Evidence** | Surface unsupported claims, weak warrants, missing paper evidence, and experiment needs. |
-| 📄 **Read Papers In Context** | Turn project-local paper dossiers into claims, evidence, limitations, and graph delta proposals. |
-| 🧠 **Maintain Project Memory** | Keep direction, decisions, evidence, and open questions in an agent-readable workspace. |
-| ✅ **Approve Memory Updates** | Let the agent propose deltas while the human accepts, rejects, parks, or revises before memory changes. |
-| 🧭 **Choose The Next Move** | Ask what to read, test, clarify, or update next based on the current graph. |
-| 🖥️ **Open The Research Browser** | Inspect papers, claims, graph snapshots, deltas, gaps, and project state in a local dashboard. |
+> **Research Pilot does not replace Zotero, your judgment, or your research taste. It gives the agent a durable memory structure so every paper and decision can update the project instead of vanishing into chat history.**
+
+---
+
+## ✨ What It Helps You Do
+
+### Keep the agent oriented
+
+Start from project state, not a blank chat. The agent can inspect your current Project Understanding Graph, project query pack, open deltas, paper dossiers, and generated reports before answering.
+
+### Read papers in project context
+
+Deep-read a paper into a project-local dossier, extract paper claims/evidence/limitations, translate them into project impact, and propose graph deltas instead of producing a generic summary.
+
+### Find missing evidence
+
+Ask which claims have weak support, missing warrants, open limitations, or unresolved translation gaps. Turn those gaps into paper-search contracts or experiment proposals.
+
+### Let humans approve memory updates
+
+The agent proposes D* deltas. You accept, reject, park, or request revision. Only accepted deltas enter append-only graph events.
+
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <h3>🔎 Gap Detection</h3>
+      <p>Surface unsupported claims, weak warrants, missing evidence, and experiment needs from the current graph.</p>
+    </td>
+    <td width="50%" valign="top">
+      <h3>📄 Paper Dossiers</h3>
+      <p>Convert project-relevant papers into agent-readable questions, claims, evidence, warrants, limitations, and proposed deltas.</p>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <h3>✅ Human-Gated Deltas</h3>
+      <p>Preview graph changes, dry-run effects, then accept, reject, park, or revise before memory changes.</p>
+    </td>
+    <td width="50%" valign="top">
+      <h3>🧪 Experiment Proposals</h3>
+      <p>Suggest experiments from weak claims, missing evidence, and limitations without pretending the results already exist.</p>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <h3>🧭 Next Research Move</h3>
+      <p>Recommend whether to search, deep-read, update a question, design an experiment, or resolve an open delta.</p>
+    </td>
+    <td width="50%" valign="top">
+      <h3>🖥️ Research Browser</h3>
+      <p>Open a local dashboard to inspect projects, papers, graph snapshots, deltas, gaps, and experiment proposals.</p>
+    </td>
+  </tr>
+</table>
+
+---
 
 ## 🚀 Quick Start
 
-Install Research Pilot skills for Codex-compatible agents:
+### 1. Install Research Pilot skills
 
 ```bash
+git clone https://github.com/QZhang2111/Research-Pilot.git
+cd Research-Pilot
 ./install.sh codex
 ```
 
-Create your private research workspace:
+### 2. Initialize a private research workspace
 
 ```bash
 python3 tools/research_pilot_init.py ~/Research/MyResearchWiki
 ```
 
-Start your agent inside that workspace and ask:
+Your research data lives in that workspace, not in this public repo.
 
-```text
-Use Research Pilot to inspect this workspace and tell me the next research gap.
+### 3. Start the agent inside your workspace
+
+```bash
+cd ~/Research/MyResearchWiki
+codex
 ```
 
-Open the Research Browser:
+Ask:
+
+```text
+Use Research Pilot to inspect this workspace and help me start a project.
+```
+
+### 4. Make the first project update through human gate
+
+Ask:
+
+```text
+Add my first project question: does this model family encode interaction knowledge?
+```
+
+The agent should propose a graph delta, dry-run it, and wait for your decision before updating project memory.
+
+### 5. Open the Research Browser
+
+From the Research Pilot repo:
 
 ```bash
 python3 tools/build_dashboard_index.py --repo ~/Research/MyResearchWiki --output .dashboard/index.json
@@ -69,38 +140,97 @@ Then visit:
 http://127.0.0.1:8765/dashboard/index.html
 ```
 
+---
+
 ## 🧪 What You Can Ask The Agent
 
-- "Where does this project stand?"
-- "What claim has the weakest evidence?"
-- "Read this paper in project context and propose graph deltas."
-- "Show open deltas waiting for human review."
-- "What paper should I search for next?"
-- "What experiment would most reduce uncertainty?"
-- "Open the Research Browser for this workspace."
-
-## 🧩 Core Workflows
-
-Research Pilot keeps the agent workflow explicit:
+```text
+Where does this project stand?
+```
 
 ```text
-Zotero papers
--> project-local paper dossiers
--> claims / evidence / warrants / limitations
--> proposed graph deltas
+What claim has the weakest evidence?
+```
+
+```text
+Read this paper in project context and propose graph deltas.
+```
+
+```text
+Show open deltas waiting for human review.
+```
+
+```text
+Find papers for this missing evidence gap.
+```
+
+```text
+What experiment would most reduce uncertainty?
+```
+
+```text
+Based on current graph state, what should I do next?
+```
+
+---
+
+## 🧩 Core Loop
+
+Research Pilot keeps the project loop explicit:
+
+```text
+project question
+-> Zotero paper / experiment / human discussion
+-> paper dossier or proposal
+-> Project Understanding Graph delta
 -> human gate
--> append-only graph events
--> snapshots / SQLite / dashboard
+-> append-only graph event
+-> graph.db / snapshot / markdown report / dashboard
 -> next research move
 ```
 
 The graph event log is the source of truth for project understanding. Snapshots, SQLite, markdown reports, and dashboard data are rebuildable read models.
 
+---
+
+## 🧱 Mental Model
+
+```text
+Research Pilot repo = plugin source and tools
+User research workspace = private research memory
+Agent chat = primary interface
+Zotero = paper metadata, PDFs, collections, tags
+Markdown = long-term agent-readable memory
+Graph events = append-only project-understanding truth
+Generated DB/reports/dashboard = rebuildable read models
+```
+
+This repo is the tool factory. Your private workspace is the research site.
+
+---
+
+## 🔗 Zotero-First Source Boundary
+
+Research Pilot assumes Zotero remains the normal paper manager.
+
+```text
+Zotero = paper metadata, PDFs, collections, tags, reading status mirror
+wiki = digested research understanding and project files
+wiki/graphs/events = append-only project understanding graph truth
+graph.db/snapshots/reports = rebuildable read models
+dashboard = browser view over read models and wiki state
+chat/agent = primary control surface
+```
+
+DOI, arXiv, URL, or manual refs can be captured during setup and dry-runs, but they are not a replacement for Zotero as the paper source of truth.
+
+---
+
 ## 🖥️ Research Browser
 
 The Research Browser is a local dashboard over generated read models. It helps you inspect project state, papers, graph snapshots, deltas, gaps, and experiment proposals.
 
-It is not source of truth. It observes:
+It observes:
 
 ```text
 .dashboard/index.json
@@ -109,11 +239,36 @@ wiki/graphs/graph.db
 wiki/projects/
 ```
 
-Graph truth remains:
+It is not source of truth. Graph truth remains:
 
 ```text
 wiki/graphs/events/**/*.jsonl
 ```
+
+---
+
+## 📦 What Is Included
+
+- Codex-compatible install instructions.
+- `research-pilot` router skill.
+- Private workspace initializer.
+- Workspace templates with no private research data.
+- Graph-event validation.
+- Graph snapshot generation.
+- SQLite graph read-model generation.
+- Generated project graph markdown reports.
+- Read-only graph query commands.
+- Read-only gap detection and next-action routing.
+- Project understanding update and evidence synthesis protocols.
+- Gap-driven search contracts and user-facing gap discovery.
+- Read-only experiment proposal generation.
+- Zotero bridge helpers for configurable metadata/status workflows.
+- Human-gated delta dry-run, registration, and decision commands.
+- Project-local paper dossier creation, validation, and delta export.
+- Zotero-first source identity intake with manual source-reference capture for setup/dry-run cases.
+- Research Browser dashboard served from plugin UI files over workspace read models.
+
+---
 
 ## 🔬 Operator Commands
 
@@ -123,13 +278,13 @@ Run the full release check:
 ./scripts/release_check.sh
 ```
 
-Run the graph-core smoke test. The `examples/demo/` files are test fixtures, not a product demo workspace:
+Run the graph-core smoke test:
 
 ```bash
 ./scripts/smoke_mvp_b.sh
 ```
 
-Build graph read models in a workspace after adding project graph events:
+Build graph read models in a workspace:
 
 ```bash
 python3 tools/graph_validate.py --repo ~/Research/MyResearchWiki --project DemoProject
@@ -170,13 +325,6 @@ python3 tools/paper_dossier_cli.py validate --dossier ~/Research/MyResearchWiki/
 python3 tools/paper_dossier_cli.py export-deltas --dossier ~/Research/MyResearchWiki/wiki/projects/DemoProject/papers/paper-a/index.md --output-dir ~/Research/MyResearchWiki/.research-pilot/generated/deltas --json
 ```
 
-Intake source identity. Normal paper management is Zotero-first; DOI/arXiv/URL/manual refs are setup and emergency identity capture, not a replacement paper manager:
-
-```bash
-python3 tools/source_intake_cli.py status --json
-python3 tools/source_intake_cli.py intake --repo ~/Research/MyResearchWiki --project DemoProject --paper paper-a --title "Paper A" --zotero-key ABC123 --doi 10.000/demo --json
-```
-
 Project understanding update and evidence synthesis are agent workflows, not direct approval shortcuts:
 
 ```text
@@ -186,50 +334,7 @@ wiki/_system/workflows/project-understanding-update.md
 wiki/_system/workflows/project-evidence-synthesis.md
 ```
 
-## 📦 Current Public Alpha
-
-Current public extraction includes:
-
-- Codex-compatible install instructions;
-- `research-pilot` router skill;
-- private workspace initializer;
-- workspace templates with no private research data;
-- graph-event validation;
-- graph snapshot generation;
-- SQLite graph read-model generation;
-- generated project graph markdown reports;
-- read-only graph query commands;
-- read-only gap detection and next-action routing;
-- project understanding update and evidence synthesis workflow protocols;
-- gap-driven search contracts and user-facing gap discovery;
-- read-only experiment proposal generation;
-- Zotero bridge helpers for configurable metadata/status workflows;
-- human-gated delta dry-run, registration, and decision commands;
-- project-local paper dossier creation, validation, and delta export;
-- Zotero-first source identity intake with manual source-reference capture for setup/dry-run cases;
-- required Research Browser dashboard served from plugin UI files over workspace read models.
-
-## 🧱 Mental Model
-
-```text
-Research Pilot public repo = plugin source and tools
-User research workspace = private research memory
-Agent chat = primary interface
-Markdown files = long-term agent-readable memory
-Graph events = append-only project-understanding truth
-Generated DB/dashboard files = rebuildable read models
-```
-
-## 🔗 Zotero-First Source Boundary
-
-```text
-Zotero = paper metadata, PDFs, collections, tags, reading status mirror
-wiki = digested research understanding and project files
-wiki/graphs/events = append-only project understanding graph truth
-graph.db/snapshots/reports = rebuildable read models
-dashboard = required browser view over read models and wiki state
-chat/agent = primary control surface
-```
+---
 
 ## 📚 Guides
 
@@ -240,8 +345,23 @@ chat/agent = primary control surface
 - [Core workflows](docs/guides/core-workflows.md)
 - [Source boundaries](docs/guides/source-boundaries.md)
 
+---
+
 ## 🔒 Private By Design
 
 Do not put real paper PDFs, Zotero API keys, local Zotero databases, private project dossiers, generated private dashboard data, or personal research memory into this public repo.
 
 Each user should keep their research memory in their own private workspace.
+
+---
+
+## 🤝 Contributing
+
+This project is an early public extraction. Useful contributions should preserve the core boundary:
+
+```text
+agent chat = primary interaction
+human gate = required for project truth
+workspace data = private
+public repo = reusable plugin kit
+```
