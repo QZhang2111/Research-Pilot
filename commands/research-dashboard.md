@@ -3,9 +3,9 @@ description: Open the local Research Pilot dashboard for a private research work
 argument-hint: "[workspace_path] [port]"
 ---
 
-# /research-dashboard
+# Research Pilot Dashboard Workflow
 
-Open the Research Pilot dashboard for a workspace.
+Open the Research Pilot dashboard for a workspace. This is an agent workflow document, not a guaranteed Codex slash command registration.
 
 ## Arguments
 
@@ -50,7 +50,7 @@ wiki/log.md
 .research-pilot/
 ```
 
-If missing, route to `/research-init` first.
+If missing, route to the Research Pilot initialization workflow first.
 
 ## Workflow
 
@@ -83,9 +83,9 @@ open "$URL"
 
 If `open` is unavailable, print the URL.
 
-## Host Fallback
+## Chat-First Operation
 
-If `/research-dashboard` is not exposed by the host, the agent must run the same server steps from chat. Slash command visibility is not required. Resolve `PLUGIN_ROOT`, run the health check, start `tools/research_browser_server.py`, verify the URL, and report the same completion summary.
+When the user asks to open the dashboard, the agent must run these server steps from chat. Slash command visibility is not required. Resolve `PLUGIN_ROOT`, run the health check, start `tools/research_browser_server.py`, verify the URL, and report the same completion summary.
 
 ## Boundary
 

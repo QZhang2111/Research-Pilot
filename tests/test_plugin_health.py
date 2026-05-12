@@ -26,7 +26,9 @@ class PluginHealthTests(unittest.TestCase):
         self.assertEqual(health["version"], "0.1.0")
         self.assertTrue(health["command_files"]["research-dashboard"])
         self.assertTrue(health["dashboard_fallback_available"])
-        self.assertEqual(health["commands_visible"], "unknown")
+        self.assertEqual(health["interaction_model"], "chat-first")
+        self.assertFalse(health["slash_commands_supported"])
+        self.assertEqual(health["commands_visible"], "unsupported")
         self.assertIn("install.sh --update", health["update_command"])
 
     def test_skill_links_accept_installed_directories(self) -> None:
@@ -57,22 +59,6 @@ class PluginHealthTests(unittest.TestCase):
                 health = inspect_plugin(root)
 
         self.assertTrue(health["helper_bins"]["research-pilot-init"])
-
-    def test_prompt_links_report_codex_prompt_command_bridge(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp) / "plugin"
-            root.mkdir()
-            home = Path(tmp) / "home"
-            prompts = home / ".codex" / "prompts"
-            prompts.mkdir(parents=True)
-            (prompts / "research-init.md").write_text("# /research-init\n")
-            (prompts / "research-dashboard.md").write_text("# /research-dashboard\n")
-
-            with patch.dict(os.environ, {"HOME": str(home), "RP_CODEX_PROMPTS_DIR": str(prompts)}):
-                health = inspect_plugin(root)
-
-        self.assertTrue(health["prompt_links"]["research-init"])
-        self.assertTrue(health["prompt_links"]["research-dashboard"])
 
 
 if __name__ == "__main__":

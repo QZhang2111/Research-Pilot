@@ -53,27 +53,29 @@ wiki/log.md
 
 ## Intent Routing
 
-### Command Aliases
+### Chat-First Intents
 
 Treat these as equivalent initialization intents:
 
 ```text
-/research-init
 research-init
 init research memory
 initialize Research Pilot
 create a Research Pilot workspace
+Use Research Pilot to initialize <path>
 ```
 
 Treat these as equivalent dashboard intents:
 
 ```text
-/research-dashboard
 research-dashboard
 open Research Pilot dashboard
 open research browser
 show dashboard
+Use Research Pilot to open the dashboard
 ```
+
+If the user types `/research-init` or `/research-dashboard` literally, treat it as plain chat intent. Current local Codex plugins do not guarantee those slash commands appear in the host command registry.
 
 ### Initialize Workspace
 
@@ -290,7 +292,7 @@ Do not print API keys. Do not mention Zotero MCP as part of the normal user flow
 
 ### Dashboard
 
-When the user invokes `/research-dashboard`, read `commands/research-dashboard.md` and follow it.
+When the user asks to open the dashboard, read `commands/research-dashboard.md` and follow it.
 
 When the user asks to build or refresh the dashboard read model:
 

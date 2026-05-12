@@ -24,14 +24,6 @@ It links skills into:
 ~/.agents/skills/
 ```
 
-It links Codex prompt command files into:
-
-```text
-~/.codex/prompts/
-```
-
-This prompt-command bridge is for Codex builds that expose custom slash prompts from `~/.codex/prompts`.
-
 It registers the plugin in:
 
 ```text
@@ -48,7 +40,7 @@ It also creates compatibility helper links:
 ~/.research-pilot/bin/research-pilot-init
 ```
 
-After restart, Research Pilot should appear as a local plugin in Codex plugin views. If a Codex build only reads skills, the installed skills still work.
+After restart, Research Pilot should appear as a local plugin in Codex plugin views. The primary interface is agent chat through installed skills.
 
 Check plugin health:
 
@@ -56,26 +48,27 @@ Check plugin health:
 python3 "$HOME/.research-pilot/repo/tools/plugin_health.py" --plugin-root "$HOME/.research-pilot/repo" --json
 ```
 
-The health check reports plugin version, source path, command files, helper links, and whether the dashboard server fallback is available. `commands_visible` is `unknown` because command exposure is host state; restart Codex after install or update so plugin metadata reloads.
-It also reports `prompt_links`; both Research Pilot command prompts should be `true` after install/update.
+The health check reports plugin version, source path, workflow files, helper links, and whether the dashboard server fallback is available. `commands_visible` is `unsupported` because current local Codex plugins do not register top-level `/research-*` slash commands.
 
-After install, start Codex and use the plugin command:
+After install, start Codex:
 
 ```bash
 codex
 ```
 
+Ask the agent:
+
 ```text
-/research-init ~/Research/MyResearchWiki
+Use Research Pilot to initialize ~/Research/MyResearchWiki.
 ```
 
-Manual fallback:
+Direct helper fallback:
 
 ```bash
 ~/.research-pilot/bin/research-pilot-init ~/Research/MyResearchWiki
 ```
 
-If `/research-init` is not visible, ask the agent to resolve `PLUGIN_ROOT` and run:
+The agent can also resolve `PLUGIN_ROOT` and run:
 
 ```bash
 python3 "$PLUGIN_ROOT/tools/research_pilot_init.py" "$WORKSPACE_PATH"
@@ -94,13 +87,13 @@ Then ask:
 Use Research Pilot to inspect this workspace.
 ```
 
-Open the dashboard:
+Open the dashboard by asking:
 
 ```text
-/research-dashboard ~/Research/MyResearchWiki
+Use Research Pilot to open the dashboard for ~/Research/MyResearchWiki.
 ```
 
-If `/research-dashboard` is not visible, ask the agent to use the host fallback in `commands/research-dashboard.md`. The fallback starts `tools/research_browser_server.py` from the plugin root, verifies the local URL, and opens or prints it. Slash command visibility is not required.
+The dashboard fallback in `commands/research-dashboard.md` starts `tools/research_browser_server.py` from the plugin root, verifies the local URL, and opens or prints it. Slash command visibility is not required.
 
 Update plugin source:
 

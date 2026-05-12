@@ -3,9 +3,9 @@ description: Initialize or inspect a private Research Pilot workspace, then guid
 argument-hint: "[workspace_path]"
 ---
 
-# /research-init
+# Research Pilot Init Workflow
 
-Initialize Research Pilot for a private research workspace.
+Initialize Research Pilot for a private research workspace. This is an agent workflow document, not a guaranteed Codex slash command registration.
 
 ## Arguments
 
@@ -32,9 +32,9 @@ Stop with a clear install instruction if no plugin root is found:
 curl -fsSL https://raw.githubusercontent.com/QZhang2111/Research-Pilot/main/install.sh | bash
 ```
 
-## Host Fallback
+## Chat-First Operation
 
-If `/research-init` is not visible, the agent must resolve `PLUGIN_ROOT`, run `tools/research_pilot_init.py` from that plugin root, and report the same completion summary. Slash command visibility is not required.
+When the user asks to initialize Research Pilot, the agent must resolve `PLUGIN_ROOT`, run `tools/research_pilot_init.py` from that plugin root, and report the same completion summary. Slash command visibility is not required.
 
 ## Workflow
 

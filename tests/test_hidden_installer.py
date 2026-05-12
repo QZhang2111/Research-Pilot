@@ -84,6 +84,10 @@ class HiddenInstallerTests(unittest.TestCase):
         legacy_catalog_link = self.home / ".agents" / "plugins" / "research-pilot"
         legacy_catalog_link.parent.mkdir(parents=True)
         legacy_catalog_link.symlink_to(self.home / ".research-pilot" / "repo")
+        legacy_prompt_dir = self.home / ".codex" / "prompts"
+        legacy_prompt_dir.mkdir(parents=True)
+        (legacy_prompt_dir / "research-init.md").symlink_to(self.remote / "commands" / "research-init.md")
+        (legacy_prompt_dir / "research-dashboard.md").symlink_to(self.remote / "commands" / "research-dashboard.md")
 
         result = self._run_install()
 
@@ -101,12 +105,13 @@ class HiddenInstallerTests(unittest.TestCase):
         self.assertEqual(Path(os.readlink(catalog_link)), repo_dir)
         self.assertFalse(legacy_catalog_link.is_symlink())
         self.assertEqual(Path(os.readlink(init_link)), repo_dir / "tools" / "research_pilot_init.py")
-        self.assertEqual(Path(os.readlink(prompt_init)), repo_dir / "commands" / "research-init.md")
-        self.assertEqual(Path(os.readlink(prompt_dashboard)), repo_dir / "commands" / "research-dashboard.md")
+        self.assertFalse(prompt_init.exists())
+        self.assertFalse(prompt_dashboard.exists())
         self.assert_marketplace_entry_installed()
         self.assertIn("Health check", result.stdout)
         self.assertIn("plugin_health.py", result.stdout)
-        self.assertIn("fallback", result.stdout.lower())
+        self.assertIn("chat with the agent", result.stdout.lower())
+        self.assertIn("do not register", result.stdout.lower())
 
     def test_codex_install_uses_hidden_checkout_not_current_worktree(self) -> None:
         self._run_install("codex")
@@ -124,7 +129,7 @@ class HiddenInstallerTests(unittest.TestCase):
         beta_link = self.home / ".agents" / "skills" / "beta-skill"
         self.assertEqual(Path(os.readlink(beta_link)), self.home / ".research-pilot" / "repo" / "skills" / "beta-skill")
         prompt_dashboard = self.home / ".codex" / "prompts" / "research-dashboard.md"
-        self.assertEqual(Path(os.readlink(prompt_dashboard)), self.home / ".research-pilot" / "repo" / "commands" / "research-dashboard.md")
+        self.assertFalse(prompt_dashboard.exists())
         self.assertIn("Health check", result.stdout)
         self.assertIn("plugin_health.py", result.stdout)
         self.assertIn("restart", result.stdout.lower())
