@@ -24,6 +24,14 @@ It links skills into:
 ~/.agents/skills/
 ```
 
+It links Codex prompt command files into:
+
+```text
+~/.codex/prompts/
+```
+
+This prompt-command bridge is for Codex builds that expose custom slash prompts from `~/.codex/prompts`.
+
 It registers the plugin in:
 
 ```text
@@ -49,6 +57,7 @@ python3 "$HOME/.research-pilot/repo/tools/plugin_health.py" --plugin-root "$HOME
 ```
 
 The health check reports plugin version, source path, command files, helper links, and whether the dashboard server fallback is available. `commands_visible` is `unknown` because command exposure is host state; restart Codex after install or update so plugin metadata reloads.
+It also reports `prompt_links`; both Research Pilot command prompts should be `true` after install/update.
 
 After install, start Codex and use the plugin command:
 

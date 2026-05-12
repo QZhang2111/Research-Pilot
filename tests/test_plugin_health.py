@@ -58,6 +58,22 @@ class PluginHealthTests(unittest.TestCase):
 
         self.assertTrue(health["helper_bins"]["research-pilot-init"])
 
+    def test_prompt_links_report_codex_prompt_command_bridge(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "plugin"
+            root.mkdir()
+            home = Path(tmp) / "home"
+            prompts = home / ".codex" / "prompts"
+            prompts.mkdir(parents=True)
+            (prompts / "research-init.md").write_text("# /research-init\n")
+            (prompts / "research-dashboard.md").write_text("# /research-dashboard\n")
+
+            with patch.dict(os.environ, {"HOME": str(home), "RP_CODEX_PROMPTS_DIR": str(prompts)}):
+                health = inspect_plugin(root)
+
+        self.assertTrue(health["prompt_links"]["research-init"])
+        self.assertTrue(health["prompt_links"]["research-dashboard"])
+
 
 if __name__ == "__main__":
     unittest.main()
