@@ -25,7 +25,7 @@
 
 Research Pilot is an agent-operated research memory plugin. It gives your AI agent a private local workspace where project questions, claims, evidence, warrants, limitations, paper dossiers, experiments, graph deltas, and human decisions compound over time.
 
-This repo is the public plugin source. The installer keeps a local plugin checkout under `~/.research-pilot/repo` and exposes Research Pilot as an agent command. Your visible research files live in the private workspace created by `/research-init`.
+This repo is the public plugin source. The installer keeps a local plugin checkout under `~/.research-pilot/repo` and exposes Research Pilot through installed agent skills and helper tools. Your visible research files live in the private workspace created when you ask the agent to initialize Research Pilot.
 
 The goal is not another notes app. The goal is a research agent that knows your project well enough to tell what is missing, read new papers in context, propose updates, and stop for human approval before changing project understanding.
 
@@ -94,7 +94,9 @@ The agent proposes D* deltas. You accept, reject, park, or request revision. Onl
 curl -fsSL https://raw.githubusercontent.com/QZhang2111/Research-Pilot/main/install.sh | bash
 ```
 
-This clones or updates the plugin source in `~/.research-pilot/repo`, registers Research Pilot in the local plugin catalog, links `~/plugins/research-pilot` to the hidden checkout, links skills into `~/.agents/skills/`, and links command prompts into `~/.codex/prompts/` for Codex builds that expose custom slash prompts such as `/research-init` and `/research-dashboard`.
+This clones or updates the plugin source in `~/.research-pilot/repo`, registers Research Pilot in the local plugin catalog, links `~/plugins/research-pilot` to the hidden checkout, links skills into `~/.agents/skills/`, and creates helper commands under `~/.research-pilot/bin/`.
+
+Research Pilot is chat-first in Codex. Current local Codex plugins do not register new top-level slash commands such as `/research-init` or `/research-dashboard`.
 
 ### 2. Start Codex and initialize a private workspace
 
@@ -102,13 +104,13 @@ This clones or updates the plugin source in `~/.research-pilot/repo`, registers 
 codex
 ```
 
-Then ask:
+Then ask the agent:
 
 ```text
-/research-init ~/Research/MyResearchWiki
+Use Research Pilot to initialize ~/Research/MyResearchWiki.
 ```
 
-`/research-init` creates the workspace, collects minimum project context, and stops at the first human-gated graph update.
+The agent creates the workspace, collects minimum project context, and stops at the first human-gated graph update.
 
 Your research data lives in that workspace, not in the hidden plugin checkout.
 
@@ -145,10 +147,10 @@ Manual fallback:
 
 ### 5. Open the Research Browser
 
-Ask:
+Ask the agent:
 
 ```text
-/research-dashboard ~/Research/MyResearchWiki
+Use Research Pilot to open the dashboard for ~/Research/MyResearchWiki.
 ```
 
 The agent starts the local dashboard server and opens:
@@ -157,7 +159,7 @@ The agent starts the local dashboard server and opens:
 http://127.0.0.1:8765/dashboard/index.html
 ```
 
-If a slash command is not visible in your Codex host, ask the agent to open the Research Pilot dashboard. The agent can use the same dashboard server fallback from the plugin tools.
+The agent starts the dashboard through the plugin helper. Slash command visibility is not required.
 
 ---
 
@@ -192,7 +194,7 @@ Based on current graph state, what should I do next?
 ```
 
 ```text
-/research-dashboard
+Open the Research Pilot dashboard.
 ```
 
 ---
@@ -222,7 +224,7 @@ The graph event log is the source of truth for project understanding. Snapshots,
 
 ```text
 Research Pilot repo = hidden plugin source and tools
-Codex plugin = manifest + commands + skills + assets + catalog entry
+Codex plugin = manifest + skills + assets + helper tools + catalog entry
 User research workspace = private research memory
 Agent chat = primary interface
 Zotero = paper metadata, PDFs, collections, tags
@@ -238,10 +240,10 @@ Repo, skill, and plugin are different layers:
 ```text
 repo = source distribution on GitHub
 skill = one agent instruction workflow
-plugin = packaged capability: manifest, commands, skills, assets, install metadata
+plugin = packaged capability: manifest, skills, assets, helper tools, install metadata
 ```
 
-After installation, Research Pilot is registered through `~/.agents/plugins/marketplace.json` with source path `./plugins/research-pilot`, which resolves to `~/plugins/research-pilot`. It should appear as a local plugin in Codex plugin views. If a Codex build only reads skills, the same workflows still work through the installed skills and `/research-init` command file in the hidden plugin checkout.
+After installation, Research Pilot is registered through `~/.agents/plugins/marketplace.json` with source path `./plugins/research-pilot`, which resolves to `~/plugins/research-pilot`. It should appear as a local plugin in Codex plugin views. The primary interface is still agent chat: ask Codex to use Research Pilot, and the installed skills route to the right helper workflow.
 
 ---
 
@@ -286,8 +288,8 @@ wiki/graphs/events/**/*.jsonl
 ## 📦 What Is Included
 
 - Codex plugin manifest at `.codex-plugin/plugin.json`.
-- Plugin command `/research-init`.
-- Plugin command `/research-dashboard`.
+- Chat-first Research Pilot router skills.
+- Agent workflow docs for initialization and dashboard fallback.
 - Curl-based Codex-compatible installer.
 - `research-pilot` router skill.
 - Private workspace initializer.

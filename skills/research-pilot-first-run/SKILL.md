@@ -8,10 +8,10 @@ argument-hint: "[workspace path] [project id]"
 
 Guide a user from plugin/repo confusion to a status-aware workspace and project shell. Defer the first project graph update until graph-worthy input exists.
 
-Primary command:
+Primary user intent:
 
 ```text
-/research-init [workspace_path]
+Use Research Pilot to initialize [workspace_path].
 ```
 
 ## Goal

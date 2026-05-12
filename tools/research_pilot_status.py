@@ -268,7 +268,9 @@ def plugin_status() -> Dict[str, Any]:
     return {
         "source_path": str(source_path) if source_path else "",
         "version": version,
-        "commands_visible": "unknown",
+        "interaction_model": "chat-first",
+        "slash_commands_supported": False,
+        "commands_visible": "unsupported",
         "dashboard_fallback_available": bool(
             source_path and (source_path / "tools" / "research_browser_server.py").exists()
         ),

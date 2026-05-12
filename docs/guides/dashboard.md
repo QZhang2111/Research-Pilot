@@ -15,13 +15,13 @@ Graph truth remains:
 wiki/graphs/events/**/*.jsonl
 ```
 
-Build and serve:
+Ask the agent:
 
 ```text
-/research-dashboard ~/Research/MyResearchWiki
+Use Research Pilot to open the dashboard for ~/Research/MyResearchWiki.
 ```
 
-Manual fallback:
+Direct helper fallback:
 
 ```bash
 python3 tools/build_dashboard_index.py --repo "$WORKSPACE" --output .dashboard/index.json
