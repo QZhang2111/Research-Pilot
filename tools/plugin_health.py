@@ -40,6 +40,7 @@ def inspect_plugin(root: str | Path) -> dict[str, object]:
     plugin_root = Path(root).expanduser().resolve()
     home = Path.home()
     bin_dir = Path(os.environ.get("RP_BIN_DIR", home / ".research-pilot" / "bin")).expanduser()
+    prompts_dir = Path(os.environ.get("RP_CODEX_PROMPTS_DIR", home / ".codex" / "prompts")).expanduser()
     command_names = ("research-init", "research-dashboard")
     skill_names = ("research-pilot", "research-pilot-first-run")
 
@@ -49,6 +50,9 @@ def inspect_plugin(root: str | Path) -> dict[str, object]:
         "git_commit": git_commit(plugin_root),
         "command_files": {
             name: (plugin_root / "commands" / f"{name}.md").is_file() for name in command_names
+        },
+        "prompt_links": {
+            name: (prompts_dir / f"{name}.md").exists() for name in command_names
         },
         "commands_visible": "unknown",
         "skill_links": {
@@ -63,8 +67,9 @@ def inspect_plugin(root: str | Path) -> dict[str, object]:
             "-o /tmp/research-pilot-install.sh && bash /tmp/research-pilot-install.sh --update"
         ),
         "restart_guidance": (
-            "Restart Codex after install or update. If slash commands are not visible, ask the agent "
-            "to run the Research Pilot command fallback from the plugin root."
+            "Restart Codex after install or update. Research Pilot also links command prompts into "
+            "~/.codex/prompts for Codex builds that load custom slash prompts. If slash commands are "
+            "not visible, ask the agent to run the Research Pilot command fallback from the plugin root."
         ),
     }
 

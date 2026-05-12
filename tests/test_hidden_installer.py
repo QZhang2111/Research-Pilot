@@ -28,6 +28,7 @@ class HiddenInstallerTests(unittest.TestCase):
                 "RP_BIN_DIR": str(self.home / ".research-pilot" / "bin"),
                 "RP_MARKETPLACE_PATH": str(self.home / ".agents" / "plugins" / "marketplace.json"),
                 "RP_CATALOG_LINK": str(self.home / "plugins" / "research-pilot"),
+                "RP_CODEX_PROMPTS_DIR": str(self.home / ".codex" / "prompts"),
             }
         )
 
@@ -39,7 +40,10 @@ class HiddenInstallerTests(unittest.TestCase):
         (self.remote / "skills").mkdir()
         (self.remote / ".codex-plugin").mkdir()
         (self.remote / "tools").mkdir()
+        (self.remote / "commands").mkdir()
         (self.remote / ".codex-plugin" / "plugin.json").write_text('{"name":"research-pilot","skills":"./skills/"}\n')
+        (self.remote / "commands" / "research-init.md").write_text("# /research-init\n")
+        (self.remote / "commands" / "research-dashboard.md").write_text("# /research-dashboard\n")
         init = self.remote / "tools" / "research_pilot_init.py"
         init.write_text("#!/usr/bin/env python3\nprint('init')\n")
         init.chmod(init.stat().st_mode | stat.S_IXUSR)
@@ -88,6 +92,8 @@ class HiddenInstallerTests(unittest.TestCase):
         plugin_link = self.home / ".research-pilot-plugin"
         catalog_link = self.home / "plugins" / "research-pilot"
         init_link = self.home / ".research-pilot" / "bin" / "research-pilot-init"
+        prompt_init = self.home / ".codex" / "prompts" / "research-init.md"
+        prompt_dashboard = self.home / ".codex" / "prompts" / "research-dashboard.md"
 
         self.assertTrue((repo_dir / ".git").exists())
         self.assertEqual(Path(os.readlink(skill_link)), repo_dir / "skills" / "alpha-skill")
@@ -95,6 +101,8 @@ class HiddenInstallerTests(unittest.TestCase):
         self.assertEqual(Path(os.readlink(catalog_link)), repo_dir)
         self.assertFalse(legacy_catalog_link.is_symlink())
         self.assertEqual(Path(os.readlink(init_link)), repo_dir / "tools" / "research_pilot_init.py")
+        self.assertEqual(Path(os.readlink(prompt_init)), repo_dir / "commands" / "research-init.md")
+        self.assertEqual(Path(os.readlink(prompt_dashboard)), repo_dir / "commands" / "research-dashboard.md")
         self.assert_marketplace_entry_installed()
         self.assertIn("Health check", result.stdout)
         self.assertIn("plugin_health.py", result.stdout)
@@ -115,6 +123,8 @@ class HiddenInstallerTests(unittest.TestCase):
 
         beta_link = self.home / ".agents" / "skills" / "beta-skill"
         self.assertEqual(Path(os.readlink(beta_link)), self.home / ".research-pilot" / "repo" / "skills" / "beta-skill")
+        prompt_dashboard = self.home / ".codex" / "prompts" / "research-dashboard.md"
+        self.assertEqual(Path(os.readlink(prompt_dashboard)), self.home / ".research-pilot" / "repo" / "commands" / "research-dashboard.md")
         self.assertIn("Health check", result.stdout)
         self.assertIn("plugin_health.py", result.stdout)
         self.assertIn("restart", result.stdout.lower())
@@ -128,6 +138,8 @@ class HiddenInstallerTests(unittest.TestCase):
         self.assertFalse((self.home / ".research-pilot-plugin").exists())
         self.assertFalse((self.home / "plugins" / "research-pilot").exists())
         self.assertFalse((self.home / ".research-pilot" / "bin" / "research-pilot-init").exists())
+        self.assertFalse((self.home / ".codex" / "prompts" / "research-init.md").exists())
+        self.assertFalse((self.home / ".codex" / "prompts" / "research-dashboard.md").exists())
         self.assertTrue((self.home / ".research-pilot" / "repo" / ".git").exists())
         self.assert_marketplace_entry_absent()
 

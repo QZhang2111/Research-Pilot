@@ -12,6 +12,7 @@
 #   RP_BIN_DIR       Override helper command directory (default: $HOME/.research-pilot/bin)
 #   RP_MARKETPLACE_PATH  Override plugin marketplace path (default: $HOME/.agents/plugins/marketplace.json)
 #   RP_CATALOG_LINK      Override plugin catalog symlink (default: $HOME/plugins/research-pilot)
+#   RP_CODEX_PROMPTS_DIR Override Codex prompt command directory (default: $HOME/.codex/prompts)
 
 set -euo pipefail
 
@@ -19,6 +20,7 @@ REPO_URL="${RP_REPO_URL:-https://github.com/QZhang2111/Research-Pilot.git}"
 REPO_DIR="${RP_DIR:-$HOME/.research-pilot/repo}"
 PLUGIN_LINK="${RP_PLUGIN_LINK:-$HOME/.research-pilot-plugin}"
 BIN_DIR="${RP_BIN_DIR:-$HOME/.research-pilot/bin}"
+CODEX_PROMPTS_DIR="${RP_CODEX_PROMPTS_DIR:-$HOME/.codex/prompts}"
 MARKETPLACE_PATH="${RP_MARKETPLACE_PATH:-$HOME/.agents/plugins/marketplace.json}"
 CATALOG_LINK="${RP_CATALOG_LINK:-$HOME/plugins/research-pilot}"
 LEGACY_CATALOG_LINK="${RP_LEGACY_CATALOG_LINK:-$HOME/.agents/plugins/research-pilot}"
@@ -240,6 +242,24 @@ unlink_bins() {
   [[ -L "$BIN_DIR/research-pilot-init" ]] && rm -f "$BIN_DIR/research-pilot-init"
 }
 
+link_prompt_commands() {
+  mkdir -p "$CODEX_PROMPTS_DIR"
+  local command
+  for command in research-init research-dashboard; do
+    if [[ -f "$REPO_DIR/commands/$command.md" ]]; then
+      safe_symlink "$REPO_DIR/commands/$command.md" "$CODEX_PROMPTS_DIR/$command.md"
+      printf '  linked %s -> %s\n' "$CODEX_PROMPTS_DIR/$command.md" "$REPO_DIR/commands/$command.md"
+    fi
+  done
+}
+
+unlink_prompt_commands() {
+  local command
+  for command in research-init research-dashboard; do
+    [[ -L "$CODEX_PROMPTS_DIR/$command.md" ]] && rm -f "$CODEX_PROMPTS_DIR/$command.md"
+  done
+}
+
 link_installation() {
   local id="${1:-codex}"
   local row target style
@@ -257,12 +277,15 @@ link_installation() {
   write_marketplace_entry
   printf -- '-> Linking helper commands\n'
   link_bins
+  printf -- '-> Linking Codex prompt commands\n'
+  link_prompt_commands
 }
 
 print_post_install_guidance() {
   printf 'Health check:\n'
   printf '  python3 "%s/tools/plugin_health.py" --plugin-root "%s" --json\n' "$REPO_DIR" "$REPO_DIR"
   printf 'Restart Codex after install or update so plugin metadata reloads.\n'
+  printf 'Slash command bridge: %s\n' "$CODEX_PROMPTS_DIR"
   printf 'Fallback: if slash commands are not visible, ask the agent to run the command fallback from %s.\n' "$REPO_DIR"
 }
 
@@ -307,6 +330,7 @@ cmd_uninstall() {
   cleanup_legacy_plugin_catalog
   remove_marketplace_entry
   unlink_bins
+  unlink_prompt_commands
 
   printf '\nUninstalled Research Pilot links for %s\n' "$id"
   printf 'Hidden checkout kept: %s\n' "$REPO_DIR"
@@ -333,6 +357,7 @@ Environment:
   RP_DIR           Override clone destination (default: \$HOME/.research-pilot/repo)
   RP_PLUGIN_LINK   Override plugin symlink (default: \$HOME/.research-pilot-plugin)
   RP_BIN_DIR       Override helper command directory (default: \$HOME/.research-pilot/bin)
+  RP_CODEX_PROMPTS_DIR Override Codex prompt command directory (default: \$HOME/.codex/prompts)
   RP_MARKETPLACE_PATH  Override plugin marketplace path (default: \$HOME/.agents/plugins/marketplace.json)
   RP_CATALOG_LINK      Override plugin catalog symlink (default: \$HOME/plugins/research-pilot)
   RP_MARKETPLACE_SOURCE_PATH Override marketplace source path (default: ./plugins/research-pilot)

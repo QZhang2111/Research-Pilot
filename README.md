@@ -94,7 +94,7 @@ The agent proposes D* deltas. You accept, reject, park, or request revision. Onl
 curl -fsSL https://raw.githubusercontent.com/QZhang2111/Research-Pilot/main/install.sh | bash
 ```
 
-This clones or updates the plugin source in `~/.research-pilot/repo`, registers Research Pilot in the local plugin catalog, links `~/plugins/research-pilot` to the hidden checkout, links skills into `~/.agents/skills/`, and exposes plugin commands such as `/research-init` and `/research-dashboard`.
+This clones or updates the plugin source in `~/.research-pilot/repo`, registers Research Pilot in the local plugin catalog, links `~/plugins/research-pilot` to the hidden checkout, links skills into `~/.agents/skills/`, and links command prompts into `~/.codex/prompts/` for Codex builds that expose custom slash prompts such as `/research-init` and `/research-dashboard`.
 
 ### 2. Start Codex and initialize a private workspace
 

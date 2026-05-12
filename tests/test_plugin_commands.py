@@ -24,6 +24,7 @@ class PluginCommandTests(unittest.TestCase):
         quick_start = text.split("## 🚀 Quick Start", 1)[1].split("## 🧪 What You Can Ask", 1)[0]
 
         self.assertIn("/research-init ~/Research/MyResearchWiki", quick_start)
+        self.assertIn("~/.codex/prompts/", quick_start)
         self.assertRegex(quick_start, re.compile(r"Manual fallback:.*research-pilot-init", re.S))
         self.assertNotIn("python3 tools/research_pilot_init.py", quick_start)
 
