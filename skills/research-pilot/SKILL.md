@@ -265,6 +265,15 @@ python3 "$PLUGIN_ROOT/tools/source_intake_cli.py" intake --repo "$WORKSPACE_PATH
 
 Normal paper management is Zotero-first. If Zotero credentials are not configured yet, DOI, arXiv, URL, or manual source refs may be recorded only as source identity capture; do not present this as a replacement paper manager.
 
+For Zotero setup, use the agent-facing helper:
+
+```bash
+python3 "$PLUGIN_ROOT/tools/zotero_setup.py" prepare-env --repo "$WORKSPACE_PATH" --json
+python3 "$PLUGIN_ROOT/tools/zotero_setup.py" status --repo "$WORKSPACE_PATH" --json
+```
+
+Do not print API keys. Do not mention Zotero MCP as part of the normal user flow.
+
 ### Dashboard
 
 When the user invokes `/research-dashboard`, read `commands/research-dashboard.md` and follow it.

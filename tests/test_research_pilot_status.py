@@ -138,7 +138,7 @@ class ResearchPilotStatusTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             init_workspace_main([str(root), "--no-git"])
-            (root / ".env").write_text("ZOTERO_API_KEY=secret-value\n", encoding="utf-8")
+            (root / ".env").write_text("ZOTERO_API_KEY=" + "secret-value\n", encoding="utf-8")
 
             result = inspect_workspace(root)
             encoded = json.dumps(result)

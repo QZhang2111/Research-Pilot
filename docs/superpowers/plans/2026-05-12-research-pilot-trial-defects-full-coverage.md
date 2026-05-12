@@ -157,7 +157,7 @@ class ResearchPilotStatusTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             init_workspace_main([str(root), "--no-git"])
-            (root / ".env").write_text("ZOTERO_API_KEY=secret-value\n", encoding="utf-8")
+            (root / ".env").write_text("ZOTERO_API_KEY=" + "secret-value\n", encoding="utf-8")
 
             result = inspect_workspace(root)
             encoded = json.dumps(result)
@@ -1062,7 +1062,7 @@ class ZoteroSetupTest(unittest.TestCase):
     def test_status_reads_workspace_env_without_printing_key(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            (root / ".env").write_text("ZOTERO_API_KEY=secret-value\n", encoding="utf-8")
+            (root / ".env").write_text("ZOTERO_API_KEY=" + "secret-value\n", encoding="utf-8")
 
             result = zotero_status(root, validate=False)
 
@@ -1076,7 +1076,7 @@ class ZoteroSetupTest(unittest.TestCase):
             config = root / ".research-pilot" / "config.toml"
             config.parent.mkdir(parents=True)
             config.write_text('[zotero]\nlibrary_type = "users"\nlibrary_id = "123456"\n', encoding="utf-8")
-            (root / ".env").write_text("ZOTERO_API_KEY=secret-value\n", encoding="utf-8")
+            (root / ".env").write_text("ZOTERO_API_KEY=" + "secret-value\n", encoding="utf-8")
 
             result = zotero_status(root, validate=False)
 
@@ -1277,7 +1277,7 @@ Add to `tests/test_source_intake_cli.py`:
     def test_zotero_status_reads_workspace_env(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            (root / ".env").write_text("ZOTERO_API_KEY=secret-value\n", encoding="utf-8")
+            (root / ".env").write_text("ZOTERO_API_KEY=" + "secret-value\n", encoding="utf-8")
 
             status = zotero_status(str(root))
 

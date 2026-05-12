@@ -11,6 +11,8 @@ from pathlib import Path
 
 
 WORKSPACE_GITIGNORE = """# Research Pilot private/generated data
+.env
+.env.local
 .research-pilot/config.toml
 .research-pilot/generated/
 .dashboard/

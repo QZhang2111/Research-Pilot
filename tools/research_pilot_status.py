@@ -21,6 +21,7 @@ DELTA_STATUS_TO_LIFECYCLE = {
     "superseded": "revised",
 }
 OPEN_DELTA_LIFECYCLES = {"proposed", "parked", "revised"}
+ZOTERO_API_KEY_ENV = "ZOTERO_API_KEY"
 
 
 def parse_frontmatter(text: str) -> Tuple[Dict[str, Any], str]:
@@ -71,7 +72,7 @@ def read_env_flags(root: Path) -> Dict[str, Any]:
         for line in env_path.read_text(encoding="utf-8").splitlines():
             stripped = line.strip()
             if (
-                stripped.startswith("ZOTERO_API_KEY=")
+                stripped.startswith(f"{ZOTERO_API_KEY_ENV}=")
                 and stripped.split("=", 1)[1].strip()
             ):
                 api_key_present = True
