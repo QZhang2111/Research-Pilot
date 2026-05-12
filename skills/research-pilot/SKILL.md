@@ -13,7 +13,7 @@ Research Pilot is the primary router skill for agent-operated research memory.
 - Explain plugin vs workspace boundary.
 - Initialize a private research workspace.
 - Inspect whether the current directory looks like a Research Pilot workspace.
-- Guide first-run setup from plugin source or empty directory to first human-gated graph update.
+- Guide first-run setup from plugin source or empty directory to a project shell, then a human-gated graph update when real graph-worthy input exists.
 - Validate project graph-event JSONL.
 - Build generated graph snapshots.
 - Build generated SQLite graph read models.
@@ -94,10 +94,18 @@ When the user asks to start from scratch, create the first project, initialize a
 $WORKSPACE_PATH/wiki/_system/workflows/first-run.md
 ```
 
-3. Detect state: plugin repo, initialized workspace, plain directory, or unknown.
+3. Before suggesting next actions, run:
+
+```bash
+python3 "$PLUGIN_ROOT/tools/research_pilot_status.py" --repo "$WORKSPACE_PATH" --json
+```
+
+Summarize the returned stage in chat. Offer at most two next actions. Do not mutate graph truth during status inspection.
+
 4. Create or confirm a private workspace.
 5. Collect only minimum project intake: project id/name, one-sentence direction, first question/claim, Zotero now/later.
-6. Route the first graph-level question or claim through D* dry-run and human gate.
+6. If the user only has a venue, broad direction, or baseline-paper need, create a project shell first. Defer the first graph delta until the user provides a real question, claim, evidence pressure, paper synthesis, or experiment result.
+7. Route the first graph-level question or claim through D* dry-run and human gate.
 
 Do not start paper search or dashboard work before a first project question or claim exists.
 
@@ -105,9 +113,13 @@ Do not start paper search or dashboard work before a first project question or c
 
 When the user asks to inspect current Research Pilot status:
 
-1. Check for the workspace detection files.
-2. If present, report that the workspace skeleton is initialized.
-3. If absent, explain that the user should run initialization first.
+Before suggesting next actions, run:
+
+```bash
+python3 "$PLUGIN_ROOT/tools/research_pilot_status.py" --repo "$WORKSPACE_PATH" --json
+```
+
+Summarize the returned stage in chat. Offer at most two next actions. Do not mutate graph truth during status inspection.
 
 ### Validate Graph Events
 
