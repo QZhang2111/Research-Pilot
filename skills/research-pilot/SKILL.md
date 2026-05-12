@@ -31,8 +31,14 @@ Research Pilot is the primary router skill for agent-operated research memory.
 - Export paper-dossier graph delta JSON proposals.
 - Intake Zotero-first source identity, with manual source-reference capture for setup/dry-run cases.
 - Build and serve the Research Browser dashboard.
+- Create durable execution-state records for long search, deep-read, synthesis, and experiment-proposal jobs.
 
 Dashboard is a required public component and a browser observer. It must not become graph truth.
+Durable job records are execution state only. They must not become graph truth.
+
+## Durable Research Jobs
+
+For long paper-search, deep-read, evidence-synthesis, or experiment-proposal work, create a durable record under `.research-pilot/jobs`. Job records track execution state only. They do not change graph truth. Any graph change from job output still requires D* dry-run, D* registration, and explicit human decision in the main agent/user conversation before acceptance.
 
 ## Workspace Detection
 
@@ -188,6 +194,8 @@ Do not silently promote human discussion into graph truth.
 
 When a set of papers, dossiers, or experiment notes should affect project understanding:
 
+Create a durable job record in `.research-pilot/jobs` for long-running evidence-synthesis work.
+
 1. Read the workspace protocol:
 
 ```text
@@ -204,6 +212,8 @@ Do not approve sources or mutate graph truth without explicit human decision.
 
 When the user asks to find papers for a graph gap:
 
+Create a durable job record in `.research-pilot/jobs` for long-running search work. The record tracks execution state only; it is not graph truth. Human gating still happens in the main agent/user conversation before any graph delta is accepted.
+
 ```bash
 python3 "$PLUGIN_ROOT/tools/research_gap_discovery_cli.py" run --repo "$WORKSPACE_PATH" --project "$PROJECT_ID" --gap "$GAP_TARGET" --source memory --json
 ```
@@ -213,6 +223,8 @@ Use `--source arxiv`, `--source openreview`, or `--source all` only when the use
 ### Experiment Proposal
 
 When the user asks what experiment could test a claim:
+
+Create a durable job record in `.research-pilot/jobs` for long-running experiment-proposal work. The record tracks execution state only; it is not graph truth. Human gating still happens in the main agent/user conversation before any graph delta is accepted.
 
 ```bash
 python3 "$PLUGIN_ROOT/tools/project_experiment_cli.py" suggest --repo "$WORKSPACE_PATH" --project "$PROJECT_ID" --target "$CLAIM_ID" --json
@@ -243,6 +255,8 @@ python3 "$PLUGIN_ROOT/tools/graph_delta_cli.py" decide --repo "$WORKSPACE_PATH" 
 ### Paper Dossier Workflow
 
 When the user asks to create a project-local paper dossier:
+
+Create a durable job record in `.research-pilot/jobs` for long-running deep-read work.
 
 ```bash
 python3 "$PLUGIN_ROOT/tools/paper_dossier_cli.py" create --repo "$WORKSPACE_PATH" --project "$PROJECT_ID" --paper "$PAPER_ID" --title "$TITLE" --json

@@ -2,6 +2,7 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from tools.build_dashboard_index import build_index
 from tools.build_graph_db import main as build_graph_db_main
@@ -24,6 +25,119 @@ class DashboardPublicTest(unittest.TestCase):
         self.assertEqual(index["project_graphs"][0]["project"], "DemoProject")
         self.assertEqual(index["project_graphs"][0]["nodes"][0]["id"], "C0")
         json.dumps(index)
+
+    def test_build_index_exposes_durable_job_records(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            jobs_dir = root / ".research-pilot" / "jobs"
+            jobs_dir.mkdir(parents=True)
+            (jobs_dir / "job-1.json").write_text(
+                json.dumps(
+                    {
+                        "id": "job-1",
+                        "type": "paper_search",
+                        "project": "DemoProject",
+                        "status": "queued",
+                        "created_at": "2026-05-12T00:00:00Z",
+                        "updated_at": "2026-05-12T00:00:00Z",
+                        "owner": "agent",
+                        "human_gate": "required_before_graph_update",
+                        "truth_boundary": "execution_state_only",
+                        "inputs": {"gap_id": "RL0"},
+                        "artifacts": [],
+                        "result_summary": "Queued search. No graph truth changed.",
+                    }
+                ),
+                encoding="utf-8",
+            )
+            (jobs_dir / "job-corrupt.json").write_text("{not-json", encoding="utf-8")
+            (jobs_dir / "job-non-utf8.json").write_bytes(b"\xff\xfe\x00\x00")
+            (jobs_dir / "job-invalid.json").write_text(
+                json.dumps(
+                    {
+                        "id": "job-invalid",
+                        "type": "paper_search",
+                        "project": "DemoProject",
+                        "status": "queued",
+                        "human_gate": "required_before_graph_update",
+                        "truth_boundary": "graph_truth_changed",
+                    }
+                ),
+                encoding="utf-8",
+            )
+            (jobs_dir / "job-missing-project.json").write_text(
+                json.dumps(
+                    {
+                        "id": "job-missing-project",
+                        "type": "paper_search",
+                        "status": "queued",
+                        "created_at": "2026-05-12T00:00:00Z",
+                        "updated_at": "2026-05-12T00:00:00Z",
+                        "owner": "agent",
+                        "human_gate": "required_before_graph_update",
+                        "truth_boundary": "execution_state_only",
+                        "inputs": {"gap_id": "RL0"},
+                        "artifacts": [],
+                        "result_summary": "Missing project.",
+                    }
+                ),
+                encoding="utf-8",
+            )
+            (jobs_dir / "job-a.json").write_text(
+                json.dumps(
+                    {
+                        "id": "job-b",
+                        "type": "paper_search",
+                        "project": "DemoProject",
+                        "status": "queued",
+                        "created_at": "2026-05-12T00:00:00Z",
+                        "updated_at": "2026-05-12T00:00:00Z",
+                        "owner": "agent",
+                        "human_gate": "required_before_graph_update",
+                        "truth_boundary": "execution_state_only",
+                        "inputs": {"gap_id": "RL0"},
+                        "artifacts": [],
+                        "result_summary": "Mismatched id.",
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            index = build_index(root)
+
+        self.assertEqual(len(index["jobs"]), 1)
+        self.assertEqual(index["jobs"][0]["id"], "job-1")
+        self.assertEqual(index["jobs"][0]["truth_boundary"], "execution_state_only")
+
+    def test_build_index_expands_home_repo_root(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp)
+            root = home / "workspace"
+            jobs_dir = root / ".research-pilot" / "jobs"
+            jobs_dir.mkdir(parents=True)
+            (jobs_dir / "job-home.json").write_text(
+                json.dumps(
+                    {
+                        "id": "job-home",
+                        "type": "paper_search",
+                        "project": "DemoProject",
+                        "status": "queued",
+                        "created_at": "2026-05-12T00:00:00Z",
+                        "updated_at": "2026-05-12T00:00:00Z",
+                        "owner": "agent",
+                        "human_gate": "required_before_graph_update",
+                        "truth_boundary": "execution_state_only",
+                        "inputs": {"gap_id": "RL0"},
+                        "artifacts": [],
+                        "result_summary": "Home-expanded job.",
+                    }
+                ),
+                encoding="utf-8",
+            )
+            with patch.dict("os.environ", {"HOME": str(home)}):
+                index = build_index(Path("~/workspace"))
+
+        self.assertEqual(index["jobs"][0]["id"], "job-home")
 
     def test_project_graph_maintenance_api_serves_read_model(self):
         with tempfile.TemporaryDirectory() as tmp:

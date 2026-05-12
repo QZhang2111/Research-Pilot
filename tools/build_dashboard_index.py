@@ -16,6 +16,8 @@ ROOT_DIR = THIS_DIR.parent
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
+from tools.job_records import list_job_records
+
 VALID_REVIEW_STATUSES = {
     "inbox",
     "candidate",
@@ -1031,7 +1033,7 @@ def attach_stats(
 
 
 def build_index(root: Path) -> Dict[str, Any]:
-    root = root.resolve()
+    root = Path(root).expanduser().resolve()
     project_graphs = collect_project_graphs(root)
     projects = collect_projects(root, project_graphs)
     ensure_graph_projects(projects, project_graphs, root)
@@ -1042,6 +1044,7 @@ def build_index(root: Path) -> Dict[str, Any]:
     claims = collect_claims(root, papers)
     attach_stats(projects, papers, rounds, claims)
     attach_project_cards(projects, raw_papers, rounds, round_candidates)
+    jobs = list_job_records(root)
     return {
         "schema_version": "research-browser-v2",
         "generated_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
@@ -1052,6 +1055,7 @@ def build_index(root: Path) -> Dict[str, Any]:
         "rounds": rounds,
         "round_candidates": round_candidates,
         "claims": claims,
+        "jobs": jobs,
     }
 
 
@@ -1065,7 +1069,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     )
     args = parser.parse_args(argv)
 
-    root = Path(args.repo).resolve()
+    root = Path(args.repo).expanduser().resolve()
     data = build_index(root)
     output_is_absolute = Path(args.output).is_absolute()
     output_path = resolve_output_path(root, args.output)
