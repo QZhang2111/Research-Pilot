@@ -14,6 +14,7 @@ class PluginCommandTests(unittest.TestCase):
         self.assertIn("description:", text)
         self.assertIn("# /research-init", text)
         self.assertIn("research_pilot_init.py", text)
+        self.assertIn("not visible", text)
         self.assertIn("research-pilot-first-run", text)
         self.assertNotIn("/Users/" + "qing", text)
         self.assertNotIn("Personal" + "ResearchWiki", text)
@@ -32,7 +33,9 @@ class PluginCommandTests(unittest.TestCase):
 
         self.assertIn("description:", text)
         self.assertIn("# /research-dashboard", text)
+        self.assertIn("Host Fallback", text)
         self.assertIn("research_browser_server.py", text)
+        self.assertIn("plugin_health.py", text)
         self.assertIn("http://127.0.0.1:", text)
         self.assertIn("open \"$URL\"", text)
         self.assertNotIn("/Users/" + "qing", text)

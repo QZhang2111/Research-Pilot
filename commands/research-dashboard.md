@@ -33,6 +33,12 @@ Stop with a clear install instruction if no plugin root is found:
 curl -fsSL https://raw.githubusercontent.com/QZhang2111/Research-Pilot/main/install.sh | bash
 ```
 
+Health check:
+
+```bash
+python3 "$PLUGIN_ROOT/tools/plugin_health.py" --plugin-root "$PLUGIN_ROOT" --json
+```
+
 ## Workspace Check
 
 The workspace must contain:
@@ -77,6 +83,10 @@ open "$URL"
 
 If `open` is unavailable, print the URL.
 
+## Host Fallback
+
+If `/research-dashboard` is not exposed by the host, the agent must run the same server steps from chat. Slash command visibility is not required. Resolve `PLUGIN_ROOT`, run the health check, start `tools/research_browser_server.py`, verify the URL, and report the same completion summary.
+
 ## Boundary
 
 Dashboard is a read-model observer. This command may rebuild `.dashboard/index.json` through the dashboard server, but it must not append graph events, accept deltas, edit project truth, or change Zotero state.
@@ -92,4 +102,3 @@ Port:
 Server log:
 Boundary: read-only observer
 ```
-

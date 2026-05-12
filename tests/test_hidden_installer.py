@@ -81,7 +81,7 @@ class HiddenInstallerTests(unittest.TestCase):
         legacy_catalog_link.parent.mkdir(parents=True)
         legacy_catalog_link.symlink_to(self.home / ".research-pilot" / "repo")
 
-        self._run_install()
+        result = self._run_install()
 
         repo_dir = self.home / ".research-pilot" / "repo"
         skill_link = self.home / ".agents" / "skills" / "alpha-skill"
@@ -96,6 +96,9 @@ class HiddenInstallerTests(unittest.TestCase):
         self.assertFalse(legacy_catalog_link.is_symlink())
         self.assertEqual(Path(os.readlink(init_link)), repo_dir / "tools" / "research_pilot_init.py")
         self.assert_marketplace_entry_installed()
+        self.assertIn("Health check", result.stdout)
+        self.assertIn("plugin_health.py", result.stdout)
+        self.assertIn("fallback", result.stdout.lower())
 
     def test_codex_install_uses_hidden_checkout_not_current_worktree(self) -> None:
         self._run_install("codex")
@@ -108,10 +111,13 @@ class HiddenInstallerTests(unittest.TestCase):
         self._run_install("codex")
         self._add_remote_skill("beta-skill")
 
-        self._run_install("--update")
+        result = self._run_install("--update")
 
         beta_link = self.home / ".agents" / "skills" / "beta-skill"
         self.assertEqual(Path(os.readlink(beta_link)), self.home / ".research-pilot" / "repo" / "skills" / "beta-skill")
+        self.assertIn("Health check", result.stdout)
+        self.assertIn("plugin_health.py", result.stdout)
+        self.assertIn("restart", result.stdout.lower())
 
     def test_uninstall_removes_links_but_keeps_hidden_checkout(self) -> None:
         self._run_install("codex")

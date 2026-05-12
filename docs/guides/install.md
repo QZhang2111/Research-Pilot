@@ -42,6 +42,14 @@ It also creates compatibility helper links:
 
 After restart, Research Pilot should appear as a local plugin in Codex plugin views. If a Codex build only reads skills, the installed skills still work.
 
+Check plugin health:
+
+```bash
+python3 "$HOME/.research-pilot/repo/tools/plugin_health.py" --plugin-root "$HOME/.research-pilot/repo" --json
+```
+
+The health check reports plugin version, source path, command files, helper links, and whether the dashboard server fallback is available. `commands_visible` is `unknown` because command exposure is host state; restart Codex after install or update so plugin metadata reloads.
+
 After install, start Codex and use the plugin command:
 
 ```bash
@@ -56,6 +64,12 @@ Manual fallback:
 
 ```bash
 ~/.research-pilot/bin/research-pilot-init ~/Research/MyResearchWiki
+```
+
+If `/research-init` is not visible, ask the agent to resolve `PLUGIN_ROOT` and run:
+
+```bash
+python3 "$PLUGIN_ROOT/tools/research_pilot_init.py" "$WORKSPACE_PATH"
 ```
 
 Run the agent inside the private workspace after initialization:
@@ -76,6 +90,8 @@ Open the dashboard:
 ```text
 /research-dashboard ~/Research/MyResearchWiki
 ```
+
+If `/research-dashboard` is not visible, ask the agent to use the host fallback in `commands/research-dashboard.md`. The fallback starts `tools/research_browser_server.py` from the plugin root, verifies the local URL, and opens or prints it. Slash command visibility is not required.
 
 Update plugin source:
 
