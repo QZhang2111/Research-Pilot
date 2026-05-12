@@ -25,6 +25,8 @@ class CodexPluginManifestTests(unittest.TestCase):
         self.assertIn("Interactive", interface["capabilities"])
         self.assertIn("Read", interface["capabilities"])
         self.assertIn("Write", interface["capabilities"])
+        self.assertIn("private research workspace", interface["longDescription"])
+        self.assertIn("human-gated", interface["longDescription"])
         self.assertRegex(interface["brandColor"], r"^#[0-9A-Fa-f]{6}$")
 
     def test_default_prompts_stay_codex_sized(self) -> None:
