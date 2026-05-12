@@ -624,6 +624,38 @@ class ZoteroClient:
             start += limit
         return collections
 
+    def create_collection(self, name: str, parent_collection: str = "") -> Dict[str, Any]:
+        payload = [
+            {
+                "name": name,
+                "parentCollection": parent_collection or False,
+            }
+        ]
+        request = urllib.request.Request(
+            f"{self.base_url}/collections",
+            data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
+            method="POST",
+        )
+        if self.api_key:
+            request.add_header("Zotero-API-Key", self.api_key)
+        request.add_header("Content-Type", "application/json")
+        request.add_header("Accept", "application/json")
+        with urllib.request.urlopen(request, timeout=30) as response:
+            created = json.loads(response.read().decode("utf-8"))
+        successful = created.get("successful", {}) if isinstance(created, dict) else {}
+        if successful:
+            first = successful[sorted(successful.keys())[0]]
+            key = str(first.get("key") or "")
+            if not key:
+                detail = json.dumps(created, ensure_ascii=False, sort_keys=True)
+                raise ValueError(f"Zotero collection creation failed for {name}: missing key in response {detail}")
+            return {"key": key, "data": {"key": key, "name": name, "parentCollection": parent_collection or False}}
+        failed = created.get("failed", {}) if isinstance(created, dict) else {}
+        if failed:
+            detail = json.dumps(failed, ensure_ascii=False, sort_keys=True)
+            raise ValueError(f"Zotero collection creation failed for {name}: {detail}")
+        raise ValueError(f"Zotero collection creation failed for {name}")
+
 
 class ZoteroBridge:
     def __init__(self, *, root: Path, library_id: str, library_type: str = "users"):
