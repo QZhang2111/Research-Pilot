@@ -13,7 +13,7 @@ Research Pilot is the primary router skill for agent-operated research memory.
 - Explain plugin vs workspace boundary.
 - Initialize a private research workspace.
 - Inspect whether the current directory looks like a Research Pilot workspace.
-- Guide first-run setup from plugin source or empty directory to first human-gated graph update.
+- Guide first-run setup from plugin source or empty directory to a project shell, then a human-gated graph update when real graph-worthy input exists.
 - Validate project graph-event JSONL.
 - Build generated graph snapshots.
 - Build generated SQLite graph read models.
@@ -31,8 +31,14 @@ Research Pilot is the primary router skill for agent-operated research memory.
 - Export paper-dossier graph delta JSON proposals.
 - Intake Zotero-first source identity, with manual source-reference capture for setup/dry-run cases.
 - Build and serve the Research Browser dashboard.
+- Create durable execution-state records for long search, deep-read, synthesis, and experiment-proposal jobs.
 
 Dashboard is a required public component and a browser observer. It must not become graph truth.
+Durable job records are execution state only. They must not become graph truth.
+
+## Durable Research Jobs
+
+For long paper-search, deep-read, evidence-synthesis, or experiment-proposal work, create a durable record under `.research-pilot/jobs`. Job records track execution state only. They do not change graph truth. Any graph change from job output still requires D* dry-run, D* registration, and explicit human decision in the main agent/user conversation before acceptance.
 
 ## Workspace Detection
 
@@ -94,10 +100,18 @@ When the user asks to start from scratch, create the first project, initialize a
 $WORKSPACE_PATH/wiki/_system/workflows/first-run.md
 ```
 
-3. Detect state: plugin repo, initialized workspace, plain directory, or unknown.
+3. Before suggesting next actions, run:
+
+```bash
+python3 "$PLUGIN_ROOT/tools/research_pilot_status.py" --repo "$WORKSPACE_PATH" --json
+```
+
+Summarize the returned stage in chat. Offer at most two next actions. Do not mutate graph truth during status inspection.
+
 4. Create or confirm a private workspace.
 5. Collect only minimum project intake: project id/name, one-sentence direction, first question/claim, Zotero now/later.
-6. Route the first graph-level question or claim through D* dry-run and human gate.
+6. If the user only has a venue, broad direction, or baseline-paper need, create a project shell first. Defer the first graph delta until the user provides a real question, claim, evidence pressure, paper synthesis, or experiment result.
+7. Route the first graph-level question or claim through D* dry-run and human gate.
 
 Do not start paper search or dashboard work before a first project question or claim exists.
 
@@ -105,9 +119,13 @@ Do not start paper search or dashboard work before a first project question or c
 
 When the user asks to inspect current Research Pilot status:
 
-1. Check for the workspace detection files.
-2. If present, report that the workspace skeleton is initialized.
-3. If absent, explain that the user should run initialization first.
+Before suggesting next actions, run:
+
+```bash
+python3 "$PLUGIN_ROOT/tools/research_pilot_status.py" --repo "$WORKSPACE_PATH" --json
+```
+
+Summarize the returned stage in chat. Offer at most two next actions. Do not mutate graph truth during status inspection.
 
 ### Validate Graph Events
 
@@ -176,6 +194,8 @@ Do not silently promote human discussion into graph truth.
 
 When a set of papers, dossiers, or experiment notes should affect project understanding:
 
+Create a durable job record in `.research-pilot/jobs` for long-running evidence-synthesis work.
+
 1. Read the workspace protocol:
 
 ```text
@@ -192,6 +212,8 @@ Do not approve sources or mutate graph truth without explicit human decision.
 
 When the user asks to find papers for a graph gap:
 
+Create a durable job record in `.research-pilot/jobs` for long-running search work. The record tracks execution state only; it is not graph truth. Human gating still happens in the main agent/user conversation before any graph delta is accepted.
+
 ```bash
 python3 "$PLUGIN_ROOT/tools/research_gap_discovery_cli.py" run --repo "$WORKSPACE_PATH" --project "$PROJECT_ID" --gap "$GAP_TARGET" --source memory --json
 ```
@@ -201,6 +223,8 @@ Use `--source arxiv`, `--source openreview`, or `--source all` only when the use
 ### Experiment Proposal
 
 When the user asks what experiment could test a claim:
+
+Create a durable job record in `.research-pilot/jobs` for long-running experiment-proposal work. The record tracks execution state only; it is not graph truth. Human gating still happens in the main agent/user conversation before any graph delta is accepted.
 
 ```bash
 python3 "$PLUGIN_ROOT/tools/project_experiment_cli.py" suggest --repo "$WORKSPACE_PATH" --project "$PROJECT_ID" --target "$CLAIM_ID" --json
@@ -232,6 +256,8 @@ python3 "$PLUGIN_ROOT/tools/graph_delta_cli.py" decide --repo "$WORKSPACE_PATH" 
 
 When the user asks to create a project-local paper dossier:
 
+Create a durable job record in `.research-pilot/jobs` for long-running deep-read work.
+
 ```bash
 python3 "$PLUGIN_ROOT/tools/paper_dossier_cli.py" create --repo "$WORKSPACE_PATH" --project "$PROJECT_ID" --paper "$PAPER_ID" --title "$TITLE" --json
 ```
@@ -252,6 +278,15 @@ python3 "$PLUGIN_ROOT/tools/source_intake_cli.py" intake --repo "$WORKSPACE_PATH
 ```
 
 Normal paper management is Zotero-first. If Zotero credentials are not configured yet, DOI, arXiv, URL, or manual source refs may be recorded only as source identity capture; do not present this as a replacement paper manager.
+
+For Zotero setup, use the agent-facing helper:
+
+```bash
+python3 "$PLUGIN_ROOT/tools/zotero_setup.py" prepare-env --repo "$WORKSPACE_PATH" --json
+python3 "$PLUGIN_ROOT/tools/zotero_setup.py" status --repo "$WORKSPACE_PATH" --json
+```
+
+Do not print API keys. Do not mention Zotero MCP as part of the normal user flow.
 
 ### Dashboard
 

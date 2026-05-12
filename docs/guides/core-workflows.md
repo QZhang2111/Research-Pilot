@@ -79,6 +79,24 @@ python3 tools/paper_dossier_cli.py validate --dossier "$DOSSIER" --json
 python3 tools/paper_dossier_cli.py export-deltas --dossier "$DOSSIER" --output-dir "$WORKSPACE/.research-pilot/generated/deltas" --json
 ```
 
+## Durable Research Jobs
+
+Long paper search, deep-read, evidence-synthesis, and experiment-proposal work should create durable records under `.research-pilot/jobs`.
+
+Valid statuses:
+
+```text
+queued
+running
+needs_review
+done
+failed
+```
+
+Job records are execution state only. They are not graph truth and must not be treated as accepted project understanding.
+
+Project-understanding changes still use D* delta dry-run, registration, and explicit human acceptance before graph truth changes.
+
 ## Delta Update
 
 ```bash

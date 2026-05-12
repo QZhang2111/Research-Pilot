@@ -1,0 +1,74 @@
+---
+title: "Research Pilot Trial Defects"
+type: feedback-log
+created: 2026-05-12
+updated: 2026-05-12
+tags:
+  - research-pilot
+  - trial
+  - defects
+  - codex
+status: active
+---
+
+# Research Pilot Trial Defects
+
+Purpose: record errors, gaps, friction, and improvement ideas found while testing Research Pilot inside Codex.
+
+Workspace: `~/Research/MyResearchWiki`
+Plugin: `research-pilot`
+Tester role: feature trial owner
+
+## Defect Log
+
+| ID | Date | Area | Scenario | Expected | Actual | Impact | Severity | Status | Notes |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| RP-001 | 2026-05-12 | Onboarding | Initial workspace inspection | Agent clearly explains plugin/workspace state and next action | Initial inspection was only a seed entry and did not create an actionable first-run diagnosis | Trial evidence could not drive implementation without a concrete status contract | medium | planned | Covered by `research_pilot_status.py` and stage-aware first-run flow. |
+| RP-002 | 2026-05-12 | Onboarding | New user opens Codex from an initialized `MyResearchWiki` workspace | Agent detects current stage: empty workspace, project started, open deltas, papers present, or read models stale; then gives stage-specific next actions | User can feel lost after plugin install and workspace init because there is no clear stage diagnosis or guided next step | Users may not know whether to create a first project, inspect existing state, open dashboard, or provide Zotero/project context | high | planned | Proposed behavior: on workspace entry, run a read-only "where am I?" check and suggest the next one or two actions. |
+| RP-003 | 2026-05-12 | Commands | User runs `/research-dashboard` after plugin install | Codex recognizes `/research-dashboard` or provides an equivalent visible command entry | Codex reports `Unrecognized command '/research-dashboard'. Type "/" for a list of supported commands.` | New user follows documented path but immediately hits a dead command; dashboard path appears broken even though plugin files exist | high | planned | Evidence: plugin command file exists at `~/.research-pilot/repo/commands/research-dashboard.md`, but current Codex command registry does not expose it. Need installer/manifest/host compatibility check or fallback instruction. |
+| RP-004 | 2026-05-12 | Project creation | New user wants to create first research project from realistic academic context | Project creation captures target venue, maturity stage, rough direction, and 1-2 baseline papers when available | Current first-run protocol asks only for project id/name, one-sentence direction, first question/claim, and Zotero status | Project memory starts from an under-specified research context; agent may miss venue constraints, contribution bar, timeline, and baseline anchors | medium | planned | User expectation: project start often begins from target conference, broad direction without concrete topic, and baseline papers. |
+| RP-005 | 2026-05-12 | Project lifecycle | User has target venue and broad direction but no baseline paper or concrete question yet | System should allow creating a project page/dashboard entry without creating an understanding graph yet | Current first-run flow pushes toward first question/claim and first graph delta immediately | User may feel forced to invent a graph-level question before enough context exists; project shell and graph truth are conflated | medium | planned | Better lifecycle: create project shell from venue + direction; then collect baseline papers or detailed needs; then search/deep-read/synthesize; then create first graph delta. |
+| RP-006 | 2026-05-12 | Agent orchestration | User starts project shell, paper search, baseline reading, or synthesis from main chat | Clear boundary exists between main agent work, delegated subagent work, durable job records, and human gate | Current Research Pilot workflow does not specify when to use subagents, how background work is tracked, or how results return to the user/dashboard | Long paper/search/synthesis tasks may block the main chat, lose progress, or blur who can mutate project truth | medium | planned | Proposed principle to evaluate: project shell stays in main agent; paper search/deep-read/synthesis can use subagents plus durable job records; human gate stays with main agent/user. |
+| RP-007 | 2026-05-12 | Dashboard/project display | Project shell is created with both `overview.md` and `project-query-pack.md` | Dashboard project title should use the user-facing project name from `overview.md` or explicit project metadata | Dashboard title becomes `AAAI2027 Affordance Estimation Query Pack` because dashboard prefers `project-query-pack.md` when present | User sees an internal artifact name as project name, which makes the project feel mislabeled | medium | planned | Source: `build_dashboard_index.py` selects `project-query-pack.md` before `overview.md` for project card metadata. Need separate display title vs query-pack artifact title. |
+| RP-008 | 2026-05-12 | Dashboard/project display | Early project shell has no concrete research question yet | Dashboard should distinguish broad project prompts, search prompts, and accepted graph questions | Dashboard shows generated baseline-search prompts under `当前问题`, making them look like existing research questions | User cannot tell whether these are agent-created prompts, Research Pilot required fields, or accepted project understanding | medium | planned | Need label such as `Next setup questions` / `Seed search prompts`, or hide until a real user-approved project question exists. |
+| RP-009 | 2026-05-12 | Zotero onboarding | User reaches baseline-paper stage and needs Zotero connected | Agent should create `.env` from template, open/provide Zotero API key URL, tell user to paste key locally, then continue setup after validation | Existing docs/config do not provide this simple guided path; workspace `config.example.toml` only has `enabled = true` | User has to infer where secrets go and what to configure | high | planned | Correct flow: prepare `.env`, link `https://www.zotero.org/settings/keys/new`, user pastes only `ZOTERO_API_KEY`, agent validates without printing key. |
+| RP-010 | 2026-05-12 | Zotero config validation | User pastes `ZOTERO_API_KEY` into `.env` | Status/setup command should load `.env`, validate key, discover My Library, and continue automatically | `source_intake_cli.py status` reads process environment only and does not load workspace `.env`; `zotero_bridge.py` loads `.env` but setup is not unified | Valid local config can be missed; setup requires ad hoc commands | medium | planned | Need one canonical `zotero setup/status` path that reads `.env` and hides secrets. |
+| RP-011 | 2026-05-12 | Zotero collection setup | After API key validation, Research Pilot should prepare Zotero storage | Plugin should create or reuse `My Library / Research_Pilot` root collection and standard project subcollections | Current setup lacks a first-class command for `Research_Pilot` root collection creation and key persistence | Baseline-paper workflow lacks a predictable Zotero destination | high | planned | Desired tree: `Research_Pilot/{00 Inbox,10 Projects,20 Research Areas,30 Review Campaigns,90 Archive}` plus project-level collections under `10 Projects/<project>`. |
+| RP-012 | 2026-05-12 | Zotero integration portability | Trial used local Zotero MCP during diagnosis | Research Pilot user flow should not mention or depend on Zotero MCP | External MCP can hide missing plugin functionality | New users should need only Zotero account + API key | high | planned | Remove MCP from user-facing flow. Research Pilot should own Web API validation, collection creation, and config persistence. |
+| RP-013 | 2026-05-12 | Plugin updates | Installed Research Pilot plugin changes upstream | User should have an obvious way to check current version, update plugin source, relink skills/commands, and know whether Codex restart is needed | Update path exists in `install.sh --update`, but it is not surfaced during normal workspace use and does not appear as an agent-facing health check | User may run stale plugin code while workspace assumes newer workflows | medium | planned | Need `research-pilot update/status` or onboarding hint. Current documented command: `curl -fsSL https://raw.githubusercontent.com/QZhang2111/Research-Pilot/main/install.sh \| bash -s -- --update`. |
+
+## Improvement Ideas
+
+| ID | Date | Area | Idea | Why It Matters | Status | Notes |
+| --- | --- | --- | --- | --- | --- | --- |
+| RI-001 | 2026-05-12 | Feedback capture | Keep one lightweight defects/improvements note in workspace | Gives later agents concrete trial evidence to process | open | This file. |
+| RI-002 | 2026-05-12 | Onboarding | Add stage-aware onboarding prompt for initialized workspaces | Converts an empty or partially configured workspace into an obvious next step instead of leaving the user to guess commands | open | Stages should include empty workspace, project exists, open deltas, papers/dossiers present, and generated read models missing/stale. |
+| RI-003 | 2026-05-12 | Commands | Add command availability self-check after install | Prevents docs from telling users to run slash commands that current Codex cannot recognize | open | Could print visible fallback: `python3 ~/.research-pilot/repo/tools/research_browser_server.py --repo ~/Research/MyResearchWiki --host 127.0.0.1 --port 8765`. |
+| RI-004 | 2026-05-12 | Project creation | Add maturity-aware project intake | Better matches academic project formation: venue target, broad direction, baseline anchors, then evolving questions/claims | open | Keep minimum path, but ask optional structured fields before first graph delta. |
+| RI-005 | 2026-05-12 | Project lifecycle | Separate project shell creation from understanding graph creation | Lets early-stage projects exist in wiki/dashboard before there is enough evidence for graph truth | open | Project shell can be `human_review: pending`; graph remains empty until baseline papers, user needs, or search results support a first question/claim delta. |
+| RI-006 | 2026-05-12 | Agent orchestration | Design durable job records for delegated research work | Lets users continue in main chat while slow search/deep-read/synthesis work runs or can be resumed | open | Candidate path: `wiki/jobs/<job-id>.md` or `.research-pilot/jobs/<job-id>.json`; dashboard should show queued/running/needs-review/done/failed and link artifacts. |
+| RI-007 | 2026-05-12 | Dashboard/project display | Split project display metadata from internal query-pack metadata | Prevents dashboard from surfacing internal artifact names as project names | open | Project card should prefer `overview.md` title or `display_title` field; query pack remains a linked core file. |
+| RI-008 | 2026-05-12 | Dashboard/project display | Add explicit field types for early-stage prompts | Avoids presenting setup/search prompts as established project questions | open | Candidate fields: `seed_questions`, `search_questions`, `accepted_questions`, with dashboard labels matching lifecycle stage. |
+| RI-009 | 2026-05-12 | Zotero onboarding | Add API-key-first setup flow | Makes Zotero connection one guided step: prepare `.env`, link API key page, validate key, continue | open | Agent should run `cp .env.example .env` when missing, then provide `https://www.zotero.org/settings/keys/new`; user only pastes key locally. |
+| RI-010 | 2026-05-12 | Zotero config validation | Add one canonical Zotero status/setup command | Gives users a reliable configured/not-configured answer before paper intake | open | Command should load `.env`, validate `ZOTERO_API_KEY`, discover My Library, and never print secrets. |
+| RI-011 | 2026-05-12 | Zotero collection setup | Add built-in creation/reuse of `Research_Pilot` collection tree | Gives every project a predictable Zotero destination for inbox, baselines, candidates, reading, project-core, and archive | open | Persist collection keys in `.research-pilot/config.toml`; file remains ignored. |
+| RI-012 | 2026-05-12 | Zotero integration portability | Remove Zotero MCP from user-facing workflow | Makes Research Pilot usable for new users without environment-specific MCP tools | open | User-facing setup should use Research Pilot Web API tooling only. |
+| RI-013 | 2026-05-12 | Plugin updates | Add plugin update/status UX | Prevents stale local plugin installations and clarifies what updates affect | open | Should show local commit/version, upstream availability, update command, relink status, and restart guidance. Must not mutate private workspace data. |
+
+## Retest Queue
+
+| ID | What To Retest | Trigger | Result | Date |
+| --- | --- | --- | --- | --- |
+| RP-001 | First-run onboarding clarity | Run `research_pilot_status.py` through agent workflow from plugin repo and workspace | Planned: expect stage plus one or two next actions | 2026-05-12 |
+| RP-002 | Stage-aware workspace guidance | Open Codex in `MyResearchWiki` after init but before any project exists | TBD | TBD |
+| RP-003 | Slash command availability | Run `/research-dashboard` in Codex after install | Failed: unrecognized command | 2026-05-12 |
+| RP-004 | Project creation intake quality | Start first project with venue + rough direction + baseline papers, no concrete topic | TBD | TBD |
+| RP-005 | Project shell before graph | Create project from target venue + broad direction only, then view dashboard | TBD | TBD |
+| RP-006 | Delegated research job UX | Start a paper search or deep-read while continuing main chat | TBD | TBD |
+| RP-007 | Project title display | Create shell with query pack present, open dashboard project page | Failed: title includes `Query Pack` | 2026-05-12 |
+| RP-008 | Current question semantics | Create shell before concrete topic exists, inspect `当前问题` panel | Failed: generated search/setup prompts appear as current questions | 2026-05-12 |
+| RP-009 | API-key-first setup | Missing `.env`, user needs Zotero connection | Partially passed manually: agent created `.env`, user pasted key locally | 2026-05-12 |
+| RP-010 | Zotero status consistency | Validate `.env`-stored key through one status command | Failed: no canonical status/setup command yet | 2026-05-12 |
+| RP-011 | Research_Pilot collection tree | After API key validation, create Zotero project collections | Passed manually through Web API; needs product command | 2026-05-12 |
+| RP-012 | No MCP dependency | Repeat setup without Zotero MCP in clean environment | TBD | TBD |
+| RP-013 | Plugin update path | Ask how to update installed Research Pilot after upstream changes | Partially passed: installer supports `--update`; UX/status command missing | 2026-05-12 |

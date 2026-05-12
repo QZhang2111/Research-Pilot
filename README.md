@@ -157,6 +157,8 @@ The agent starts the local dashboard server and opens:
 http://127.0.0.1:8765/dashboard/index.html
 ```
 
+If a slash command is not visible in your Codex host, ask the agent to open the Research Pilot dashboard. The agent can use the same dashboard server fallback from the plugin tools.
+
 ---
 
 ## 🧪 What You Can Ask The Agent
@@ -198,6 +200,8 @@ Based on current graph state, what should I do next?
 ## 🧩 Core Loop
 
 Research Pilot keeps the project loop explicit:
+
+Early projects may start as a project shell before graph truth exists. A project shell can capture target venue, maturity stage, broad direction, baseline anchors, and setup/search prompts. Graph truth starts only after a human-approved D* delta.
 
 ```text
 project question

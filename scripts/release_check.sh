@@ -15,7 +15,7 @@ for pattern in \
   fi
 done
 
-if rg -n 'ZOTERO_API_KEY=[^"[:space:]]' . --glob '!/.git/**' --glob '!scripts/release_check.sh'; then
+if rg -n "ZOTERO_API_KEY[[:space:]]*=[[:space:]]*([^\"'[:space:]]+|\"[^\"[:space:]]+\"|'[^'[:space:]]+')" . --glob '!/.git/**' --glob '!scripts/release_check.sh'; then
   echo "release check failed: possible Zotero API key assignment" >&2
   exit 1
 fi
@@ -32,6 +32,7 @@ python3 -m unittest \
   tests.test_first_run_protocol \
   tests.test_graph_schema_contracts \
   tests.test_source_intake_cli \
+  tests.test_zotero_setup \
   tests.test_graph_core \
   tests.test_project_graph_report \
   tests.test_graph_delta_loop \

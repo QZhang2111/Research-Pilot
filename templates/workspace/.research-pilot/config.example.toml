@@ -13,3 +13,7 @@ enabled = true
 
 [dashboard]
 enabled = true
+
+[project_lifecycle]
+default_maturity_stage = "project_shell"
+allow_project_shell_without_graph = true

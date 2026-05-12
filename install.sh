@@ -259,6 +259,13 @@ link_installation() {
   link_bins
 }
 
+print_post_install_guidance() {
+  printf 'Health check:\n'
+  printf '  python3 "%s/tools/plugin_health.py" --plugin-root "%s" --json\n' "$REPO_DIR" "$REPO_DIR"
+  printf 'Restart Codex after install or update so plugin metadata reloads.\n'
+  printf 'Fallback: if slash commands are not visible, ask the agent to run the command fallback from %s.\n' "$REPO_DIR"
+}
+
 cmd_install() {
   local id="${1:-codex}"
   clone_or_update
@@ -270,6 +277,7 @@ cmd_install() {
   printf 'Initialize a private workspace:\n'
   printf '  %s/research-pilot-init ~/Research/MyResearchWiki\n' "$BIN_DIR"
   printf 'Then run Codex from inside that workspace.\n'
+  print_post_install_guidance
 }
 
 cmd_update() {
@@ -282,6 +290,7 @@ cmd_update() {
   printf '\nUpdated Research Pilot for codex\n'
   printf 'Plugin source: %s\n' "$REPO_DIR"
   printf 'Plugin catalog: %s\n' "$MARKETPLACE_PATH"
+  print_post_install_guidance
 }
 
 cmd_uninstall() {

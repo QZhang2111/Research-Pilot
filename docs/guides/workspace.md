@@ -22,3 +22,15 @@ Do not publish a workspace unless it is explicitly sanitized.
 
 Do not commit PDFs, Zotero credentials, local Zotero databases, generated SQLite files, or dashboard read models.
 
+## Workspace Stages
+
+Research Pilot workspaces are stage-aware:
+- empty workspace;
+- project shell;
+- graph started;
+- papers present;
+- open deltas;
+- stale read models;
+- Zotero setup needed.
+
+The agent should inspect stage before suggesting next actions.

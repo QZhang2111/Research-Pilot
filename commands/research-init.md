@@ -32,6 +32,10 @@ Stop with a clear install instruction if no plugin root is found:
 curl -fsSL https://raw.githubusercontent.com/QZhang2111/Research-Pilot/main/install.sh | bash
 ```
 
+## Host Fallback
+
+If `/research-init` is not visible, the agent must resolve `PLUGIN_ROOT`, run `tools/research_pilot_init.py` from that plugin root, and report the same completion summary. Slash command visibility is not required.
+
 ## Workflow
 
 1. Classify current location:
@@ -78,4 +82,3 @@ Human gate result:
 Generated read models:
 Next possible moves:
 ```
-

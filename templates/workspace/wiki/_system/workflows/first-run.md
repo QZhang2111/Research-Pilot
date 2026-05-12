@@ -11,30 +11,42 @@ Use this protocol when a new user starts Research Pilot, initializes a private w
 
 ## Purpose
 
-Guide the user to the first human-gated project graph update.
+Guide the user to a status-aware workspace and project shell. Defer the first human-gated project graph update until graph-worthy input exists.
 
 Success is not "all features shown." Success is:
 
 ```text
 workspace exists
 project exists
-first question or claim has a proposed D*
+first question, claim, evidence pressure, paper synthesis, or experiment result has a proposed D*
 human gate happens
 accepted changes enter append-only graph events
 read models can rebuild
 agent suggests the next research move
 ```
 
+If the user only has a venue, broad direction, or baseline-paper need, create a project shell first. Defer the first graph delta until the user provides a real question, claim, evidence pressure, paper synthesis, or experiment result.
+
 ## State Detection
 
-Classify the current directory:
+Before suggesting next actions, run:
+
+```bash
+python3 "$PLUGIN_ROOT/tools/research_pilot_status.py" --repo "$WORKSPACE_PATH" --json
+```
+
+Summarize the returned stage in chat. Offer at most two next actions. Do not mutate graph truth during status inspection.
+
+Use returned stage values:
 
 | State | Markers | Action |
 |---|---|---|
 | plugin_repo | `install.sh`, `tools/research_pilot_init.py`, `skills/research-pilot/SKILL.md` | explain repo vs workspace; ask for workspace path |
-| initialized_workspace | `AGENTS.md`, `wiki/index.md`, `wiki/log.md`, `.research-pilot/` | inspect workspace and continue |
+| empty_workspace | `AGENTS.md`, `wiki/index.md`, `wiki/log.md`, `.research-pilot/`, no projects | create first project shell |
+| project_shell | project overview exists, no graph report | configure Zotero or add baseline anchors |
+| read_models_stale | graph events newer than generated views | rebuild read models |
+| project_has_graph | project graph exists | inspect current graph and next action |
 | plain_directory | no Research Pilot markers | ask whether to initialize here or elsewhere |
-| unknown | conflicting markers | explain uncertainty and ask before writing |
 
 In normal installed use, the plugin repo is hidden at `~/.research-pilot/repo`; the optional plugin-root symlink is `~/.research-pilot-plugin`. User-visible research data belongs in the initialized workspace.
 
@@ -47,7 +59,7 @@ Ask only for missing essentials:
 - first question, uncertainty, or claim;
 - Zotero status: configured now or later.
 
-Do not force a full project charter before the first graph update.
+Do not force a full project charter before project shell creation.
 
 ## Project Skeleton
 
@@ -65,7 +77,9 @@ Use `human_review: pending` unless the user explicitly approves a decision or gr
 
 ## First Graph Update
 
-The first durable update should usually be a `Question` node. A `Claim` node is allowed when the user gives a contestable project judgment.
+If the user only has a venue, broad direction, or baseline-paper need, stop after project shell creation and explain what input would justify a graph delta.
+
+The first durable graph update should usually be a `Question` node. A `Claim` node is allowed when the user gives a contestable project judgment.
 
 Required flow:
 

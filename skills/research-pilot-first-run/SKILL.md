@@ -6,7 +6,7 @@ argument-hint: "[workspace path] [project id]"
 
 # Research Pilot First Run
 
-Guide a user from plugin/repo confusion to the first project graph update.
+Guide a user from plugin/repo confusion to a status-aware workspace and project shell. Defer the first project graph update until graph-worthy input exists.
 
 Primary command:
 
@@ -21,7 +21,7 @@ Create the minimum working research memory loop:
 ```text
 workspace exists
 -> first project exists
--> first question or claim becomes proposed D*
+-> first question, claim, evidence pressure, paper synthesis, or experiment result becomes proposed D*
 -> dry-run passes
 -> human accepts/rejects/parks/revises
 -> accepted event updates graph
@@ -30,15 +30,26 @@ workspace exists
 ```
 
 Do not showcase every feature. Do not start paper search first. Do not mutate graph truth without human approval.
+If the user only has a venue, broad direction, or baseline-paper need, create a project shell first. Defer the first graph delta until the user provides a real question, claim, evidence pressure, paper synthesis, or experiment result.
 
 ## State Detection
 
-First identify where the user is:
+Before suggesting next actions, run:
+
+```bash
+python3 "$PLUGIN_ROOT/tools/research_pilot_status.py" --repo "$WORKSPACE_PATH" --json
+```
+
+Summarize the returned stage in chat. Offer at most two next actions. Do not mutate graph truth during status inspection.
+
+Use returned stage values:
 
 - `plugin_repo`: current directory contains `install.sh`, `tools/research_pilot_init.py`, and `skills/research-pilot/SKILL.md`.
-- `initialized_workspace`: current directory contains `AGENTS.md`, `wiki/index.md`, `wiki/log.md`, and `.research-pilot/config.example.toml` or `.research-pilot/config.toml`.
-- `empty_or_plain_directory`: no Research Pilot workspace markers.
-- `unknown`: conflicting markers or missing permissions.
+- `plain_directory`: no Research Pilot workspace markers.
+- `empty_workspace`: workspace exists without projects.
+- `project_shell`: project shell exists without graph truth.
+- `read_models_stale`: graph events are newer than generated read models.
+- `project_has_graph`: project graph exists.
 
 If in `plugin_repo`, explain:
 
@@ -110,7 +121,9 @@ Use public-safe frontmatter and default `human_review: pending` unless the user 
 
 ### 5. First graph update
 
-Convert the first question or claim into a D* proposal:
+If the user only has a venue, broad direction, or baseline-paper need, stop after project shell creation and explain what input would justify a graph delta.
+
+Convert the first real question, claim, evidence pressure, paper synthesis, or experiment result into a D* proposal:
 
 - new question -> `operation_type: add_node`, `evolution_type: add`
 - new claim -> `operation_type: add_node`, `evolution_type: add`

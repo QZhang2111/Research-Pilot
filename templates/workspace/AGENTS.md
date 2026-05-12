@@ -29,6 +29,12 @@ Only the human may approve:
 - research direction changes;
 - experiment result interpretation.
 
+## Project Lifecycle
+
+Early projects may start as project shells with venue, broad direction, baseline anchors, and setup prompts.
+Project shells are not graph truth.
+Create graph deltas only after the human supplies or approves a graph-level question, claim, evidence pressure, paper synthesis, or experiment result.
+
 ## Private Data
 
 Do not publish this workspace unless the human explicitly says it is sanitized.

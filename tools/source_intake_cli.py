@@ -5,7 +5,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -16,6 +15,7 @@ if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
 from tools.paper_dossier_cli import create_dossier, dossier_path
+from tools.zotero_setup import zotero_status as workspace_zotero_status
 
 
 def source_refs_from_args(args: argparse.Namespace) -> List[str]:
@@ -32,17 +32,11 @@ def source_refs_from_args(args: argparse.Namespace) -> List[str]:
     return refs
 
 
-def zotero_status() -> Dict[str, Any]:
-    api_key = os.environ.get("ZOTERO_API_KEY", "")
-    library_id = os.environ.get("ZOTERO_LIBRARY_ID", "")
-    library_type = os.environ.get("ZOTERO_LIBRARY_TYPE", "user")
-    return {
-        "enabled": bool(api_key and library_id),
-        "library_id_present": bool(library_id),
-        "api_key_present": bool(api_key),
-        "library_type": library_type,
-        "mode": "zotero-env" if api_key and library_id else "manual-source-identity",
-    }
+def zotero_status(repo: str = ".") -> Dict[str, Any]:
+    status = dict(workspace_zotero_status(Path(repo), validate=False))
+    if status.get("mode") == "not-configured":
+        status["mode"] = "manual-source-identity"
+    return status
 
 
 def intake_source(args: argparse.Namespace) -> Dict[str, Any]:
@@ -58,7 +52,7 @@ def intake_source(args: argparse.Namespace) -> Dict[str, Any]:
         "created": bool(create_result.get("created")),
         "path": create_result.get("path"),
         "source_refs": refs,
-        "zotero": zotero_status(),
+        "zotero": zotero_status(args.repo),
         "error": create_result.get("error", ""),
     }
 
@@ -84,6 +78,7 @@ def main(argv: Optional[list[str]] = None) -> int:
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     status = subparsers.add_parser("status", help="Show Zotero environment status.")
+    status.add_argument("--repo", default=".")
     status.add_argument("--json", action="store_true")
 
     intake = subparsers.add_parser("intake", help="Create a project-local dossier from source identity.")
@@ -100,7 +95,7 @@ def main(argv: Optional[list[str]] = None) -> int:
     intake.add_argument("--json", action="store_true")
 
     args = parser.parse_args(argv)
-    result = zotero_status() if args.command == "status" else intake_source(args)
+    result = zotero_status(args.repo) if args.command == "status" else intake_source(args)
     print_result(result, bool(getattr(args, "json", False)))
     return 0 if result.get("valid", True) else 1
 
