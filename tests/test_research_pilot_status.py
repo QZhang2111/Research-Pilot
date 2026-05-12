@@ -61,8 +61,39 @@ class ResearchPilotStatusTest(unittest.TestCase):
 
             result = inspect_workspace(root)
 
-        self.assertEqual(result["stage"], "project_has_graph")
+        self.assertEqual(result["stage"], "read_models_stale")
         self.assertTrue(result["projects"][0]["has_graph_events"])
+
+    def test_graph_only_project_is_not_reported_as_empty_workspace(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            init_workspace_main([str(root), "--no-git"])
+            events = root / "wiki" / "graphs" / "events" / "projects" / "DemoProject.jsonl"
+            events.parent.mkdir(parents=True)
+            events.write_text(
+                json.dumps(
+                    {
+                        "event_id": "E0",
+                        "event_type": "delta.proposed",
+                        "payload": {
+                            "delta_id": "project:DemoProject:D1",
+                            "local_id": "D1",
+                            "status": "proposed",
+                        },
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            result = inspect_workspace(root)
+
+        self.assertIn("DemoProject", [project["id"] for project in result["projects"]])
+        project = next(project for project in result["projects"] if project["id"] == "DemoProject")
+        self.assertTrue(project["has_graph_events"])
+        self.assertEqual(result["open_deltas"], 1)
+        self.assertEqual(result["stage"], "read_models_stale")
+        self.assertEqual(result["next_actions"][0]["id"], "rebuild_read_models")
 
     def test_open_deltas_count_project_event_lifecycle(self):
         with tempfile.TemporaryDirectory() as tmp:

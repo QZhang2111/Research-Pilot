@@ -87,12 +87,21 @@ def read_env_flags(root: Path) -> Dict[str, Any]:
     }
 
 
+def graph_event_project_ids(root: Path) -> List[str]:
+    event_root = root / "wiki" / "graphs" / "events" / "projects"
+    if not event_root.exists():
+        return []
+    return sorted(path.stem for path in event_root.glob("*.jsonl"))
+
+
 def collect_projects(root: Path) -> List[Dict[str, Any]]:
     projects_root = root / "wiki" / "projects"
-    if not projects_root.exists():
-        return []
+    project_ids = set(graph_event_project_ids(root))
+    if projects_root.exists():
+        project_ids.update(path.name for path in projects_root.iterdir() if path.is_dir())
     projects: List[Dict[str, Any]] = []
-    for project_dir in sorted(path for path in projects_root.iterdir() if path.is_dir()):
+    for project_id in sorted(project_ids):
+        project_dir = projects_root / project_id
         overview = project_dir / "overview.md"
         frontmatter: Dict[str, Any] = {}
         if overview.exists():
@@ -100,23 +109,27 @@ def collect_projects(root: Path) -> List[Dict[str, Any]]:
         title = str(
             frontmatter.get("display_title")
             or frontmatter.get("title")
-            or project_dir.name
+            or project_id
         )
-        maturity_stage = str(frontmatter.get("maturity_stage") or "project_shell")
+        has_graph_events = (
+            root
+            / "wiki"
+            / "graphs"
+            / "events"
+            / "projects"
+            / f"{project_id}.jsonl"
+        ).exists()
+        maturity_stage = str(
+            frontmatter.get("maturity_stage")
+            or ("graph_started" if has_graph_events else "project_shell")
+        )
         projects.append(
             {
-                "id": project_dir.name,
+                "id": project_id,
                 "title": title,
                 "maturity_stage": maturity_stage,
                 "has_overview": overview.exists(),
-                "has_graph_events": (
-                    root
-                    / "wiki"
-                    / "graphs"
-                    / "events"
-                    / "projects"
-                    / f"{project_dir.name}.jsonl"
-                ).exists(),
+                "has_graph_events": has_graph_events,
                 "has_graph_report": (
                     project_dir / "project-understanding-graph.md"
                 ).exists(),
@@ -324,7 +337,10 @@ def classify(root: Path, projects: List[Dict[str, Any]], read_models: Dict[str, 
         return "plugin_repo"
     if not is_workspace(root):
         return "plain_directory"
-    if any(value == "stale" for value in read_models.values()):
+    has_graph_events = any(project.get("has_graph_events") for project in projects)
+    if any(value == "stale" for value in read_models.values()) or (
+        has_graph_events and any(value == "missing" for value in read_models.values())
+    ):
         return "read_models_stale"
     if not projects:
         return "empty_workspace"
