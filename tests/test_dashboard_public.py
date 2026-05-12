@@ -44,6 +44,94 @@ class DashboardPublicTest(unittest.TestCase):
         self.assertEqual(model["claim_paths"][0]["claim"]["id"], "C0")
         self.assertEqual(model["claim_paths"][0]["supporting_links"][0]["premises"][0]["id"], "E0")
 
+    def test_project_card_prefers_overview_display_title_over_query_pack(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            project = root / "wiki" / "projects" / "DemoProject"
+            project.mkdir(parents=True)
+            (project / "overview.md").write_text(
+                "---\ntitle: Demo Overview\ndisplay_title: Demo Display Title\ntype: project-overview\nmaturity_stage: project_shell\n---\n"
+                "# Demo Display Title\n\n## Project Direction\n\nBroad direction.\n\n## Seed Questions\n\n- Setup prompt\n",
+                encoding="utf-8",
+            )
+            (project / "project-query-pack.md").write_text(
+                "---\ntitle: Demo Query Pack\ntype: project-query-pack\n---\n# Demo Query Pack\n",
+                encoding="utf-8",
+            )
+
+            index = build_index(root)
+
+        self.assertEqual(index["projects"][0]["title"], "Demo Display Title")
+        self.assertEqual(index["projects"][0]["overview"]["seed_questions"], ["Setup prompt"])
+        self.assertEqual(index["projects"][0]["overview"]["accepted_questions"], [])
+        self.assertNotIn("Setup prompt", index["projects"][0]["overview"]["current_questions"])
+
+    def test_project_card_uses_query_pack_title_when_overview_missing(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            project = root / "wiki" / "projects" / "DemoProject"
+            project.mkdir(parents=True)
+            (project / "project-query-pack.md").write_text(
+                "---\ntitle: Demo Query Pack\ntype: project-query-pack\n---\n# Demo Query Pack\n",
+                encoding="utf-8",
+            )
+
+            index = build_index(root)
+
+        self.assertEqual(index["projects"][0]["title"], "Demo Query Pack")
+
+    def test_dashboard_accepted_questions_come_from_graph_nodes(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            project = root / "wiki" / "projects" / "DemoProject"
+            project.mkdir(parents=True)
+            (project / "overview.md").write_text(
+                "---\ntitle: Demo Project\ntype: project-overview\n---\n# Demo\n\n## Search Questions\n\n- Search prompt\n",
+                encoding="utf-8",
+            )
+            (project / "project-understanding-graph.md").write_text(
+                "---\ntitle: Demo Graph\ntype: project-understanding-graph\n---\n"
+                "# Demo Graph\n\n## Project Questions\n\n"
+                "| ID | Question | Role | Status | Confidence | Human Review | Source Refs | Bounds |\n"
+                "| --- | --- | --- | --- | --- | --- | --- | --- |\n"
+                "| Q0 | Does the model encode interaction knowledge? | main | active | medium | accepted | human | none |\n",
+                encoding="utf-8",
+            )
+
+            index = build_index(root)
+
+        self.assertEqual(
+            index["projects"][0]["overview"]["accepted_questions"],
+            ["Does the model encode interaction knowledge?"],
+        )
+        self.assertEqual(index["projects"][0]["overview"]["search_questions"], ["Search prompt"])
+
+    def test_dashboard_pending_active_graph_questions_are_not_accepted_questions(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            project = root / "wiki" / "projects" / "DemoProject"
+            project.mkdir(parents=True)
+            (project / "overview.md").write_text(
+                "---\ntitle: Demo Project\ntype: project-overview\n---\n# Demo\n",
+                encoding="utf-8",
+            )
+            (project / "project-understanding-graph.md").write_text(
+                "---\ntitle: Demo Graph\ntype: project-understanding-graph\n---\n"
+                "# Demo Graph\n\n## Project Questions\n\n"
+                "| ID | Question | Role | Status | Confidence | Human Review | Source Refs | Bounds |\n"
+                "| --- | --- | --- | --- | --- | --- | --- | --- |\n"
+                "| Q0 | Does the model encode interaction knowledge? | main | active | medium | pending | human | none |\n",
+                encoding="utf-8",
+            )
+
+            index = build_index(root)
+
+        self.assertEqual(index["projects"][0]["overview"]["accepted_questions"], [])
+        self.assertNotIn(
+            "Does the model encode interaction knowledge?",
+            index["projects"][0]["overview"]["current_questions"],
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

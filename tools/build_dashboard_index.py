@@ -223,43 +223,72 @@ def collect_core_files(project_dir: Path, root: Path) -> List[Dict[str, Any]]:
     return files
 
 
-def collect_projects(root: Path) -> List[Dict[str, Any]]:
+def section_bullets(body: str, heading: str) -> List[str]:
+    section = extract_section(body, heading)
+    return [
+        line.strip("- ").strip()
+        for line in section.splitlines()
+        if line.strip().startswith("- ") and line.strip("- ").strip()
+    ]
+
+
+def accepted_questions_from_graph(project_id: str, project_graphs: List[Dict[str, Any]]) -> List[str]:
+    for graph in project_graphs:
+        if graph.get("project") != project_id:
+            continue
+        questions = []
+        for node in graph.get("nodes", []):
+            if node.get("kind") != "question":
+                continue
+            human_review = str(node.get("human_review") or "").lower()
+            if human_review in {"accepted", "approved"}:
+                label = str(node.get("label") or "").strip()
+                if label:
+                    questions.append(label)
+        return questions
+    return []
+
+
+def collect_projects(root: Path, project_graphs: Optional[List[Dict[str, Any]]] = None) -> List[Dict[str, Any]]:
+    project_graphs = project_graphs or []
     projects_dir = root / "wiki" / "projects"
     if not projects_dir.exists():
         return []
     projects: List[Dict[str, Any]] = []
     for project_dir in sorted(path for path in projects_dir.iterdir() if path.is_dir()):
+        overview_file = project_dir / "overview.md"
         query_pack = project_dir / "project-query-pack.md"
-        overview_file = query_pack if query_pack.exists() else project_dir / "overview.md"
+        overview_source = overview_file if overview_file.exists() else query_pack
         frontmatter: Dict[str, Any] = {}
         body = ""
-        if overview_file.exists():
-            frontmatter, body = read_markdown(overview_file)
+        if overview_source.exists():
+            frontmatter, body = read_markdown(overview_source)
         direction = first_sentence(extract_section(body, "Project Direction"))
-        questions_section = extract_section(body, "Current Questions")
+        seed_questions = section_bullets(body, "Seed Questions")
+        search_questions = section_bullets(body, "Search Questions")
+        accepted_questions = section_bullets(body, "Accepted Questions")
+        if not accepted_questions:
+            accepted_questions = accepted_questions_from_graph(project_dir.name, project_graphs)
+        current_questions = accepted_questions
+        if not current_questions:
+            current_questions = section_bullets(body, "Current Questions")
         search_contract = first_sentence(
             extract_section(body, "First Search Contract"),
             limit=320,
         )
-        human_gates_section = extract_section(body, "Human Gates")
         projects.append(
             {
                 "id": project_dir.name,
-                "title": scalar(frontmatter, "title", project_dir.name),
+                "title": scalar(frontmatter, "display_title") or scalar(frontmatter, "title", project_dir.name),
                 "path": relpath(project_dir, root),
                 "overview": {
                     "direction": direction,
-                    "current_questions": [
-                        line.strip("- ").strip()
-                        for line in questions_section.splitlines()
-                        if line.strip().startswith("- ")
-                    ],
+                    "current_questions": current_questions,
+                    "seed_questions": seed_questions,
+                    "search_questions": search_questions,
+                    "accepted_questions": accepted_questions,
                     "search_contract": search_contract,
-                    "human_gates": [
-                        line.strip("- ").strip()
-                        for line in human_gates_section.splitlines()
-                        if line.strip().startswith("- ")
-                    ],
+                    "human_gates": section_bullets(body, "Human Gates"),
                 },
                 "core_files": collect_core_files(project_dir, root),
                 "stats": {
@@ -288,6 +317,9 @@ def ensure_graph_projects(projects: List[Dict[str, Any]], project_graphs: List[D
                 "overview": {
                     "direction": "Graph-only project initialized from graph events.",
                     "current_questions": [],
+                    "seed_questions": [],
+                    "search_questions": [],
+                    "accepted_questions": [],
                     "search_contract": "",
                     "human_gates": ["Graph deltas require explicit human decisions."],
                 },
@@ -1000,8 +1032,8 @@ def attach_stats(
 
 def build_index(root: Path) -> Dict[str, Any]:
     root = root.resolve()
-    projects = collect_projects(root)
     project_graphs = collect_project_graphs(root)
+    projects = collect_projects(root, project_graphs)
     ensure_graph_projects(projects, project_graphs, root)
     raw_papers = collect_papers(root)
     papers = dedupe_papers(raw_papers)
