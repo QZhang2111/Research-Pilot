@@ -154,6 +154,19 @@ def values_match(left: Any, right: Any) -> bool:
     return str(left or "") == str(right or "")
 
 
+def added_node_ids(project_id: str, patch_ops: Sequence[Dict[str, Any]]) -> set[str]:
+    node_ids: set[str] = set()
+    for patch_op in patch_ops:
+        if not isinstance(patch_op, dict):
+            continue
+        op = str(patch_op.get("op") or "")
+        if op == "add_node":
+            node = patch_op.get("node") if isinstance(patch_op.get("node"), dict) else {}
+            node_ids.add(normalize_project_ref(project_id, str(node.get("node_id") or node.get("local_id") or "")))
+    node_ids.discard(project_ref(project_id, ""))
+    return node_ids
+
+
 def dry_run_graph_delta(root: Path, project_id: str, delta: Dict[str, Any]) -> Dict[str, Any]:
     root = root.resolve()
     errors: List[str] = []
@@ -164,17 +177,20 @@ def dry_run_graph_delta(root: Path, project_id: str, delta: Dict[str, Any]) -> D
         return {"valid": False, "summary": "Delta payload is invalid.", "preview": preview, "warnings": warnings, "errors": errors}
 
     db = default_graph_db_path(root)
+    pending_node_ids = added_node_ids(project_id, delta.get("patch_ops") or [])
     if not db.exists():
-        errors.append(f"graph database not found: {relpath(db, root)}")
-        return {"valid": False, "summary": "Graph database is missing.", "preview": preview, "warnings": warnings, "errors": errors}
+        warnings.append(f"Using empty project graph for first graph dry-run because {relpath(db, root)} is missing.")
+        return dry_run_empty_project_delta(project_id, delta, preview, warnings, errors, pending_node_ids)
 
     conn = sqlite3.connect(db)
     conn.row_factory = sqlite3.Row
     try:
         graph_row = conn.execute("select graph_id from graphs where graph_id = ?", (graph_id_for_project(project_id),)).fetchone()
         if not graph_row:
-            errors.append(f"project graph not found: {graph_id_for_project(project_id)}")
-            return {"valid": False, "summary": "Project graph is missing.", "preview": preview, "warnings": warnings, "errors": errors}
+            warnings.append(f"Using empty project graph for first graph dry-run because {graph_id_for_project(project_id)} is missing.")
+            return dry_run_empty_project_delta(project_id, delta, preview, warnings, errors, pending_node_ids)
+        seen_node_ids: set[str] = set()
+        seen_link_ids: set[str] = set()
         for index, patch_op in enumerate(delta.get("patch_ops") or []):
             if not isinstance(patch_op, dict):
                 errors.append(f"patch_ops[{index}] must be an object")
@@ -186,11 +202,23 @@ def dry_run_graph_delta(root: Path, project_id: str, delta: Dict[str, Any]) -> D
             if op == "update_node":
                 preview_update_node(conn, project_id, patch_op, preview, errors)
             elif op == "add_node":
+                node = patch_op.get("node") if isinstance(patch_op.get("node"), dict) else {}
+                node_id = normalize_project_ref(project_id, str(node.get("node_id") or node.get("local_id") or ""))
+                if node_id in seen_node_ids:
+                    errors.append(f"duplicate add_node id in delta: {node_id}")
+                    continue
+                seen_node_ids.add(node_id)
                 preview_add_node(conn, project_id, patch_op, preview, errors)
             elif op == "update_link":
                 preview_update_link(conn, project_id, patch_op, preview, errors)
             elif op == "add_link":
-                preview_add_link(conn, project_id, patch_op, preview, errors, warnings)
+                link = patch_op.get("link") if isinstance(patch_op.get("link"), dict) else {}
+                link_id = normalize_project_ref(project_id, str(link.get("link_id") or link.get("local_id") or ""))
+                if link_id in seen_link_ids:
+                    errors.append(f"duplicate add_link id in delta: {link_id}")
+                    continue
+                seen_link_ids.add(link_id)
+                preview_add_link(conn, project_id, patch_op, preview, errors, warnings, pending_node_ids)
     finally:
         conn.close()
 
@@ -199,6 +227,42 @@ def dry_run_graph_delta(root: Path, project_id: str, delta: Dict[str, Any]) -> D
     return {
         "valid": valid,
         "summary": f"{count} patch op{'s' if count != 1 else ''} previewed." if valid else "Delta dry-run failed.",
+        "preview": preview,
+        "warnings": warnings,
+        "errors": errors,
+    }
+
+
+def dry_run_empty_project_delta(
+    project_id: str,
+    delta: Dict[str, Any],
+    preview: Dict[str, List[Dict[str, Any]]],
+    warnings: List[str],
+    errors: List[str],
+    pending_node_ids: set[str],
+) -> Dict[str, Any]:
+    seen_node_ids: set[str] = set()
+    seen_link_ids: set[str] = set()
+    for index, patch_op in enumerate(delta.get("patch_ops") or []):
+        if not isinstance(patch_op, dict):
+            errors.append(f"patch_ops[{index}] must be an object")
+            continue
+        op = str(patch_op.get("op") or "")
+        if op not in SUPPORTED_PATCH_OPS:
+            errors.append(f"unsupported patch op: {op}")
+            continue
+        if op == "add_node":
+            preview_add_node_without_db(project_id, patch_op, preview, errors, seen_node_ids)
+        elif op == "add_link":
+            preview_add_link_without_db(project_id, patch_op, preview, errors, warnings, pending_node_ids, seen_link_ids)
+        else:
+            errors.append(f"empty project graph cannot dry-run {op}; first graph delta must create nodes or links")
+
+    valid = not errors
+    count = sum(len(items) for items in preview.values())
+    return {
+        "valid": valid,
+        "summary": f"{count} patch op{'s' if count != 1 else ''} previewed against empty project graph." if valid else "Delta dry-run failed.",
         "preview": preview,
         "warnings": warnings,
         "errors": errors,
@@ -226,15 +290,43 @@ def preview_update_node(conn: sqlite3.Connection, project_id: str, patch_op: Dic
     preview["updated_nodes"].append({"id": node["local_id"], "node_id": node_id, "field": field, "before": before, "after": after})
 
 
-def preview_add_node(conn: sqlite3.Connection, project_id: str, patch_op: Dict[str, Any], preview: Dict[str, List[Dict[str, Any]]], errors: List[str]) -> None:
+def validate_add_node_payload(project_id: str, patch_op: Dict[str, Any], errors: List[str]) -> Tuple[Dict[str, Any], str]:
     node = patch_op.get("node") if isinstance(patch_op.get("node"), dict) else {}
     node_id = normalize_project_ref(project_id, str(node.get("node_id") or node.get("local_id") or ""))
-    if fetch_node(conn, node_id):
-        errors.append(f"node id collision: {node_id}")
-        return
     for field in ["local_id", "node_type", "text"]:
         if not node.get(field):
             errors.append(f"missing node.{field}")
+    return node, node_id
+
+
+def preview_add_node(
+    conn: sqlite3.Connection,
+    project_id: str,
+    patch_op: Dict[str, Any],
+    preview: Dict[str, List[Dict[str, Any]]],
+    errors: List[str],
+) -> None:
+    node, node_id = validate_add_node_payload(project_id, patch_op, errors)
+    if fetch_node(conn, node_id):
+        errors.append(f"node id collision: {node_id}")
+        return
+    if errors:
+        return
+    preview["added_nodes"].append({"id": node["local_id"], "node_id": node_id, "kind": node["node_type"], "text": node["text"]})
+
+
+def preview_add_node_without_db(
+    project_id: str,
+    patch_op: Dict[str, Any],
+    preview: Dict[str, List[Dict[str, Any]]],
+    errors: List[str],
+    seen_node_ids: set[str],
+) -> None:
+    node, node_id = validate_add_node_payload(project_id, patch_op, errors)
+    if node_id in seen_node_ids:
+        errors.append(f"duplicate add_node id in delta: {node_id}")
+        return
+    seen_node_ids.add(node_id)
     if errors:
         return
     preview["added_nodes"].append({"id": node["local_id"], "node_id": node_id, "kind": node["node_type"], "text": node["text"]})
@@ -260,19 +352,56 @@ def preview_update_link(conn: sqlite3.Connection, project_id: str, patch_op: Dic
     preview["updated_links"].append({"id": link.get("local_id") or local_id_from_graph_ref(link_id), "link_id": link_id, "field": "relation", "before": before, "after": after})
 
 
-def preview_add_link(conn: sqlite3.Connection, project_id: str, patch_op: Dict[str, Any], preview: Dict[str, List[Dict[str, Any]]], errors: List[str], warnings: List[str]) -> None:
+def validate_add_link_payload(project_id: str, patch_op: Dict[str, Any], errors: List[str]) -> Tuple[Dict[str, Any], str, List[str], List[str]]:
     link = patch_op.get("link") if isinstance(patch_op.get("link"), dict) else {}
     link_id = normalize_project_ref(project_id, str(link.get("link_id") or link.get("local_id") or ""))
-    if fetch_link(conn, link_id):
-        errors.append(f"link id collision: {link_id}")
-        return
     from_nodes = [normalize_project_ref(project_id, ref) for ref in link.get("from_nodes", [])]
     to_nodes = [normalize_project_ref(project_id, ref) for ref in link.get("to_nodes", [])]
     if not to_nodes:
         errors.append(f"link has no target: {link_id}")
+    return link, link_id, from_nodes, to_nodes
+
+
+def preview_add_link(
+    conn: sqlite3.Connection,
+    project_id: str,
+    patch_op: Dict[str, Any],
+    preview: Dict[str, List[Dict[str, Any]]],
+    errors: List[str],
+    warnings: List[str],
+    pending_node_ids: set[str],
+) -> None:
+    link, link_id, from_nodes, to_nodes = validate_add_link_payload(project_id, patch_op, errors)
+    if fetch_link(conn, link_id):
+        errors.append(f"link id collision: {link_id}")
+        return
     for ref in from_nodes + to_nodes:
-        if not fetch_node(conn, ref):
+        if ref not in pending_node_ids and not fetch_node(conn, ref):
             errors.append(f"link endpoint not found: {ref}")
+    if link.get("relation") in {"supports", "challenges"} and not link.get("warrant_nodes") and not link.get("inline_warrant"):
+        warnings.append(f"{link_id} {link.get('relation')} link has no warrant")
+    if errors:
+        return
+    preview["added_links"].append({"id": link.get("local_id"), "link_id": link_id, "relation": link.get("relation"), "from_nodes": from_nodes, "to_nodes": to_nodes})
+
+
+def preview_add_link_without_db(
+    project_id: str,
+    patch_op: Dict[str, Any],
+    preview: Dict[str, List[Dict[str, Any]]],
+    errors: List[str],
+    warnings: List[str],
+    pending_node_ids: set[str],
+    seen_link_ids: set[str],
+) -> None:
+    link, link_id, from_nodes, to_nodes = validate_add_link_payload(project_id, patch_op, errors)
+    if link_id in seen_link_ids:
+        errors.append(f"duplicate add_link id in delta: {link_id}")
+        return
+    seen_link_ids.add(link_id)
+    for ref in from_nodes + to_nodes:
+        if ref not in pending_node_ids:
+            errors.append(f"link endpoint not found in empty project graph: {ref}")
     if link.get("relation") in {"supports", "challenges"} and not link.get("warrant_nodes") and not link.get("inline_warrant"):
         warnings.append(f"{link_id} {link.get('relation')} link has no warrant")
     if errors:

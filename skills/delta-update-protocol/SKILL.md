@@ -20,6 +20,10 @@ Register:
 python3 "$PLUGIN_ROOT/tools/graph_delta_cli.py" register --repo "$WORKSPACE_PATH" --project "$PROJECT_ID" --delta "$DELTA_JSON" --json
 ```
 
+First graph bootstrap:
+
+If the project is only a shell and has no `wiki/graphs/graph.db`, dry-run/register can still work for first deltas that create nodes, or create links whose endpoints are created in the same delta. Update ops still require existing graph state.
+
 Apply explicit human decision:
 
 ```bash
@@ -27,4 +31,3 @@ python3 "$PLUGIN_ROOT/tools/graph_delta_cli.py" decide --repo "$WORKSPACE_PATH" 
 ```
 
 Never accept, reject, park, or revise without explicit human instruction.
-
