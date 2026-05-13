@@ -20,6 +20,10 @@ This workspace was initialized by Research Pilot.
 
 No projects yet.
 
+## Program Context
+
+- Program context: `wiki/program/`
+
 ## System
 
 - Workflows: `wiki/_system/workflows/`

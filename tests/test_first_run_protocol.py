@@ -28,6 +28,20 @@ class FirstRunProtocolTest(unittest.TestCase):
             self.assertTrue(workflow.exists())
             self.assertIn("Research Pilot First-Run Protocol", workflow.read_text(encoding="utf-8"))
 
+    def test_workspace_init_installs_program_context_layer(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+
+            init_workspace_main([str(root), "--no-git"])
+
+            overview = root / "wiki" / "program" / "overview.md"
+            text = overview.read_text(encoding="utf-8")
+            self.assertTrue(overview.exists())
+            self.assertIn("agent context layer", text)
+            self.assertIn("not graph truth", text)
+            self.assertIn("not evidence", text)
+            self.assertIn("must not make decisions for the user", text)
+
 
 if __name__ == "__main__":
     unittest.main()
