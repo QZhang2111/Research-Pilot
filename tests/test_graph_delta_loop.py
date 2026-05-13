@@ -18,6 +18,141 @@ class GraphDeltaLoopTest(unittest.TestCase):
         build_db_main(["--repo", str(root), "--project", "DemoProject"])
         return temp_dir, root
 
+    def first_graph_delta(self) -> dict:
+        return {
+            "delta_id": "project:NewProject:D1",
+            "local_id": "D1",
+            "source_type": "human_discussion",
+            "source_refs": ["human_discussion:first-graph"],
+            "operation": ["add_node"],
+            "operation_type": "add_node",
+            "evolution_type": "promote",
+            "epistemic_effect": "clarifies",
+            "summary": "Create the first project question.",
+            "source_paper_nodes": [],
+            "affected_nodes": ["project:NewProject:Q0"],
+            "affected_links": [],
+            "patch_ops": [
+                {
+                    "op": "add_node",
+                    "node": {
+                        "node_id": "project:NewProject:Q0",
+                        "local_id": "Q0",
+                        "node_type": "Question",
+                        "text": "What is the first project question?",
+                        "scope": "project",
+                        "project_id": "NewProject",
+                        "paper_id": None,
+                        "status": "active",
+                        "lifecycle_status": "active",
+                        "confidence": "medium",
+                        "human_review": "pending",
+                        "source_refs": ["human_discussion:first-graph"],
+                        "supersedes": [],
+                        "superseded_by": [],
+                        "derived_from": [],
+                        "metadata": {"role": "first project question"},
+                    },
+                }
+            ],
+            "rationale": "Bootstrap the project graph through the normal human-gated delta path.",
+            "caused_by": ["human_discussion:first-graph"],
+            "supersedes": [],
+            "confidence": "medium",
+            "human_review": "pending",
+        }
+
+    def test_first_graph_add_node_dry_run_without_graph_db(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            delta = self.first_graph_delta()
+
+            dry_run = dry_run_graph_delta(root, "NewProject", delta)
+
+            self.assertTrue(dry_run["valid"], dry_run)
+            self.assertEqual(dry_run["preview"]["added_nodes"][0]["id"], "Q0")
+            self.assertIn("empty project graph", " ".join(dry_run["warnings"]))
+
+    def test_register_first_graph_delta_creates_read_model(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            delta = self.first_graph_delta()
+
+            registration = register_graph_delta(root, "NewProject", delta, actor="agent")
+            open_deltas = query_open(root, "NewProject")
+
+            self.assertTrue(registration["registered"], registration)
+            self.assertTrue((root / "wiki" / "graphs" / "events" / "projects" / "NewProject.jsonl").exists())
+            self.assertTrue((root / "wiki" / "graphs" / "graph.db").exists())
+            self.assertIn("D1", open_deltas["open_deltas"])
+
+    def test_accept_first_graph_delta_creates_first_node(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            delta = self.first_graph_delta()
+
+            register_graph_delta(root, "NewProject", delta, actor="agent")
+            decision = decide_graph_delta(root, "NewProject", "D1", "accept", actor="human", decision_note="Approve first graph node.")
+            node = query_node(root, "NewProject", "Q0")
+
+            self.assertTrue(decision["applied"], decision)
+            self.assertEqual(decision["events_appended"], 2)
+            self.assertEqual(node["node"]["text"], "What is the first project question?")
+
+    def test_first_graph_delta_can_add_nodes_and_link_together(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            delta = self.first_graph_delta()
+            delta["operation"] = ["add_node", "add_link"]
+            delta["operation_type"] = "add_link"
+            delta["affected_nodes"].append("project:NewProject:C0")
+            delta["affected_links"] = ["project:NewProject:RL0"]
+            delta["patch_ops"].append(
+                {
+                    "op": "add_node",
+                    "node": {
+                        "node_id": "project:NewProject:C0",
+                        "local_id": "C0",
+                        "node_type": "Claim",
+                        "text": "First bootstrap claim.",
+                        "scope": "project",
+                        "project_id": "NewProject",
+                        "paper_id": None,
+                        "status": "active",
+                        "lifecycle_status": "active",
+                        "confidence": "medium",
+                        "human_review": "pending",
+                        "source_refs": ["human_discussion:first-graph"],
+                        "supersedes": [],
+                        "superseded_by": [],
+                        "derived_from": [],
+                        "metadata": {},
+                    },
+                }
+            )
+            delta["patch_ops"].append(
+                {
+                    "op": "add_link",
+                    "link": {
+                        "link_id": "project:NewProject:RL0",
+                        "local_id": "RL0",
+                        "link_type": "ReasoningLink",
+                        "relation": "supports",
+                        "from_nodes": ["project:NewProject:Q0"],
+                        "to_nodes": ["project:NewProject:C0"],
+                        "inline_warrant": "Bootstrap link only previews endpoints created in the same delta.",
+                        "confidence": "medium",
+                        "human_review": "pending",
+                        "source_refs": ["human_discussion:first-graph"],
+                    },
+                }
+            )
+
+            dry_run = dry_run_graph_delta(root, "NewProject", delta)
+
+            self.assertTrue(dry_run["valid"], dry_run)
+            self.assertEqual(dry_run["preview"]["added_links"][0]["id"], "RL0")
+
     def test_register_and_accept_delta_updates_graph_state(self):
         temp_dir, root = self.make_workspace()
         self.addCleanup(temp_dir.cleanup)
