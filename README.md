@@ -229,6 +229,7 @@ User research workspace = private research memory
 Agent chat = primary interface
 Zotero = paper metadata, PDFs, collections, tags
 Markdown = long-term agent-readable memory
+Program context = taste and north-star background, not evidence or decisions
 Graph events = append-only project-understanding truth
 Generated DB/reports/dashboard = rebuildable read models
 ```
@@ -254,6 +255,7 @@ Research Pilot assumes Zotero remains the normal paper manager.
 ```text
 Zotero = paper metadata, PDFs, collections, tags, reading status mirror
 wiki = digested research understanding and project files
+wiki/program = taste and north-star context only, not graph truth
 wiki/graphs/events = append-only project understanding graph truth
 graph.db/snapshots/reports = rebuildable read models
 dashboard = browser view over read models and wiki state
@@ -294,6 +296,7 @@ wiki/graphs/events/**/*.jsonl
 - `research-pilot` router skill.
 - Private workspace initializer.
 - Workspace templates with no private research data.
+- Program context template for taste/north-star markdown.
 - Graph-event validation.
 - Graph snapshot generation.
 - SQLite graph read-model generation.

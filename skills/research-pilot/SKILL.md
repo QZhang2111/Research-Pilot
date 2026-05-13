@@ -35,6 +35,7 @@ Research Pilot is the primary router skill for agent-operated research memory.
 
 Dashboard is a required public component and a browser observer. It must not become graph truth.
 Durable job records are execution state only. They must not become graph truth.
+Program context is taste and north-star background only. It must not become evidence, graph truth, or an automatic decision source.
 
 ## Durable Research Jobs
 
