@@ -11,6 +11,74 @@ from tools.research_browser_server import handle_project_graph_maintenance_reque
 
 
 class DashboardPublicTest(unittest.TestCase):
+    def test_build_index_exposes_related_work_lineage_maps(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            lineage_path = (
+                root
+                / "wiki"
+                / "projects"
+                / "DemoProject"
+                / "literature-rounds"
+                / "vision-world-model-baselines"
+                / "related-work-lineage.json"
+            )
+            lineage_path.parent.mkdir(parents=True)
+            lineage_path.write_text(
+                json.dumps(
+                    {
+                        "schema_version": "related-work-lineage-v1",
+                        "project": "DemoProject",
+                        "round": "vision-world-model-baselines",
+                        "title": "Vision World Model Baselines",
+                        "status": "candidate",
+                        "source_boundary": "related_work_lineage_only_not_graph_truth",
+                        "route_narrowing": {
+                            "input_mode": "coarse_direction",
+                            "user_direction": "Map baseline methods.",
+                            "selected_anchor_papers": [],
+                            "candidate_routes": [],
+                        },
+                        "routes": [
+                            {
+                                "id": "route-1",
+                                "label": "Video prediction",
+                                "description": "Predict future visual states.",
+                                "review_status": "candidate",
+                            }
+                        ],
+                        "papers": [
+                            {
+                                "id": "paper-1",
+                                "kind": "paper",
+                                "title": "Demo Paper",
+                                "source_url": "https://example.com/demo",
+                                "source_evidence": "User-provided baseline.",
+                                "route": "route-1",
+                                "review_status": "candidate",
+                            }
+                        ],
+                        "explicit_edges": [],
+                        "positioning_note": "Demo positioning note.",
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            index = build_index(root)
+
+        self.assertEqual(len(index["lineage_maps"]), 1)
+        lineage = index["lineage_maps"][0]
+        self.assertEqual(lineage["id"], "DemoProject/vision-world-model-baselines")
+        self.assertEqual(lineage["project"], "DemoProject")
+        self.assertEqual(lineage["paper_count"], 1)
+        self.assertEqual(lineage["route_count"], 1)
+        self.assertEqual(
+            lineage["path"],
+            "wiki/projects/DemoProject/literature-rounds/vision-world-model-baselines/related-work-lineage.json",
+        )
+        self.assertEqual(lineage["source_boundary"], "related_work_lineage_only_not_graph_truth")
+
     def test_build_index_exposes_graph_only_project(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

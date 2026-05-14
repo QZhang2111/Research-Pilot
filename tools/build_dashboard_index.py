@@ -17,6 +17,7 @@ if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
 from tools.job_records import list_job_records
+from tools.related_work_lineage_cli import validate_lineage_map
 
 VALID_REVIEW_STATUSES = {
     "inbox",
@@ -825,6 +826,57 @@ def collect_project_graphs(root: Path) -> List[Dict[str, Any]]:
     return [graphs_by_project[project] for project in sorted(graphs_by_project)]
 
 
+def list_field(payload: Any, key: str) -> List[Any]:
+    if not isinstance(payload, dict):
+        return []
+    value = payload.get(key)
+    return value if isinstance(value, list) else []
+
+
+def collect_lineage_maps(root: Path) -> List[Dict[str, Any]]:
+    lineage_maps: List[Dict[str, Any]] = []
+    projects_root = root / "wiki" / "projects"
+    if not projects_root.exists():
+        return lineage_maps
+
+    for lineage_path in sorted(projects_root.glob("*/literature-rounds/*/related-work-lineage.json")):
+        try:
+            payload = json.loads(lineage_path.read_text(encoding="utf-8"))
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+            continue
+
+        validation = validate_lineage_map(payload)
+        relative = lineage_path.relative_to(projects_root)
+        path_project = relative.parts[0]
+        path_round = relative.parts[2]
+        project = str(payload.get("project") or path_project).strip() if isinstance(payload, dict) else path_project
+        round_name = str(payload.get("round") or path_round).strip() if isinstance(payload, dict) else path_round
+        markdown_path = lineage_path.with_suffix(".md")
+        lineage_maps.append(
+            {
+                "id": f"{project}/{round_name}",
+                "project": project,
+                "round": round_name,
+                "title": str(payload.get("title") or "").strip() if isinstance(payload, dict) else "",
+                "status": str(payload.get("status") or "").strip() if isinstance(payload, dict) else "",
+                "source_boundary": str(payload.get("source_boundary") or "").strip() if isinstance(payload, dict) else "",
+                "path": relpath(lineage_path, root),
+                "markdown_path": relpath(markdown_path, root) if markdown_path.exists() else "",
+                "valid": bool(validation.get("valid")),
+                "errors": validation.get("errors", []),
+                "paper_count": validation.get("paper_count", 0),
+                "route_count": validation.get("route_count", 0),
+                "edge_count": validation.get("edge_count", 0),
+                "route_narrowing": payload.get("route_narrowing", {}) if isinstance(payload, dict) else {},
+                "routes": list_field(payload, "routes"),
+                "papers": list_field(payload, "papers"),
+                "explicit_edges": list_field(payload, "explicit_edges"),
+                "positioning_note": str(payload.get("positioning_note") or "").strip() if isinstance(payload, dict) else "",
+            }
+        )
+    return lineage_maps
+
+
 def load_round_decisions(round_dir: Path) -> Dict[str, Dict[str, str]]:
     decisions_path = round_dir / "review-decisions.md"
     if not decisions_path.exists():
@@ -1042,6 +1094,7 @@ def build_index(root: Path) -> Dict[str, Any]:
     rounds = collect_rounds(root, papers)
     round_candidates = collect_round_candidates(root, raw_papers)
     claims = collect_claims(root, papers)
+    lineage_maps = collect_lineage_maps(root)
     attach_stats(projects, papers, rounds, claims)
     attach_project_cards(projects, raw_papers, rounds, round_candidates)
     jobs = list_job_records(root)
@@ -1055,6 +1108,7 @@ def build_index(root: Path) -> Dict[str, Any]:
         "rounds": rounds,
         "round_candidates": round_candidates,
         "claims": claims,
+        "lineage_maps": lineage_maps,
         "jobs": jobs,
     }
 
@@ -1081,7 +1135,8 @@ def main(argv: Optional[List[str]] = None) -> int:
         print(f"Wrote {output_path.relative_to(root)}")
     print(
         f"Projects: {len(data['projects'])} Papers: {len(data['papers'])} "
-        f"Rounds: {len(data['rounds'])} Claims: {len(data['claims'])}"
+        f"Rounds: {len(data['rounds'])} Claims: {len(data['claims'])} "
+        f"Lineage maps: {len(data['lineage_maps'])}"
     )
     return 0
 
