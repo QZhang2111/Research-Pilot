@@ -7,6 +7,7 @@ It reads:
 - `.dashboard/index.json`;
 - graph snapshots;
 - `wiki/graphs/graph.db`;
+- related-work lineage artifacts under `wiki/projects/<Project>/literature-rounds/<Round>/related-work-lineage.json`;
 - project markdown.
 
 Graph truth remains:
@@ -14,6 +15,8 @@ Graph truth remains:
 ```text
 wiki/graphs/events/**/*.jsonl
 ```
+
+`lineage.html` shows paper-only related-work technical lanes. It is read-only and does not write PUG truth.
 
 Ask the agent:
 

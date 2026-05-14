@@ -310,6 +310,8 @@ wiki/graphs/events/**/*.jsonl
 - Human-gated delta dry-run, registration, and decision commands.
 - Project-local paper dossier creation, validation, and delta export.
 - Zotero-first source identity intake with manual source-reference capture for setup/dry-run cases.
+- Paper-only related-work lineage workflow for project-scoped technical route maps.
+- Related-work lineage dashboard view over generated read models.
 - Research Browser dashboard served from plugin UI files over workspace read models.
 
 ---

@@ -19,6 +19,7 @@ Truth boundaries:
 | dossier | `paper_dossier_cli.py`, `source_intake_cli.py` | Create project-local paper/source dossiers and export proposed deltas. |
 | gap | `project_gap_cli.py`, `project_next_action_cli.py`, `gap_search_cli.py`, `research_gap_discovery_cli.py` | Detect graph gaps, recommend next workflow moves, and derive paper-search leads. |
 | experiment | `project_experiment_cli.py` | Generate read-only experiment proposals from graph claims. |
+| lineage | `related_work_lineage_cli.py` | Create, validate, and summarize paper-only related-work lineage artifacts. |
 | zotero | `zotero_bridge.py` | Dry-run/apply Zotero metadata/card sync and status tag mirror when configured. |
 | dashboard | `build_dashboard_index.py`, `research_browser_server.py` | Build and serve dashboard read models. |
 
