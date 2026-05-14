@@ -2,7 +2,7 @@
   "schema_version": "related-work-lineage-v1",
   "project": "DemoVisualAffordance",
   "round": "demo-affordance-lineage",
-  "title": "Demo Visual Affordance Related Work Lineage",
+  "title": "Geometry-Interaction Affordance Reasoning Lineage",
   "status": "candidate",
   "source_boundary": "related_work_lineage_only_not_graph_truth",
   "max_papers": 20,
@@ -10,36 +10,41 @@
   "updated": "2026-05-14",
   "route_narrowing": {
     "input_mode": "baseline_papers",
-    "user_direction": "Visual affordance grounding with geometry and interaction cues.",
+    "user_direction": "Build a technical lineage map from the baseline paper arXiv:2602.20501.",
     "selected_anchor_papers": [
-      "paper:luo2022-agd20k",
-      "paper:li2024-ooal"
+      "paper:zhang2026-geometry-interaction-affordance"
     ],
     "candidate_routes": []
   },
   "routes": [
     {
-      "id": "affordance-datasets-and-grounding",
-      "label": "Affordance Datasets And Grounding",
-      "description": "Dataset and localization anchors for visual affordance regions.",
+      "id": "affordance-grounding-benchmarks",
+      "label": "Affordance Grounding Benchmarks",
+      "description": "Papers that define visual affordance grounding as localization and establish exocentric-to-egocentric evaluation anchors.",
       "review_status": "candidate"
     },
     {
-      "id": "part-and-geometry-priors",
-      "label": "Part And Geometry Priors",
-      "description": "Dense descriptors and part correspondences that can support affordance transfer.",
+      "id": "part-and-dense-geometry-priors",
+      "label": "Part And Dense Geometry Priors",
+      "description": "Papers showing that self-supervised visual features expose object parts, dense correspondences, and reusable geometry priors.",
       "review_status": "candidate"
     },
     {
-      "id": "open-vocabulary-affordance",
-      "label": "Open Vocabulary Affordance",
-      "description": "Methods that broaden affordance prediction beyond fixed labels or heavy supervision.",
+      "id": "open-and-language-guided-affordance",
+      "label": "Open And Language-Guided Affordance",
+      "description": "Papers that use foundation models or language knowledge to generalize affordance grounding beyond fixed closed-set supervision.",
       "review_status": "candidate"
     },
     {
-      "id": "foundation-model-probing",
-      "label": "Foundation Model Probing",
-      "description": "Large visual encoders used as probes for affordance-relevant visual structure.",
+      "id": "generative-interaction-cues",
+      "label": "Generative Interaction Cues",
+      "description": "Papers that make generative models relevant as action- or instruction-conditioned spatial priors rather than pure recognition encoders.",
+      "review_status": "candidate"
+    },
+    {
+      "id": "vfm-probing-and-bridging",
+      "label": "VFM Probing And Bridging",
+      "description": "Papers that probe what visual foundation models encode, then bridge geometry and interaction cues into an affordance reasoning account.",
       "review_status": "candidate"
     }
   ],
@@ -49,44 +54,59 @@
       "kind": "paper",
       "title": "Learning Affordance Grounding from Exocentric Images",
       "year": 2022,
-      "route": "affordance-datasets-and-grounding",
-      "roles": ["dataset-anchor", "grounding-baseline"],
-      "source_url": "https://www.semanticscholar.org/search?q=Learning%20Affordance%20Grounding%20from%20Exocentric%20Images",
-      "identity": {
-        "anchor": "Luo2022 AGD20K"
-      },
-      "source_evidence": "Public paper anchor named in Task 1 plan.",
-      "summary": "Introduces an exocentric affordance grounding setting and dataset-style evaluation anchor.",
+      "month": "03",
+      "route": "affordance-grounding-benchmarks",
+      "roles": ["dataset", "task-anchor", "weak-supervision-baseline"],
+      "venue": "CVPR",
+      "source_url": "https://arxiv.org/abs/2203.09905",
+      "identity": {"arxiv": "2203.09905"},
+      "source_evidence": "arXiv abstract defines affordance grounding from exocentric to egocentric images and introduces AGD20K with over 20K images across 36 affordance categories.",
+      "summary": "Establishes the core visual affordance grounding task and AGD20K benchmark that later project papers use as the main localization/evaluation frame.",
+      "review_status": "candidate"
+    },
+    {
+      "id": "paper:amir2021-dense-vit-descriptors",
+      "kind": "paper",
+      "title": "Deep ViT Features as Dense Visual Descriptors",
+      "year": 2021,
+      "month": "12",
+      "route": "part-and-dense-geometry-priors",
+      "roles": ["dense-descriptor", "part-correspondence-prior", "geometry-anchor"],
+      "venue": "arXiv",
+      "source_url": "https://arxiv.org/abs/2112.05814",
+      "identity": {"arxiv": "2112.05814"},
+      "source_evidence": "arXiv abstract reports that self-supervised DINO-ViT features encode localized object-part semantics and cross-category correspondences usable for zero-shot co-segmentation and semantic correspondence.",
+      "summary": "Provides the early dense-feature premise: frozen self-supervised ViT features can expose object parts and correspondences without task-specific affordance training.",
       "review_status": "candidate"
     },
     {
       "id": "paper:li2023-locate",
       "kind": "paper",
-      "title": "LOCATE",
+      "title": "LOCATE: Localize and Transfer Object Parts for Weakly Supervised Affordance Grounding",
       "year": 2023,
-      "route": "affordance-datasets-and-grounding",
-      "roles": ["localization-anchor"],
-      "source_url": "https://www.semanticscholar.org/search?q=LOCATE%20affordance%20Li%202023",
-      "identity": {
-        "anchor": "Li2023 LOCATE"
-      },
-      "source_evidence": "Public paper anchor named in Task 1 plan.",
-      "summary": "Provides a localization-oriented affordance anchor for dataset and grounding comparisons.",
+      "month": "03",
+      "route": "affordance-grounding-benchmarks",
+      "roles": ["part-transfer", "weak-supervision-method", "grounding-baseline"],
+      "venue": "CVPR",
+      "source_url": "https://arxiv.org/abs/2303.09665",
+      "identity": {"arxiv": "2303.09665"},
+      "source_evidence": "arXiv abstract says LOCATE identifies matching object parts across exocentric interaction images and egocentric test images using only image-level affordance and object labels.",
+      "summary": "Moves the grounding route from dataset/task framing toward explicit object-part transfer, making parts a central affordance localization mechanism.",
       "review_status": "candidate"
     },
     {
-      "id": "paper:amir2022-dense-vit-descriptors",
+      "id": "paper:oquab2023-dinov2",
       "kind": "paper",
-      "title": "Deep ViT Features as Dense Visual Descriptors",
-      "year": 2022,
-      "route": "part-and-geometry-priors",
-      "roles": ["dense-descriptor-anchor", "part-correspondence-prior"],
-      "source_url": "https://arxiv.org/abs/2112.05814",
-      "identity": {
-        "anchor": "Amir2022 dense ViT descriptors"
-      },
-      "source_evidence": "Public paper anchor named in Task 1 plan.",
-      "summary": "Shows that transformer features can serve as dense descriptors for visual correspondence.",
+      "title": "DINOv2: Learning Robust Visual Features without Supervision",
+      "year": 2023,
+      "month": "04",
+      "route": "part-and-dense-geometry-priors",
+      "roles": ["self-supervised-vfm", "dense-feature-scale-up", "geometry-prior"],
+      "venue": "arXiv",
+      "source_url": "https://arxiv.org/abs/2304.07193",
+      "identity": {"arxiv": "2304.07193"},
+      "source_evidence": "arXiv abstract states DINOv2 produces all-purpose visual features that work across image distributions and tasks without finetuning, including image and pixel-level benchmarks.",
+      "summary": "Scales the dense self-supervised feature route from DINO-ViT descriptors into a general-purpose VFM backbone used by later affordance work.",
       "review_status": "candidate"
     },
     {
@@ -94,29 +114,74 @@
       "kind": "paper",
       "title": "One-Shot Open Affordance Learning with Foundation Models",
       "year": 2024,
-      "route": "open-vocabulary-affordance",
-      "roles": ["open-vocabulary-anchor", "foundation-model-adaptation"],
-      "source_url": "https://www.semanticscholar.org/search?q=One-Shot%20Open%20Affordance%20Learning%20with%20Foundation%20Models",
-      "identity": {
-        "anchor": "Li2024 OOAL"
-      },
-      "source_evidence": "Public paper anchor named in Task 1 plan.",
-      "summary": "Uses foundation models to adapt affordance prediction with limited examples and broader labels.",
+      "month": "06",
+      "route": "open-and-language-guided-affordance",
+      "roles": ["open-affordance", "one-shot-learning", "foundation-model-adaptation"],
+      "venue": "CVPR",
+      "source_url": "https://arxiv.org/abs/2311.17776",
+      "identity": {"arxiv": "2311.17776"},
+      "source_evidence": "arXiv abstract introduces one-shot open affordance learning and says VLMs often struggle with fine-grained affordance understanding, motivating a framework that aligns visual features and affordance text embeddings.",
+      "summary": "Shows that open-vocabulary affordance is not solved by generic VLM semantics; fine-grained affordance grounding still needs visual-part alignment.",
+      "review_status": "candidate"
+    },
+    {
+      "id": "paper:banani2024-probe3d",
+      "kind": "paper",
+      "title": "Probing the 3D Awareness of Visual Foundation Models",
+      "year": 2024,
+      "month": "04",
+      "route": "vfm-probing-and-bridging",
+      "roles": ["vfm-probe", "geometry-boundary", "representation-analysis"],
+      "venue": "CVPR",
+      "source_url": "https://arxiv.org/abs/2404.08636",
+      "identity": {"arxiv": "2404.08636"},
+      "source_evidence": "arXiv abstract frames task-specific probes and zero-shot procedures on frozen features to test whether VFMs encode 3D scene structure and consistent surfaces across views.",
+      "summary": "Adds the probing methodology and boundary language needed before claiming that VFM representations encode affordance-relevant geometry.",
       "review_status": "candidate"
     },
     {
       "id": "paper:qian2024-affordancellm",
       "kind": "paper",
-      "title": "AffordanceLLM",
+      "title": "AffordanceLLM: Grounding Affordance from Vision Language Models",
       "year": 2024,
-      "route": "open-vocabulary-affordance",
-      "roles": ["language-guided-affordance", "semantic-prior"],
-      "source_url": "https://www.semanticscholar.org/search?q=AffordanceLLM%20Qian%202024",
-      "identity": {
-        "anchor": "Qian2024 AffordanceLLM"
-      },
-      "source_evidence": "Public paper anchor named in Task 1 plan.",
-      "summary": "Connects language-model affordance knowledge with visual grounding needs.",
+      "month": "01",
+      "route": "open-and-language-guided-affordance",
+      "roles": ["vlm-knowledge", "language-guided-grounding", "semantic-prior"],
+      "venue": "arXiv",
+      "source_url": "https://arxiv.org/abs/2401.06341",
+      "identity": {"arxiv": "2401.06341"},
+      "source_evidence": "arXiv abstract argues affordance grounding needs object/part, layout, 3D, physics, function, and human-object-interaction knowledge and uses pretrained VLM knowledge for generalization.",
+      "summary": "Represents the language/world-knowledge route: use VLM priors to expand affordance grounding beyond narrow supervised labels.",
+      "review_status": "candidate"
+    },
+    {
+      "id": "paper:bolya2025-perception-encoder",
+      "kind": "paper",
+      "title": "Perception Encoder: The best visual embeddings are not at the output of the network",
+      "year": 2025,
+      "month": "04",
+      "route": "vfm-probing-and-bridging",
+      "roles": ["intermediate-feature-analysis", "spatial-alignment", "vfm-probe"],
+      "venue": "arXiv",
+      "source_url": "https://arxiv.org/abs/2504.13181",
+      "identity": {"arxiv": "2504.13181"},
+      "source_evidence": "arXiv abstract says contrastive vision-language training can produce strong general embeddings for spatial tasks, but those embeddings are hidden in intermediate layers and need language/spatial alignment.",
+      "summary": "Strengthens the representation-probing route: affordance-relevant spatial signals may live in intermediate VFM layers rather than final global embeddings.",
+      "review_status": "candidate"
+    },
+    {
+      "id": "paper:flux2025-kontext",
+      "kind": "paper",
+      "title": "FLUX.1 Kontext: Flow Matching for In-Context Image Generation and Editing in Latent Space",
+      "year": 2025,
+      "month": "06",
+      "route": "generative-interaction-cues",
+      "roles": ["generative-model", "instruction-conditioned-prior", "interaction-cue-source"],
+      "venue": "arXiv",
+      "source_url": "https://arxiv.org/abs/2506.15742",
+      "identity": {"arxiv": "2506.15742"},
+      "source_evidence": "arXiv abstract presents FLUX.1 Kontext as a flow matching model that uses text and image inputs as semantic context for unified generation and editing.",
+      "summary": "Not an affordance method by itself, but supplies the generative, instruction-conditioned model family whose attention maps the baseline treats as interaction priors.",
       "review_status": "candidate"
     },
     {
@@ -124,29 +189,29 @@
       "kind": "paper",
       "title": "DINOv3",
       "year": 2025,
-      "route": "foundation-model-probing",
-      "roles": ["foundation-encoder-anchor", "feature-probing"],
-      "source_url": "https://www.semanticscholar.org/search?q=DINOv3%20Simeoni%202025",
-      "identity": {
-        "anchor": "Simeoni2025 DINOv3"
-      },
-      "source_evidence": "Public paper anchor named in Task 1 plan.",
-      "summary": "Serves as a public anchor for probing dense signals in modern self-supervised visual encoders.",
+      "month": "08",
+      "route": "part-and-dense-geometry-priors",
+      "roles": ["self-supervised-vfm", "dense-feature-milestone", "geometry-prior"],
+      "venue": "arXiv",
+      "source_url": "https://arxiv.org/abs/2508.10104",
+      "identity": {"arxiv": "2508.10104"},
+      "source_evidence": "arXiv abstract says DINOv3 produces high-quality dense features and outperforms prior self- and weakly-supervised foundation models across many vision tasks without fine-tuning.",
+      "summary": "Supplies the latest dense-feature geometry backbone in the baseline paper's DINO-side argument.",
       "review_status": "candidate"
     },
     {
-      "id": "paper:bolya2025-perception-encoder",
+      "id": "paper:zhang2026-geometry-interaction-affordance",
       "kind": "paper",
-      "title": "Perception Encoder",
-      "year": 2025,
-      "route": "foundation-model-probing",
-      "roles": ["foundation-encoder-anchor", "representation-probing"],
-      "source_url": "https://www.semanticscholar.org/search?q=Perception%20Encoder%20Bolya%202025",
-      "identity": {
-        "anchor": "Bolya2025 Perception Encoder"
-      },
-      "source_evidence": "Public paper anchor named in Task 1 plan.",
-      "summary": "Serves as a public anchor for broad visual representation probing.",
+      "title": "Probing and Bridging Geometry-Interaction Cues for Affordance Reasoning in Vision Foundation Models",
+      "year": 2026,
+      "month": "02",
+      "route": "vfm-probing-and-bridging",
+      "roles": ["baseline", "project-anchor", "synthesis", "training-free-fusion"],
+      "venue": "CVPR",
+      "source_url": "https://arxiv.org/abs/2602.20501",
+      "identity": {"arxiv": "2602.20501"},
+      "source_evidence": "arXiv abstract argues affordance understanding hinges on geometry and interaction perception, reports DINO part-level structure and Flux verb-conditioned attention maps, and fuses them in a training-free zero-shot affordance estimator.",
+      "summary": "Sits at the convergence point: converts grounding, dense geometry, VLM/open-affordance, and generative interaction cues into a probe-and-bridge account.",
       "review_status": "candidate"
     }
   ],
@@ -154,39 +219,66 @@
     {
       "source": "paper:luo2022-agd20k",
       "target": "paper:li2023-locate",
-      "relation": "influences",
-      "rationale": "Both papers anchor affordance localization and grounding evaluation.",
+      "relation": "extends-method",
+      "rationale": "LOCATE keeps the exocentric-to-egocentric affordance grounding setup but shifts the mechanism toward object-part localization and transfer.",
       "confidence": "medium",
-      "source_evidence": "Task 1 anchor list groups both as safe affordance grounding references.",
+      "source_evidence": "Both arXiv abstracts frame affordance grounding from exocentric interaction images to egocentric object images; LOCATE explicitly adds object-part transfer.",
       "review_status": "candidate"
     },
     {
-      "source": "paper:amir2022-dense-vit-descriptors",
-      "target": "paper:li2024-ooal",
-      "relation": "influences",
-      "rationale": "Dense feature correspondence motivates foundation-model affordance transfer probes.",
+      "source": "paper:amir2021-dense-vit-descriptors",
+      "target": "paper:oquab2023-dinov2",
+      "relation": "extends-method",
+      "rationale": "DINOv2 scales the self-supervised ViT feature route from dense descriptors into robust all-purpose visual features at image and pixel levels.",
       "confidence": "medium",
-      "source_evidence": "Task 1 anchor list spans dense descriptors and open affordance learning.",
+      "source_evidence": "Amir2021 establishes DINO-ViT dense descriptors; DINOv2's arXiv abstract emphasizes scalable all-purpose features and pixel-level benchmarks.",
+      "review_status": "candidate"
+    },
+    {
+      "source": "paper:oquab2023-dinov2",
+      "target": "paper:simeoni2025-dinov3",
+      "relation": "extends-method",
+      "rationale": "DINOv3 extends the DINO self-supervised route with stronger dense features and larger-scale foundation-model behavior.",
+      "confidence": "high",
+      "source_evidence": "DINOv3 arXiv abstract explicitly positions itself as surpassing previous self- and weakly-supervised foundation models with high-quality dense features.",
       "review_status": "candidate"
     },
     {
       "source": "paper:li2024-ooal",
       "target": "paper:qian2024-affordancellm",
       "relation": "contrasts-with",
-      "rationale": "One route emphasizes visual foundation-model adaptation while the other emphasizes language-guided affordance priors.",
+      "rationale": "OOAL emphasizes visual-feature/text-embedding alignment under one-shot supervision, while AffordanceLLM emphasizes world and human-object-interaction knowledge from VLMs.",
       "confidence": "medium",
-      "source_evidence": "Task 1 anchor list includes both open-vocabulary affordance anchors.",
+      "source_evidence": "Their arXiv abstracts state different routes to open affordance: one-shot visual-text alignment versus VLM knowledge transfer.",
+      "review_status": "candidate"
+    },
+    {
+      "source": "paper:flux2025-kontext",
+      "target": "paper:zhang2026-geometry-interaction-affordance",
+      "relation": "adapts-to-domain",
+      "rationale": "The baseline adapts Flux-style instruction-conditioned generative behavior from image generation/editing into affordance interaction priors.",
+      "confidence": "medium",
+      "source_evidence": "FLUX.1 Kontext source describes text/image semantic context; the baseline arXiv abstract describes Flux verb-conditioned spatial attention maps as implicit interaction priors.",
       "review_status": "candidate"
     },
     {
       "source": "paper:simeoni2025-dinov3",
-      "target": "paper:bolya2025-perception-encoder",
-      "relation": "competes-with",
-      "rationale": "Both are foundation-model probing anchors for general visual representations.",
+      "target": "paper:zhang2026-geometry-interaction-affordance",
+      "relation": "adapts-to-domain",
+      "rationale": "The baseline adapts DINO dense geometry into affordance-region estimation by fusing geometric prototypes with interaction maps.",
+      "confidence": "high",
+      "source_evidence": "DINOv3 source describes dense feature quality; the baseline source says DINO geometric prototypes are fused with Flux interaction maps.",
+      "review_status": "candidate"
+    },
+    {
+      "source": "paper:banani2024-probe3d",
+      "target": "paper:zhang2026-geometry-interaction-affordance",
+      "relation": "influences",
+      "rationale": "Both use probing to ask what VFMs internally encode, but the baseline narrows the probe to affordance-relevant geometry and interaction cues.",
       "confidence": "medium",
-      "source_evidence": "Task 1 anchor list includes both foundation-model probing anchors.",
+      "source_evidence": "Banani2024 source frames frozen-feature probes for geometry; the baseline source frames systematic probing of VFMs for affordance reasoning.",
       "review_status": "candidate"
     }
   ],
-  "positioning_note": "Demo project sits between affordance grounding, dense geometry priors, and open-vocabulary foundation-model probing."
+  "positioning_note": "Starting from arXiv:2602.20501, the field shape is not a simple citation chain. The baseline paper sits at a convergence of four paper routes: AGD20K/LOCATE define affordance grounding as localized action-region transfer; Amir-DINOv2-DINOv3 provide dense part/geometry priors; OOAL/AffordanceLLM test open and language-guided affordance generalization; FLUX.1 Kontext supplies the generative model family whose instruction-conditioned spatial behavior can be reinterpreted as interaction cues. The project contribution is the bridge: treat geometry and interaction as separable VFM capacities, then compose them in a training-free affordance estimator."
 }

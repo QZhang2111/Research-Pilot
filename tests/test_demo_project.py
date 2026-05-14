@@ -62,7 +62,11 @@ class DemoProjectTest(unittest.TestCase):
         self.assertTrue(result["valid"], result)
         self.assertEqual(payload["project"], "DemoVisualAffordance")
         self.assertGreaterEqual(result["paper_count"], 6)
-        self.assertLessEqual(result["paper_count"], 10)
+        self.assertLessEqual(result["paper_count"], 20)
+        self.assertIn(
+            "paper:zhang2026-geometry-interaction-affordance",
+            payload["route_narrowing"]["selected_anchor_papers"],
+        )
 
     def test_demo_dashboard_index_exposes_project_lineage_and_demo_flag(self) -> None:
         index = build_index(DEMO)
