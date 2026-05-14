@@ -85,6 +85,10 @@ This feature must conform to the current Research Pilot architecture before any 
 - Add dashboard read-model building through existing dashboard index/read-model patterns.
 - Add tests following existing tool, dashboard, and workflow tests.
 
+### Storage Path Alignment Gate
+
+Before an implementation plan proposes new lineage artifact paths, it must inspect existing project artifact conventions and produce a storage-path alignment section. That section must cite the local files or tests that establish the convention, propose exactly where lineage source artifacts and dashboard read models should live, and explain why those paths fit Research Pilot's current workspace model. Agents must not invent new project directories or read-model locations without this alignment step.
+
 ### Structures Not To Invent Casually
 
 - Do not create a parallel graph-truth system.
@@ -310,8 +314,7 @@ The PRD does not bind implementation to a specific provider. Acceptable identity
 
 ## 12. Open Questions
 
-- Exact lineage artifact storage path should be decided during implementation design after inspecting existing project file conventions.
+- Exact lineage artifact storage path should be decided only through the required storage-path alignment gate.
 - Exact dashboard route/page structure should be decided by matching current dashboard index patterns.
 - Whether `project-evidence-synthesis` should later be renamed to a narrower graph-update skill is outside this MVP but should remain open.
 - Whether approved lineage papers should integrate with Zotero status mirroring is outside this MVP.
-
