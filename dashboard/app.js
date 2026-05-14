@@ -301,6 +301,12 @@ function papersForProject(projectId = state.projectId) {
   return (state.data?.papers || []).filter((paper) => paper.project === projectId);
 }
 
+function lineageMapsForProject(projectId = state.projectId) {
+  return (state.data?.lineage_maps || [])
+    .filter((map) => map.project === projectId)
+    .sort((a, b) => normalizeToken(b.round).localeCompare(normalizeToken(a.round)));
+}
+
 function paperKey(paper) {
   return String(paper?.zotero_key || paper?.zotero || paper?.id || paper?.title || "").replace("zotero:item:", "").replace("zotero:", "");
 }
@@ -399,15 +405,23 @@ function experimentProposalsUrl(projectId) {
   return `./experiment-proposals.html?project=${encodeURIComponent(projectId)}`;
 }
 
+function lineageUrl(projectId, roundName) {
+  const params = new URLSearchParams({ project: projectId });
+  if (roundName) params.set("round", roundName);
+  return `./lineage.html?${params.toString()}`;
+}
+
 function renderProjectNav(project) {
   if (!el.projectNav || !project) return;
   const current = state.page;
   const projectCurrent = current === "project" ? ' aria-current="page"' : "";
   const papersCurrent = ["papers", "round", "paper", "deep-reads"].includes(current) ? ' aria-current="page"' : "";
+  const lineageCurrent = current === "lineage" ? ' aria-current="page"' : "";
   const experimentsCurrent = current === "experiment-proposals" ? ' aria-current="page"' : "";
   el.projectNav.innerHTML = `
     <a href="${escapeAttr(projectUrl(project.id))}"${projectCurrent}>项目</a>
     <a href="${escapeAttr(papersUrl(project.id))}"${papersCurrent}>论文库</a>
+    <a href="${escapeAttr(lineageUrl(project.id))}"${lineageCurrent}>技术路线</a>
     <a href="${escapeAttr(experimentProposalsUrl(project.id))}"${experimentsCurrent}>实验建议</a>
   `;
 }
@@ -3323,6 +3337,217 @@ function renderDeepReadsPage() {
   `;
 }
 
+function renderLineagePage() {
+  const project = projectById();
+  if (!project) {
+    renderEmpty("未找到项目。");
+    return;
+  }
+  renderProjectNav(project);
+  const maps = lineageMapsForProject(project.id);
+  const roundParam = params().get("round") || "";
+  const selectedMap = maps.find((map) => normalizeToken(map.round) === normalizeToken(roundParam)) || maps[0] || null;
+  setHeader(
+    "技术路线",
+    selectedMap?.title || "Related Work Lineage",
+    `${displayProjectTitle(project)} · paper-only related-work map`
+  );
+  if (!selectedMap) {
+    el.content.innerHTML = `
+      <section class="section-block lineage-map-shell">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Read-only Artifact</p>
+            <h2>暂无 related-work-lineage.json</h2>
+            <p class="section-note">技术路线页只展示 workspace lineage artifact，不写 Project Understanding Graph。</p>
+          </div>
+          <a href="${escapeAttr(projectUrl(project.id))}">返回项目</a>
+        </div>
+        <div class="empty-state">当前项目还没有 related work lineage map。</div>
+      </section>
+    `;
+    return;
+  }
+
+  el.content.innerHTML = `
+    <section class="section-block lineage-map-shell">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Read-only Lineage Map</p>
+          <h2>${escapeHtml(selectedMap.title || selectedMap.round || "Related Work Lineage")}</h2>
+          <p class="section-note">${escapeHtml(selectedMap.positioning_note || "暂无 positioning note。")}</p>
+        </div>
+        <div class="lineage-map-switcher" aria-label="lineage map rounds">
+          ${maps.map((map) => {
+            const current = map.id === selectedMap.id ? ' aria-current="page"' : "";
+            return `<a href="${escapeAttr(lineageUrl(project.id, map.round))}"${current}>${escapeHtml(map.round || "unknown")}</a>`;
+          }).join("")}
+        </div>
+      </div>
+      ${renderLineageSummaryFacts(selectedMap)}
+      ${renderLineageLanes(selectedMap)}
+      ${renderLineageEdgeList(selectedMap)}
+      ${renderLineagePaperTable(selectedMap)}
+      <aside class="lineage-boundary-note">
+        <strong>Boundary</strong>
+        <span>Dashboard is read-only. This related-work lineage artifact is not Project Understanding Graph truth and creates no D* events.</span>
+      </aside>
+    </section>
+  `;
+}
+
+function renderLineageSummaryFacts(map) {
+  const status = map.valid ? (map.status || "candidate") : "invalid";
+  return `
+    <dl class="lineage-summary-facts">
+      <div><dt>routes</dt><dd>${Number(map.route_count || (map.routes || []).length || 0)}</dd></div>
+      <div><dt>papers</dt><dd>${Number(map.paper_count || (map.papers || []).length || 0)}</dd></div>
+      <div><dt>edges</dt><dd>${Number(map.edge_count || (map.explicit_edges || []).length || 0)}</dd></div>
+      <div><dt>status</dt><dd>${escapeHtml(status)}</dd></div>
+    </dl>
+    ${Array.isArray(map.errors) && map.errors.length ? `
+      <div class="lineage-boundary-note lineage-error-note">
+        <strong>Validation</strong>
+        <span>${map.errors.map((error) => escapeHtml(error)).join("; ")}</span>
+      </div>
+    ` : ""}
+  `;
+}
+
+function sortedLineagePapers(papers) {
+  return [...(papers || [])].sort((a, b) => {
+    const yearA = Number(a.year || 9999);
+    const yearB = Number(b.year || 9999);
+    if (yearA !== yearB) return yearA - yearB;
+    const monthA = Number(a.month || 99);
+    const monthB = Number(b.month || 99);
+    if (monthA !== monthB) return monthA - monthB;
+    return String(a.title || "").localeCompare(String(b.title || ""));
+  });
+}
+
+function renderLineageLanes(map) {
+  const papers = Array.isArray(map.papers) ? map.papers : [];
+  const routeMap = new Map((map.routes || []).map((route) => [route.id, route]));
+  const routeIds = [...routeMap.keys()];
+  papers.forEach((paper) => {
+    if (paper.route && !routeMap.has(paper.route)) {
+      routeMap.set(paper.route, { id: paper.route, label: paper.route, description: "", review_status: "unknown" });
+      routeIds.push(paper.route);
+    }
+  });
+  const unassigned = papers.filter((paper) => !paper.route);
+  if (unassigned.length) {
+    routeMap.set("unassigned", { id: "unassigned", label: "Unassigned", description: "Papers without route assignment.", review_status: "unknown" });
+    routeIds.push("unassigned");
+  }
+  if (!routeIds.length) return `<div class="empty-state">No routes in this lineage map.</div>`;
+  return `
+    <div class="lineage-lanes">
+      ${routeIds.map((routeId) => {
+        const route = routeMap.get(routeId);
+        const routePapers = sortedLineagePapers(papers.filter((paper) => (paper.route || "unassigned") === routeId));
+        return `
+          <section class="lineage-lane">
+            <header>
+              <div>
+                <span>${escapeHtml(route.review_status || "candidate")}</span>
+                <h3>${escapeHtml(route.label || route.id || "Unnamed route")}</h3>
+              </div>
+              <small>${escapeHtml(route.id || "route")}</small>
+            </header>
+            <p>${escapeHtml(route.description || "No route description.")}</p>
+            <div class="lineage-paper-track">
+              ${routePapers.length ? routePapers.map((paper) => renderLineagePaperNode(paper)).join("") : `<div class="empty-state">No papers assigned.</div>`}
+            </div>
+          </section>
+        `;
+      }).join("")}
+    </div>
+  `;
+}
+
+function renderLineagePaperNode(paper) {
+  const date = [paper.year, paper.month].filter(Boolean).join("-");
+  const roles = Array.isArray(paper.roles) ? paper.roles : [];
+  return `
+    <article class="lineage-paper-node">
+      <span>${escapeHtml(date || "n.d.")}</span>
+      <h4>${escapeHtml(paper.title || paper.id || "Untitled paper")}</h4>
+      <p>${escapeHtml(paper.summary || paper.source_evidence || "No summary.")}</p>
+      <div>
+        ${roles.map((role) => `<small>${escapeHtml(role)}</small>`).join("")}
+        <small>${escapeHtml(paper.review_status || "candidate")}</small>
+      </div>
+    </article>
+  `;
+}
+
+function renderLineageEdgeList(map) {
+  const edges = Array.isArray(map.explicit_edges) ? map.explicit_edges : [];
+  const papersById = new Map((map.papers || []).map((paper) => [paper.id, paper]));
+  return `
+    <section class="lineage-edge-list">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Explicit Cross-route Relationships</p>
+          <h2>非顺序边</h2>
+        </div>
+      </div>
+      ${edges.length ? edges.map((edge) => {
+        const source = papersById.get(edge.source);
+        const target = papersById.get(edge.target);
+        return `
+          <article>
+            <strong>${escapeHtml(source?.title || edge.source || "unknown")} -> ${escapeHtml(target?.title || edge.target || "unknown")}</strong>
+            <span>${escapeHtml(edge.relation || "related")} · ${escapeHtml(edge.confidence || "unknown")} · ${escapeHtml(edge.review_status || "candidate")}</span>
+            <p>${escapeHtml(edge.rationale || edge.source_evidence || "No rationale.")}</p>
+          </article>
+        `;
+      }).join("") : `<div class="empty-state">No explicit cross-route relationships.</div>`}
+    </section>
+  `;
+}
+
+function renderLineagePaperTable(map) {
+  const papers = sortedLineagePapers(map.papers || []);
+  return `
+    <section class="lineage-paper-table">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Paper Table</p>
+          <h2>Sources</h2>
+        </div>
+      </div>
+      <div class="table-scroll">
+        <table class="paper-summary-table">
+          <thead>
+            <tr>
+              <th>Paper</th>
+              <th>Route</th>
+              <th>Status</th>
+              <th>Source</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${papers.map((paper) => `
+              <tr>
+                <td>
+                  <strong>${escapeHtml(paper.title || paper.id || "Untitled paper")}</strong>
+                  <span>${escapeHtml([paper.venue, paper.year].filter(Boolean).join(" · ") || paper.id || "")}</span>
+                </td>
+                <td>${escapeHtml(paper.route || "unassigned")}</td>
+                <td>${escapeHtml(paper.review_status || "candidate")}</td>
+                <td>${paper.source_url ? `<a href="${escapeAttr(paper.source_url)}" target="_blank" rel="noopener noreferrer">source</a>` : `<span>no source_url</span>`}</td>
+              </tr>
+            `).join("") || `<tr><td colspan="4">No papers.</td></tr>`}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  `;
+}
+
 async function renderExperimentProposalsPage() {
   const project = projectById();
   if (!project) {
@@ -3447,6 +3672,7 @@ async function renderPage() {
   else if (state.page === "round") renderRoundReviewPage();
   else if (state.page === "paper") await renderPaperDetailPage();
   else if (state.page === "deep-reads") renderDeepReadsPage();
+  else if (state.page === "lineage") renderLineagePage();
   else if (state.page === "experiment-proposals") await renderExperimentProposalsPage();
   else renderProjectsIndex();
 }
