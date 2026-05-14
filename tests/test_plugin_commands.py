@@ -1,6 +1,11 @@
+import contextlib
+import io
 import re
+import tempfile
 import unittest
 from pathlib import Path
+
+from tools.research_pilot_init import main as research_pilot_init_main
 
 
 REPO = Path(__file__).resolve().parents[1]
@@ -54,10 +59,39 @@ class PluginCommandTests(unittest.TestCase):
     def test_related_work_lineage_skill_and_workflow_exist(self) -> None:
         skill = REPO / "skills" / "related-work-lineage" / "SKILL.md"
         workflow = REPO / "templates" / "workspace" / "wiki" / "_system" / "workflows" / "related-work-lineage.md"
+        router = REPO / "skills" / "research-pilot" / "SKILL.md"
         self.assertTrue(skill.exists())
         self.assertTrue(workflow.exists())
-        self.assertIn("paper-only", skill.read_text(encoding="utf-8"))
-        self.assertIn("must not append graph events", workflow.read_text(encoding="utf-8"))
+        skill_text = skill.read_text(encoding="utf-8")
+        workflow_text = workflow.read_text(encoding="utf-8")
+        router_text = router.read_text(encoding="utf-8")
+        self.assertIn("paper-only", skill_text)
+        self.assertIn('--direction "$DIRECTION"', skill_text)
+        self.assertIn('--baseline-paper "$BASELINE"', skill_text)
+        self.assertIn("ask the user to narrow or split maps", skill_text)
+        self.assertIn("exclude low-signal follow-ups", skill_text)
+        self.assertIn("must not append graph events", workflow_text)
+        self.assertIn("ask the user to narrow or split maps", workflow_text)
+        self.assertIn("exclude low-signal follow-ups", workflow_text)
+        self.assertRegex(
+            router_text,
+            re.compile(r"related-work route map.*related-work-lineage", re.S),
+        )
+        self.assertIn("Do not use `project-evidence-synthesis` for this intent", router_text)
+        self.assertIn("broad direction", router_text)
+        self.assertIn("candidate technical routes", router_text)
+
+    def test_related_work_lineage_workflow_copies_into_initialized_workspace(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace = Path(tmp) / "workspace"
+
+            with contextlib.redirect_stdout(io.StringIO()):
+                result = research_pilot_init_main([str(workspace), "--no-git"])
+
+            workflow = workspace / "wiki" / "_system" / "workflows" / "related-work-lineage.md"
+            self.assertEqual(result, 0)
+            self.assertTrue(workflow.exists())
+            self.assertIn("must not append graph events", workflow.read_text(encoding="utf-8"))
 
 
 if __name__ == "__main__":

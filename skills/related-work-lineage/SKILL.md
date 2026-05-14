@@ -43,6 +43,8 @@ For a broad direction, first produce a narrowing menu:
 
 Ask the user to choose routes or baseline papers before creating the lineage map.
 
+If the topic needs more than 20 papers, stop and ask the user to narrow or split maps by route, time window, method family, venue, or project contribution target. Exclude low-signal follow-ups instead of expanding the map.
+
 ## Artifact Paths
 
 Write/update artifacts under:
@@ -57,7 +59,7 @@ $WORKSPACE/wiki/projects/$PROJECT/literature-rounds/<round>/related-work-lineage
 Create:
 
 ```bash
-python3 "$PLUGIN_ROOT/tools/related_work_lineage_cli.py" create --repo "$WORKSPACE" --project "$PROJECT" --round "$ROUND" --title "$TITLE" --json
+python3 "$PLUGIN_ROOT/tools/related_work_lineage_cli.py" create --repo "$WORKSPACE" --project "$PROJECT" --round "$ROUND" --title "$TITLE" --direction "$DIRECTION" --baseline-paper "$BASELINE" --baseline-paper "$BASELINE" --json
 ```
 
 Validate:
@@ -77,6 +79,7 @@ python3 "$PLUGIN_ROOT/tools/related_work_lineage_cli.py" render-summary --path "
 Artifacts must include:
 
 - max 20 papers;
+- if the topic needs more than 20 papers, ask the user to narrow or split maps and exclude low-signal follow-ups;
 - every node has `kind: paper`;
 - title;
 - year;

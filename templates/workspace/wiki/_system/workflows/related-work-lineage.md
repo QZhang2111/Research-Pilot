@@ -43,6 +43,8 @@ Broad direction mode:
 - state why each route may be excluded;
 - ask the user to choose routes or baseline papers before map creation.
 
+If the topic needs more than 20 papers, stop and ask the user to narrow or split maps by route, time window, method family, venue, or project contribution target. Exclude low-signal follow-ups instead of expanding the map.
+
 ## Artifact Location
 
 Store lineage artifacts under:
@@ -55,6 +57,7 @@ wiki/projects/<ProjectName>/literature-rounds/<round>/related-work-lineage.md
 ## Quality Bar
 
 - Max 20 papers.
+- If topic needs more than 20 papers, ask the user to narrow or split maps and exclude low-signal follow-ups.
 - Every node is a paper with `kind: paper`.
 - Roles are not nodes; dataset, benchmark, method, theory, survey, and system are roles attached to paper nodes.
 - Route lanes are explicit.
