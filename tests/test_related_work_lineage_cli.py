@@ -6,6 +6,7 @@ from pathlib import Path
 from tools.related_work_lineage_cli import (
     artifact_paths,
     create_template,
+    main,
     render_markdown_summary,
     validate_lineage_map,
 )
@@ -91,11 +92,30 @@ class RelatedWorkLineageCliTest(unittest.TestCase):
         )
         self.assertEqual(paths["markdown"].name, "related-work-lineage.md")
 
+    def test_artifact_paths_reject_unsafe_segments(self):
+        root = Path("/tmp/workspace")
+
+        with self.assertRaises(ValueError):
+            artifact_paths(root, "../escape", "vision-world-model-baselines")
+        with self.assertRaises(ValueError):
+            artifact_paths(root, "DemoProject", "round/escape")
+        with self.assertRaises(ValueError):
+            artifact_paths(root, ".", "vision-world-model-baselines")
+
     def test_validates_paper_only_map(self):
         result = validate_lineage_map(VALID_MAP)
 
         self.assertTrue(result["valid"], result)
         self.assertEqual(result["paper_count"], 2)
+
+    def test_rejects_non_object_payload(self):
+        result = validate_lineage_map([])
+
+        self.assertFalse(result["valid"])
+        self.assertEqual(result["errors"], ["payload must be an object"])
+        self.assertEqual(result["paper_count"], 0)
+        self.assertEqual(result["route_count"], 0)
+        self.assertEqual(result["edge_count"], 0)
 
     def test_rejects_non_paper_nodes(self):
         payload = json.loads(json.dumps(VALID_MAP))
@@ -171,6 +191,38 @@ class RelatedWorkLineageCliTest(unittest.TestCase):
         self.assertIn("# Vision World Model Related Work Lineage", summary)
         self.assertIn("## Technical Routes", summary)
         self.assertIn("DreamerV3", summary)
+
+    def test_markdown_frontmatter_escapes_yaml_scalars(self):
+        payload = json.loads(json.dumps(VALID_MAP))
+        payload["title"] = "Lineage \"Quoted\"\ninjected: value"
+
+        summary = render_markdown_summary(payload)
+        frontmatter = summary.split("---", 2)[1].strip().splitlines()
+        title_lines = [line for line in frontmatter if line.startswith("title: ")]
+
+        self.assertEqual(len(title_lines), 1)
+        self.assertEqual(title_lines[0], 'title: "Lineage \\"Quoted\\"\\ninjected: value"')
+        self.assertNotIn("injected: value", frontmatter)
+
+    def test_cli_create_rejects_unsafe_project(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            result = main(
+                [
+                    "create",
+                    "--repo",
+                    tmp,
+                    "--project",
+                    "../escape",
+                    "--round",
+                    "vision-world-model-baselines",
+                    "--title",
+                    "Unsafe",
+                    "--json",
+                ]
+            )
+
+            self.assertEqual(result, 1)
+            self.assertFalse((Path(tmp).parent / "escape").exists())
 
 
 if __name__ == "__main__":

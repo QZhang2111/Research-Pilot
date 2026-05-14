@@ -23,6 +23,7 @@ VALID_RELATIONS = {
 }
 SCHEMA_VERSION = "related-work-lineage-v1"
 SOURCE_BOUNDARY = "related_work_lineage_only_not_graph_truth"
+SAFE_SEGMENT_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
 
 
 def slugify(value: str) -> str:
@@ -37,7 +38,22 @@ def relpath(path: Path, root: Path) -> str:
         return str(path)
 
 
+def validate_path_segment(value: str, label: str) -> str:
+    segment = str(value or "").strip()
+    if (
+        not segment
+        or segment in {".", ".."}
+        or "/" in segment
+        or "\\" in segment
+        or not SAFE_SEGMENT_RE.fullmatch(segment)
+    ):
+        raise ValueError(f"{label} must be a safe path segment")
+    return segment
+
+
 def artifact_paths(root: Path, project: str, round_id: str) -> Dict[str, Path]:
+    project = validate_path_segment(project, "project")
+    round_id = validate_path_segment(round_id, "round")
     base = root / "wiki" / "projects" / project / "literature-rounds" / round_id
     return {
         "dir": base,
@@ -84,7 +100,16 @@ def require_string(item: Dict[str, Any], key: str, label: str, errors: List[str]
     return value
 
 
-def validate_lineage_map(payload: Dict[str, Any]) -> Dict[str, Any]:
+def validate_lineage_map(payload: Any) -> Dict[str, Any]:
+    if not isinstance(payload, dict):
+        return {
+            "valid": False,
+            "errors": ["payload must be an object"],
+            "paper_count": 0,
+            "route_count": 0,
+            "edge_count": 0,
+        }
+
     errors: List[str] = []
     if payload.get("schema_version") != SCHEMA_VERSION:
         errors.append(f"schema_version must be {SCHEMA_VERSION}")
@@ -173,14 +198,18 @@ def validate_lineage_map(payload: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
+def yaml_scalar(value: Any) -> str:
+    return json.dumps(str(value), ensure_ascii=False)
+
+
 def render_markdown_summary(payload: Dict[str, Any]) -> str:
     lines = [
         "---",
-        f"title: \"{payload.get('title', 'Related Work Lineage')}\"",
+        f"title: {yaml_scalar(payload.get('title', 'Related Work Lineage'))}",
         "type: related-work-lineage",
-        f"project: {payload.get('project', '')}",
-        f"round: {payload.get('round', '')}",
-        f"status: {payload.get('status', 'candidate')}",
+        f"project: {yaml_scalar(payload.get('project', ''))}",
+        f"round: {yaml_scalar(payload.get('round', ''))}",
+        f"status: {yaml_scalar(payload.get('status', 'candidate'))}",
         "human_review: pending",
         "---",
         "",
@@ -297,33 +326,36 @@ def main(argv: Optional[List[str]] = None) -> int:
     render.add_argument("--json", action="store_true")
 
     args = parser.parse_args(argv)
-    if args.command == "create":
-        result = create_template(
-            Path(args.repo).expanduser().resolve(),
-            args.project,
-            args.round,
-            args.title,
-            args.direction,
-            args.baseline_paper,
-            args.overwrite,
-        )
-    elif args.command == "validate":
-        result = validate_lineage_map(load_json(Path(args.path).expanduser().resolve()))
-    else:
-        source_path = Path(args.path).expanduser().resolve()
-        payload = load_json(source_path)
-        validation = validate_lineage_map(payload)
-        if not validation["valid"]:
-            result = validation
-        else:
-            text = render_markdown_summary(payload)
-            output = (
-                Path(args.output).expanduser().resolve()
-                if args.output
-                else source_path.with_suffix(".md")
+    try:
+        if args.command == "create":
+            result = create_template(
+                Path(args.repo).expanduser().resolve(),
+                args.project,
+                args.round,
+                args.title,
+                args.direction,
+                args.baseline_paper,
+                args.overwrite,
             )
-            output.write_text(text, encoding="utf-8")
-            result = {"valid": True, "output": str(output)}
+        elif args.command == "validate":
+            result = validate_lineage_map(load_json(Path(args.path).expanduser().resolve()))
+        else:
+            source_path = Path(args.path).expanduser().resolve()
+            payload = load_json(source_path)
+            validation = validate_lineage_map(payload)
+            if not validation["valid"]:
+                result = validation
+            else:
+                text = render_markdown_summary(payload)
+                output = (
+                    Path(args.output).expanduser().resolve()
+                    if args.output
+                    else source_path.with_suffix(".md")
+                )
+                output.write_text(text, encoding="utf-8")
+                result = {"valid": True, "output": str(output)}
+    except ValueError as exc:
+        result = {"valid": False, "created": False, "errors": [str(exc)]}
     print(
         json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True)
         if getattr(args, "json", False)
