@@ -29,6 +29,7 @@ VALID_REVIEW_STATUSES = {
     "rejected",
     "archived",
 }
+MAX_LINEAGE_DASHBOARD_ITEMS = 20
 
 
 def parse_frontmatter(text: str) -> Tuple[Dict[str, Any], str]:
@@ -826,11 +827,13 @@ def collect_project_graphs(root: Path) -> List[Dict[str, Any]]:
     return [graphs_by_project[project] for project in sorted(graphs_by_project)]
 
 
-def list_field(payload: Any, key: str) -> List[Any]:
+def list_field(payload: Any, key: str, limit: Optional[int] = None) -> List[Any]:
     if not isinstance(payload, dict):
         return []
     value = payload.get(key)
-    return value if isinstance(value, list) else []
+    if not isinstance(value, list):
+        return []
+    return value[:limit] if limit is not None else value
 
 
 def collect_lineage_maps(root: Path) -> List[Dict[str, Any]]:
@@ -840,37 +843,51 @@ def collect_lineage_maps(root: Path) -> List[Dict[str, Any]]:
         return lineage_maps
 
     for lineage_path in sorted(projects_root.glob("*/literature-rounds/*/related-work-lineage.json")):
-        try:
-            payload = json.loads(lineage_path.read_text(encoding="utf-8"))
-        except (OSError, UnicodeDecodeError, json.JSONDecodeError):
-            continue
-
-        validation = validate_lineage_map(payload)
         relative = lineage_path.relative_to(projects_root)
         path_project = relative.parts[0]
         path_round = relative.parts[2]
-        project = str(payload.get("project") or path_project).strip() if isinstance(payload, dict) else path_project
-        round_name = str(payload.get("round") or path_round).strip() if isinstance(payload, dict) else path_round
+        payload: Any = {}
+        parse_errors: List[str] = []
+        try:
+            payload = json.loads(lineage_path.read_text(encoding="utf-8"))
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+            parse_errors.append(f"{exc.__class__.__name__}: {exc}")
+
+        validation = validate_lineage_map(payload) if not parse_errors else {
+            "valid": False,
+            "errors": parse_errors,
+            "paper_count": 0,
+            "route_count": 0,
+            "edge_count": 0,
+        }
+        errors = list(validation.get("errors", []))
+        if isinstance(payload, dict):
+            payload_project = str(payload.get("project") or "").strip()
+            payload_round = str(payload.get("round") or "").strip()
+            if payload_project and payload_project != path_project:
+                errors.append(f"payload project does not match path project: {payload_project} != {path_project}")
+            if payload_round and payload_round != path_round:
+                errors.append(f"payload round does not match path round: {payload_round} != {path_round}")
         markdown_path = lineage_path.with_suffix(".md")
         lineage_maps.append(
             {
-                "id": f"{project}/{round_name}",
-                "project": project,
-                "round": round_name,
+                "id": f"{path_project}/{path_round}",
+                "project": path_project,
+                "round": path_round,
                 "title": str(payload.get("title") or "").strip() if isinstance(payload, dict) else "",
                 "status": str(payload.get("status") or "").strip() if isinstance(payload, dict) else "",
                 "source_boundary": str(payload.get("source_boundary") or "").strip() if isinstance(payload, dict) else "",
                 "path": relpath(lineage_path, root),
                 "markdown_path": relpath(markdown_path, root) if markdown_path.exists() else "",
-                "valid": bool(validation.get("valid")),
-                "errors": validation.get("errors", []),
+                "valid": bool(validation.get("valid")) and not errors,
+                "errors": errors,
                 "paper_count": validation.get("paper_count", 0),
                 "route_count": validation.get("route_count", 0),
                 "edge_count": validation.get("edge_count", 0),
                 "route_narrowing": payload.get("route_narrowing", {}) if isinstance(payload, dict) else {},
-                "routes": list_field(payload, "routes"),
-                "papers": list_field(payload, "papers"),
-                "explicit_edges": list_field(payload, "explicit_edges"),
+                "routes": list_field(payload, "routes", MAX_LINEAGE_DASHBOARD_ITEMS),
+                "papers": list_field(payload, "papers", MAX_LINEAGE_DASHBOARD_ITEMS),
+                "explicit_edges": list_field(payload, "explicit_edges", MAX_LINEAGE_DASHBOARD_ITEMS),
                 "positioning_note": str(payload.get("positioning_note") or "").strip() if isinstance(payload, dict) else "",
             }
         )

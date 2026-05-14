@@ -79,6 +79,139 @@ class DashboardPublicTest(unittest.TestCase):
         )
         self.assertEqual(lineage["source_boundary"], "related_work_lineage_only_not_graph_truth")
 
+    def test_build_index_exposes_corrupt_related_work_lineage_map(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            lineage_path = (
+                root
+                / "wiki"
+                / "projects"
+                / "DemoProject"
+                / "literature-rounds"
+                / "corrupt-round"
+                / "related-work-lineage.json"
+            )
+            lineage_path.parent.mkdir(parents=True)
+            lineage_path.write_text("{not-json", encoding="utf-8")
+
+            index = build_index(root)
+
+        self.assertEqual(len(index["lineage_maps"]), 1)
+        lineage = index["lineage_maps"][0]
+        self.assertEqual(lineage["id"], "DemoProject/corrupt-round")
+        self.assertEqual(lineage["project"], "DemoProject")
+        self.assertEqual(lineage["round"], "corrupt-round")
+        self.assertFalse(lineage["valid"])
+        self.assertEqual(lineage["paper_count"], 0)
+        self.assertEqual(lineage["route_count"], 0)
+        self.assertEqual(lineage["edge_count"], 0)
+        self.assertEqual(lineage["route_narrowing"], {})
+        self.assertEqual(lineage["routes"], [])
+        self.assertEqual(lineage["papers"], [])
+        self.assertEqual(lineage["explicit_edges"], [])
+        self.assertEqual(lineage["positioning_note"], "")
+        self.assertTrue(lineage["errors"])
+
+    def test_build_index_lineage_identity_comes_from_path(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            lineage_path = (
+                root
+                / "wiki"
+                / "projects"
+                / "DemoProject"
+                / "literature-rounds"
+                / "path-round"
+                / "related-work-lineage.json"
+            )
+            lineage_path.parent.mkdir(parents=True)
+            lineage_path.write_text(
+                json.dumps(
+                    {
+                        "schema_version": "related-work-lineage-v1",
+                        "project": "OtherProject",
+                        "round": "other-round",
+                        "title": "Mismatched Lineage",
+                        "status": "candidate",
+                        "source_boundary": "related_work_lineage_only_not_graph_truth",
+                        "route_narrowing": {},
+                        "routes": [],
+                        "papers": [],
+                        "explicit_edges": [],
+                        "positioning_note": "",
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            index = build_index(root)
+
+        lineage = index["lineage_maps"][0]
+        self.assertEqual(lineage["id"], "DemoProject/path-round")
+        self.assertEqual(lineage["project"], "DemoProject")
+        self.assertEqual(lineage["round"], "path-round")
+        self.assertFalse(lineage["valid"])
+        self.assertIn("payload project does not match path project: OtherProject != DemoProject", lineage["errors"])
+        self.assertIn("payload round does not match path round: other-round != path-round", lineage["errors"])
+
+    def test_build_index_caps_oversized_invalid_lineage_payload(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            lineage_path = (
+                root
+                / "wiki"
+                / "projects"
+                / "DemoProject"
+                / "literature-rounds"
+                / "oversized-round"
+                / "related-work-lineage.json"
+            )
+            lineage_path.parent.mkdir(parents=True)
+            papers = [
+                {
+                    "id": f"paper-{index}",
+                    "kind": "paper",
+                    "title": f"Demo Paper {index}",
+                    "source_url": f"https://example.com/{index}",
+                    "source_evidence": "Search result.",
+                    "route": "route-1",
+                    "review_status": "candidate",
+                }
+                for index in range(25)
+            ]
+            lineage_path.write_text(
+                json.dumps(
+                    {
+                        "schema_version": "related-work-lineage-v1",
+                        "project": "DemoProject",
+                        "round": "oversized-round",
+                        "title": "Oversized Lineage",
+                        "status": "candidate",
+                        "source_boundary": "related_work_lineage_only_not_graph_truth",
+                        "route_narrowing": {},
+                        "routes": [
+                            {
+                                "id": "route-1",
+                                "label": "Route",
+                                "description": "Route description.",
+                                "review_status": "candidate",
+                            }
+                        ],
+                        "papers": papers,
+                        "explicit_edges": [],
+                        "positioning_note": "",
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            index = build_index(root)
+
+        lineage = index["lineage_maps"][0]
+        self.assertFalse(lineage["valid"])
+        self.assertEqual(lineage["paper_count"], 25)
+        self.assertLessEqual(len(lineage["papers"]), 20)
+
     def test_build_index_exposes_graph_only_project(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
