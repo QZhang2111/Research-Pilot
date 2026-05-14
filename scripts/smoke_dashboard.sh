@@ -8,7 +8,7 @@ port="${RESEARCH_PILOT_DASHBOARD_SMOKE_PORT:-8899}"
 cd "$repo_root"
 
 rm -rf "$tmp_workspace"
-python3 tools/research_pilot_init.py "$tmp_workspace" --no-git >/tmp/research-pilot-dashboard-init.log
+python3 tools/research_pilot_init.py "$tmp_workspace" --no-git --no-demo >/tmp/research-pilot-dashboard-init.log
 mkdir -p "$tmp_workspace/wiki/graphs/events/projects"
 cp examples/demo/events/demo-project.jsonl "$tmp_workspace/wiki/graphs/events/projects/DemoProject.jsonl"
 
