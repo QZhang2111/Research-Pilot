@@ -32,6 +32,7 @@ Research Pilot is the primary router skill for agent-operated research memory.
 - Intake Zotero-first source identity, with manual source-reference capture for setup/dry-run cases.
 - Build and serve the Research Browser dashboard.
 - Create durable execution-state records for long search, deep-read, synthesis, and experiment-proposal jobs.
+- Build paper-only related-work lineage maps for project-scoped technical route understanding.
 
 Dashboard is a required public component and a browser observer. It must not become graph truth.
 Durable job records are execution state only. They must not become graph truth.
@@ -210,6 +211,14 @@ $WORKSPACE_PATH/wiki/_system/workflows/project-evidence-synthesis.md
 4. Produce Project Understanding Delta proposals and a Human Decision Queue.
 
 Do not approve sources or mutate graph truth without explicit human decision.
+
+### Related Work Lineage
+
+When the user asks for a related-work route map, technology development map, lineage map, baseline route map, or where the project fits in prior work, use the `related-work-lineage` skill.
+
+Do not use `project-evidence-synthesis` for this intent. Related-work lineage is paper-only route mapping, not project graph truth. It must not append graph events, create D*, approve sources, or mutate Zotero.
+
+If the user gives a broad direction instead of baseline papers, first narrow into candidate technical routes and anchor baseline papers. Ask the user to choose before creating the map.
 
 ### Gap-Driven Search
 

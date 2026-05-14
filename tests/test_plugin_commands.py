@@ -51,6 +51,14 @@ class PluginCommandTests(unittest.TestCase):
         self.assertIn("Slash command visibility is not required", quick_start)
         self.assertNotIn("python3 ~/.research-pilot/repo/tools/build_dashboard_index.py", quick_start)
 
+    def test_related_work_lineage_skill_and_workflow_exist(self) -> None:
+        skill = REPO / "skills" / "related-work-lineage" / "SKILL.md"
+        workflow = REPO / "templates" / "workspace" / "wiki" / "_system" / "workflows" / "related-work-lineage.md"
+        self.assertTrue(skill.exists())
+        self.assertTrue(workflow.exists())
+        self.assertIn("paper-only", skill.read_text(encoding="utf-8"))
+        self.assertIn("must not append graph events", workflow.read_text(encoding="utf-8"))
+
 
 if __name__ == "__main__":
     unittest.main()
