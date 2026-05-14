@@ -19,12 +19,16 @@ class RelatedWorkLineageDashboardTest(unittest.TestCase):
         self.assertIn("function safeExternalSourceUrl(value)", app)
         self.assertIn("function lineageUrl(projectId, roundName)", app)
         self.assertIn("function renderLineagePage()", app)
+        self.assertIn("function renderLineageGraph(map)", app)
         self.assertIn('state.page === "lineage"', app)
 
     def test_styles_contain_lineage_selectors(self):
         css = (ROOT / "dashboard" / "styles.css").read_text(encoding="utf-8")
 
         self.assertIn(".lineage-map-shell", css)
+        self.assertIn(".lineage-graph-panel", css)
+        self.assertIn(".lineage-graph-node", css)
+        self.assertIn(".lineage-graph-explicit-edge", css)
         self.assertIn(".lineage-lane", css)
         self.assertIn(".lineage-paper-node", css)
 
@@ -190,6 +194,30 @@ class RelatedWorkLineageDashboardTest(unittest.TestCase):
             assert(node.includes("&lt;img src=x onerror=alert(1)&gt;"), node);
             assert(node.includes("&lt;script&gt;alert(1)&lt;/script&gt;"), node);
             assert(!node.includes("<script>alert(1)</script>"), node);
+
+            const graphMap = {
+              ...map,
+              routes: [
+                { id: "route-1", label: "Route One", description: "Desc", review_status: "candidate" },
+                { id: "route-2", label: "Route Two", description: "Desc", review_status: "candidate" },
+              ],
+              papers: [
+                { id: "paper-1", title: "Paper <One>", year: 2021, month: "01", route: "route-1", review_status: "candidate" },
+                { id: "paper-2", title: "Paper Two", year: 2022, month: "02", route: "route-1", review_status: "candidate" },
+                { id: "paper-3", title: "Paper Three", year: 2023, month: "03", route: "route-2", review_status: "candidate" },
+              ],
+              explicit_edges: [
+                { source: "paper-2", target: "paper-3", relation: "influences", confidence: "medium", review_status: "candidate", rationale: "Cross route" },
+              ],
+            };
+            const graph = context.renderLineageGraph(graphMap);
+            assert(graph.includes("<svg"), graph);
+            assert(graph.includes("lineage-graph-node"), graph);
+            assert(graph.includes("lineage-graph-sequence-edge"), graph);
+            assert(graph.includes("lineage-graph-explicit-edge"), graph);
+            assert(graph.includes('data-paper-id="paper-1"'), graph);
+            assert(graph.includes("Paper &lt;One&gt;"), graph);
+            assert(!graph.includes("Paper <One>"), graph);
 
             context.fixtureMaps = [
               {{ ...map, id: "DemoProject/zz-round", round: "zz-round", title: "ZZ Round" }},

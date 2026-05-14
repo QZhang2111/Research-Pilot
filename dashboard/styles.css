@@ -3918,6 +3918,96 @@ body[data-page="papers"] .page-content {
   font: 900 20px/1 var(--mono);
 }
 
+.lineage-graph-panel {
+  display: grid;
+  gap: 10px;
+  border: 1px solid rgba(49, 57, 71, 0.82);
+  border-radius: 8px;
+  background:
+    linear-gradient(90deg, rgba(214, 168, 79, 0.045), transparent 42%, rgba(76, 132, 178, 0.035)),
+    repeating-linear-gradient(90deg, rgba(143, 152, 168, 0.055) 0 1px, transparent 1px 92px),
+    rgba(8, 10, 13, 0.36);
+  padding: 12px;
+}
+
+.lineage-graph-panel .section-head {
+  padding-bottom: 8px;
+}
+
+.lineage-graph-scroll {
+  overflow-x: auto;
+  border: 1px solid rgba(49, 57, 71, 0.68);
+  border-radius: 7px;
+  background: rgba(4, 6, 10, 0.42);
+  scrollbar-color: rgba(143, 152, 168, 0.46) rgba(8, 10, 13, 0.68);
+  scrollbar-width: thin;
+}
+
+.lineage-graph {
+  display: block;
+  min-width: 1040px;
+  width: 100%;
+  height: auto;
+}
+
+.lineage-graph-route line {
+  stroke: rgba(143, 152, 168, 0.24);
+  stroke-width: 1.4;
+  stroke-dasharray: 5 8;
+}
+
+.lineage-graph-route-label {
+  fill: var(--text-main);
+  font: 800 16px/1 var(--display);
+}
+
+.lineage-graph-route-id,
+.lineage-graph-node-date,
+.lineage-graph-edge-label {
+  fill: var(--text-dim);
+  font: 800 10px/1 var(--mono);
+}
+
+.lineage-graph-sequence-edge {
+  stroke: rgba(143, 152, 168, 0.42);
+  stroke-width: 2;
+}
+
+.lineage-graph-explicit-edge {
+  fill: none;
+  stroke: rgba(214, 168, 79, 0.82);
+  stroke-width: 2.4;
+  stroke-linecap: round;
+}
+
+.lineage-graph marker path {
+  fill: rgba(214, 168, 79, 0.86);
+}
+
+.lineage-graph-node circle {
+  fill: #0e141d;
+  stroke: rgba(214, 168, 79, 0.74);
+  stroke-width: 2;
+  filter: drop-shadow(0 7px 14px rgba(0, 0, 0, 0.35));
+}
+
+.lineage-graph-node.is-anchor circle {
+  fill: rgba(214, 168, 79, 0.22);
+  stroke: var(--accent);
+  stroke-width: 2.5;
+}
+
+.lineage-graph-node-title {
+  fill: var(--text-main);
+  font: 800 11px/1.15 var(--body);
+  text-anchor: middle;
+}
+
+.lineage-graph-node-date {
+  text-anchor: middle;
+  fill: var(--accent);
+}
+
 .lineage-lanes {
   display: grid;
   gap: 12px;
@@ -4696,12 +4786,29 @@ body[data-page="papers"] .page-content {
 :root[data-theme="light"] .experiment-proposal-path,
 :root[data-theme="light"] .lineage-summary-facts div,
 :root[data-theme="light"] .lineage-map-switcher a,
+:root[data-theme="light"] .lineage-graph-panel,
+:root[data-theme="light"] .lineage-graph-scroll,
 :root[data-theme="light"] .lineage-lane,
 :root[data-theme="light"] .lineage-paper-node,
 :root[data-theme="light"] .lineage-edge-list article,
 :root[data-theme="light"] .graph-node-meta {
   border-color: rgba(199, 189, 173, 0.72);
   background: rgba(255, 253, 248, 0.66);
+}
+
+:root[data-theme="light"] .lineage-graph-route line,
+:root[data-theme="light"] .lineage-graph-sequence-edge {
+  stroke: rgba(92, 103, 119, 0.36);
+}
+
+:root[data-theme="light"] .lineage-graph-route-label,
+:root[data-theme="light"] .lineage-graph-node-title {
+  fill: var(--text-main);
+}
+
+:root[data-theme="light"] .lineage-graph-node circle {
+  fill: rgba(255, 253, 248, 0.96);
+  stroke: rgba(152, 107, 31, 0.72);
 }
 
 @media (max-width: 1440px) {

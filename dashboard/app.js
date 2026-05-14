@@ -3407,6 +3407,7 @@ function renderLineagePage() {
         </div>
       </div>
       ${renderLineageSummaryFacts(selectedMap)}
+      ${renderLineageGraph(selectedMap)}
       ${renderLineageLanes(selectedMap)}
       ${renderLineageEdgeList(selectedMap)}
       ${renderLineagePaperTable(selectedMap)}
@@ -3446,6 +3447,128 @@ function sortedLineagePapers(papers) {
     if (monthA !== monthB) return monthA - monthB;
     return String(a.title || "").localeCompare(String(b.title || ""));
   });
+}
+
+function lineagePaperDateValue(paper) {
+  const year = Number(paper?.year || 0);
+  if (!year) return 0;
+  const month = Math.max(1, Math.min(12, Number(paper?.month || 1)));
+  return year * 12 + month;
+}
+
+function shortLineageLabel(value, max = 34) {
+  const text = String(value || "").trim();
+  if (text.length <= max) return text;
+  return `${text.slice(0, Math.max(0, max - 1)).trim()}…`;
+}
+
+function renderLineageGraph(map) {
+  const papers = sortedLineagePapers(Array.isArray(map.papers) ? map.papers : []);
+  const routes = Array.isArray(map.routes) ? map.routes : [];
+  if (!papers.length) return `<div class="empty-state">No lineage graph nodes.</div>`;
+
+  const routeMap = new Map(routes.map((route) => [route.id, route]));
+  papers.forEach((paper) => {
+    const routeId = paper.route || "unassigned";
+    if (!routeMap.has(routeId)) {
+      routeMap.set(routeId, { id: routeId, label: routeId === "unassigned" ? "Unassigned" : routeId, description: "", review_status: "unknown" });
+    }
+  });
+  const routeIds = [...routeMap.keys()];
+  const values = papers.map((paper) => lineagePaperDateValue(paper)).filter(Boolean);
+  const minValue = Math.min(...values);
+  const maxValue = Math.max(...values);
+  const range = Math.max(1, maxValue - minValue);
+  const width = 1240;
+  const left = 250;
+  const right = 74;
+  const top = 92;
+  const routeGap = 116;
+  const height = Math.max(260, top + (routeIds.length - 1) * routeGap + 96);
+  const routeY = new Map(routeIds.map((routeId, index) => [routeId, top + index * routeGap]));
+  const xForPaper = (paper) => left + ((lineagePaperDateValue(paper) - minValue) / range) * (width - left - right);
+  const nodeById = new Map();
+  papers.forEach((paper) => {
+    nodeById.set(paper.id, {
+      paper,
+      x: xForPaper(paper),
+      y: routeY.get(paper.route || "unassigned") || top,
+    });
+  });
+
+  const routeRows = routeIds.map((routeId) => {
+    const route = routeMap.get(routeId);
+    const y = routeY.get(routeId);
+    return `
+      <g class="lineage-graph-route" data-route-id="${escapeAttr(routeId)}">
+        <text x="28" y="${y - 14}" class="lineage-graph-route-label">${escapeHtml(shortLineageLabel(route.label || route.id || "Route", 30))}</text>
+        <text x="28" y="${y + 10}" class="lineage-graph-route-id">${escapeHtml(shortLineageLabel(route.id || "route", 34))}</text>
+        <line x1="${left - 22}" y1="${y}" x2="${width - right + 18}" y2="${y}" />
+      </g>
+    `;
+  }).join("");
+
+  const sequenceEdges = routeIds.flatMap((routeId) => {
+    const routePapers = sortedLineagePapers(papers.filter((paper) => (paper.route || "unassigned") === routeId));
+    return routePapers.slice(1).map((paper, index) => {
+      const source = nodeById.get(routePapers[index].id);
+      const target = nodeById.get(paper.id);
+      if (!source || !target) return "";
+      return `<line class="lineage-graph-sequence-edge" x1="${source.x + 14}" y1="${source.y}" x2="${target.x - 14}" y2="${target.y}" />`;
+    });
+  }).join("");
+
+  const explicitEdges = (Array.isArray(map.explicit_edges) ? map.explicit_edges : []).map((edge) => {
+    const source = nodeById.get(edge.source);
+    const target = nodeById.get(edge.target);
+    if (!source || !target) return "";
+    const midX = (source.x + target.x) / 2;
+    const verticalLift = source.y === target.y ? -42 : (source.y < target.y ? -34 : 34);
+    const controlY = (source.y + target.y) / 2 + verticalLift;
+    return `
+      <path class="lineage-graph-explicit-edge" d="M ${source.x} ${source.y} Q ${midX} ${controlY} ${target.x} ${target.y}" marker-end="url(#lineage-arrow)" />
+      <text x="${midX}" y="${controlY - 8}" class="lineage-graph-edge-label">${escapeHtml(shortLineageLabel(edge.relation || "related", 18))}</text>
+    `;
+  }).join("");
+
+  const nodes = papers.map((paper) => {
+    const node = nodeById.get(paper.id);
+    const date = [paper.year, paper.month].filter(Boolean).join("-");
+    const isAnchor = (paper.roles || []).includes("baseline") || (paper.roles || []).includes("project-anchor");
+    return `
+      <g class="lineage-graph-node${isAnchor ? " is-anchor" : ""}" data-paper-id="${escapeAttr(paper.id || "")}" transform="translate(${node.x} ${node.y})">
+        <title>${escapeHtml(paper.title || paper.id || "Untitled paper")}</title>
+        <circle r="${isAnchor ? 18 : 14}" />
+        <text class="lineage-graph-node-date" x="0" y="-26">${escapeHtml(date || "n.d.")}</text>
+        <text class="lineage-graph-node-title" x="0" y="${isAnchor ? 38 : 34}">${escapeHtml(shortLineageLabel(paper.title || paper.id || "Untitled paper", isAnchor ? 34 : 28))}</text>
+      </g>
+    `;
+  }).join("");
+
+  return `
+    <section class="lineage-graph-panel">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Lineage Graph</p>
+          <h2>论文节点图</h2>
+          <p class="section-note">横向按时间展开，泳道是技术路线；细线是同路线时间序列，金色曲线是 explicit cross-route edge。</p>
+        </div>
+      </div>
+      <div class="lineage-graph-scroll">
+        <svg class="lineage-graph" viewBox="0 0 ${width} ${height}" role="img" aria-label="Related work lineage graph">
+          <defs>
+            <marker id="lineage-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" />
+            </marker>
+          </defs>
+          ${routeRows}
+          ${sequenceEdges}
+          ${explicitEdges}
+          ${nodes}
+        </svg>
+      </div>
+    </section>
+  `;
 }
 
 function renderLineageLanes(map) {
