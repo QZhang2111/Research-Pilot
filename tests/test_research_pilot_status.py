@@ -8,6 +8,9 @@ from tools.research_pilot_init import main as init_workspace_main
 
 
 class ResearchPilotStatusTest(unittest.TestCase):
+    def init_clean_workspace(self, root: Path) -> None:
+        init_workspace_main([str(root), "--no-git", "--no-demo"])
+
     def test_plugin_repo_stage(self):
         result = inspect_workspace(Path("."))
 
@@ -18,7 +21,7 @@ class ResearchPilotStatusTest(unittest.TestCase):
     def test_empty_workspace_stage_after_init(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            init_workspace_main([str(root), "--no-git"])
+            self.init_clean_workspace(root)
 
             result = inspect_workspace(root)
 
@@ -30,7 +33,7 @@ class ResearchPilotStatusTest(unittest.TestCase):
     def test_project_shell_stage(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            init_workspace_main([str(root), "--no-git"])
+            self.init_clean_workspace(root)
             project = root / "wiki" / "projects" / "DemoProject"
             project.mkdir(parents=True)
             (project / "overview.md").write_text(
@@ -48,7 +51,7 @@ class ResearchPilotStatusTest(unittest.TestCase):
     def test_project_has_graph_stage_when_project_events_exist_without_report(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            init_workspace_main([str(root), "--no-git"])
+            self.init_clean_workspace(root)
             project = root / "wiki" / "projects" / "DemoProject"
             project.mkdir(parents=True)
             (project / "overview.md").write_text(
@@ -67,7 +70,7 @@ class ResearchPilotStatusTest(unittest.TestCase):
     def test_graph_only_project_is_not_reported_as_empty_workspace(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            init_workspace_main([str(root), "--no-git"])
+            self.init_clean_workspace(root)
             events = root / "wiki" / "graphs" / "events" / "projects" / "DemoProject.jsonl"
             events.parent.mkdir(parents=True)
             events.write_text(
@@ -98,7 +101,7 @@ class ResearchPilotStatusTest(unittest.TestCase):
     def test_open_deltas_count_project_event_lifecycle(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            init_workspace_main([str(root), "--no-git"])
+            self.init_clean_workspace(root)
             events = root / "wiki" / "graphs" / "events" / "projects" / "DemoProject.jsonl"
             events.parent.mkdir(parents=True)
             events.write_text(
@@ -124,7 +127,7 @@ class ResearchPilotStatusTest(unittest.TestCase):
     def test_open_deltas_do_not_merge_same_local_id_across_projects(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            init_workspace_main([str(root), "--no-git"])
+            self.init_clean_workspace(root)
             events_root = root / "wiki" / "graphs" / "events" / "projects"
             events_root.mkdir(parents=True)
             for project_id in ["ProjectA", "ProjectB"]:
@@ -151,7 +154,7 @@ class ResearchPilotStatusTest(unittest.TestCase):
     def test_read_models_stale_when_events_newer_than_dashboard_index(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            init_workspace_main([str(root), "--no-git"])
+            self.init_clean_workspace(root)
             events = root / "wiki" / "graphs" / "events" / "projects" / "DemoProject.jsonl"
             events.parent.mkdir(parents=True)
             events.write_text('{"event_id":"E0"}\n', encoding="utf-8")
