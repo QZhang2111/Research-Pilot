@@ -96,7 +96,7 @@ def validate_lineage_map(payload: Dict[str, Any]) -> Dict[str, Any]:
 
     routes = payload.get("routes")
     papers = payload.get("papers")
-    edges = payload.get("explicit_edges", [])
+    edges = payload.get("explicit_edges")
     if not isinstance(routes, list):
         errors.append("routes must be a list")
         routes = []
@@ -158,6 +158,7 @@ def validate_lineage_map(payload: Dict[str, Any]) -> Dict[str, Any]:
         if relation not in VALID_RELATIONS:
             errors.append(f"explicit_edges[{index}].relation invalid: {relation}")
         require_string(edge, "rationale", f"explicit_edges[{index}]", errors)
+        require_string(edge, "confidence", f"explicit_edges[{index}]", errors)
         require_string(edge, "source_evidence", f"explicit_edges[{index}]", errors)
         status = str(edge.get("review_status") or "candidate")
         if status not in VALID_REVIEW_STATUSES:

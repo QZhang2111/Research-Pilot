@@ -132,6 +132,24 @@ class RelatedWorkLineageCliTest(unittest.TestCase):
         self.assertFalse(result["valid"])
         self.assertIn("explicit_edges[0].target unknown paper: paper:missing", result["errors"])
 
+    def test_rejects_missing_explicit_edges(self):
+        payload = json.loads(json.dumps(VALID_MAP))
+        del payload["explicit_edges"]
+
+        result = validate_lineage_map(payload)
+
+        self.assertFalse(result["valid"])
+        self.assertIn("explicit_edges must be a list", result["errors"])
+
+    def test_rejects_explicit_edge_without_confidence(self):
+        payload = json.loads(json.dumps(VALID_MAP))
+        del payload["explicit_edges"][0]["confidence"]
+
+        result = validate_lineage_map(payload)
+
+        self.assertFalse(result["valid"])
+        self.assertIn("explicit_edges[0].confidence is required", result["errors"])
+
     def test_template_and_markdown_summary(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
