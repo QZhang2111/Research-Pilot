@@ -181,6 +181,17 @@ function escapeAttr(value) {
   return escapeHtml(value);
 }
 
+function safeExternalSourceUrl(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  try {
+    const url = new URL(raw);
+    return ["http:", "https:"].includes(url.protocol) ? url.href : "";
+  } catch (_error) {
+    return "";
+  }
+}
+
 function statusPill(value) {
   const status = normalizeToken(value) || "unknown";
   return `<span class="status-pill status-${escapeAttr(status.replace(/[^a-z0-9_-]+/g, "-"))}">${escapeHtml(STATUS_LABELS[status] || status)}</span>`;
@@ -3530,17 +3541,20 @@ function renderLineagePaperTable(map) {
             </tr>
           </thead>
           <tbody>
-            ${papers.map((paper) => `
-              <tr>
-                <td>
-                  <strong>${escapeHtml(paper.title || paper.id || "Untitled paper")}</strong>
-                  <span>${escapeHtml([paper.venue, paper.year].filter(Boolean).join(" · ") || paper.id || "")}</span>
-                </td>
-                <td>${escapeHtml(paper.route || "unassigned")}</td>
-                <td>${escapeHtml(paper.review_status || "candidate")}</td>
-                <td>${paper.source_url ? `<a href="${escapeAttr(paper.source_url)}" target="_blank" rel="noopener noreferrer">source</a>` : `<span>no source_url</span>`}</td>
-              </tr>
-            `).join("") || `<tr><td colspan="4">No papers.</td></tr>`}
+            ${papers.map((paper) => {
+              const safeUrl = safeExternalSourceUrl(paper.source_url);
+              return `
+                <tr>
+                  <td>
+                    <strong>${escapeHtml(paper.title || paper.id || "Untitled paper")}</strong>
+                    <span>${escapeHtml([paper.venue, paper.year].filter(Boolean).join(" · ") || paper.id || "")}</span>
+                  </td>
+                  <td>${escapeHtml(paper.route || "unassigned")}</td>
+                  <td>${escapeHtml(paper.review_status || "candidate")}</td>
+                  <td>${safeUrl ? `<a href="${escapeAttr(safeUrl)}" target="_blank" rel="noopener noreferrer">source</a>` : `<span>${paper.source_url ? "unsafe source_url" : "no source_url"}</span>`}</td>
+                </tr>
+              `;
+            }).join("") || `<tr><td colspan="4">No papers.</td></tr>`}
           </tbody>
         </table>
       </div>

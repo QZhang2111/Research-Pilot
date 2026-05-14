@@ -1,3 +1,5 @@
+import subprocess
+import textwrap
 import unittest
 from pathlib import Path
 
@@ -14,6 +16,7 @@ class RelatedWorkLineageDashboardTest(unittest.TestCase):
     def test_app_contains_lineage_page_hooks(self):
         app = (ROOT / "dashboard" / "app.js").read_text(encoding="utf-8")
 
+        self.assertIn("function safeExternalSourceUrl(value)", app)
         self.assertIn("function lineageUrl(projectId, roundName)", app)
         self.assertIn("function renderLineagePage()", app)
         self.assertIn('state.page === "lineage"', app)
@@ -24,6 +27,117 @@ class RelatedWorkLineageDashboardTest(unittest.TestCase):
         self.assertIn(".lineage-map-shell", css)
         self.assertIn(".lineage-lane", css)
         self.assertIn(".lineage-paper-node", css)
+
+    def test_lineage_rendering_regressions(self):
+        script = textwrap.dedent(
+            """
+            const fs = require("fs");
+            const vm = require("vm");
+            const assert = require("assert");
+
+            const elements = {{
+              "page-title": {{ textContent: "", innerHTML: "", className: "" }},
+              "page-subtitle": {{ textContent: "", innerHTML: "", className: "" }},
+              "page-kicker": {{ textContent: "", innerHTML: "", className: "" }},
+              "page-content": {{ textContent: "", innerHTML: "", className: "" }},
+              "project-nav": {{ textContent: "", innerHTML: "", className: "" }},
+            }};
+            const body = {{
+              dataset: {{ page: "lineage" }},
+              querySelector: () => null,
+            }};
+            const document = {{
+              body,
+              documentElement: {{ dataset: {{}} }},
+              getElementById: (id) => elements[id] || null,
+              querySelector: () => null,
+              querySelectorAll: () => [],
+            }};
+            const window = {{
+              location: {{ search: "?project=DemoProject&round=selected-round" }},
+              localStorage: {{ getItem: () => null, setItem: () => null }},
+            }};
+            const context = {{
+              console,
+              document,
+              window,
+              URL,
+              URLSearchParams,
+              Map,
+              Set,
+              fetch: async () => ({{ ok: true, json: async () => ({{}}) }}),
+              setTimeout,
+              clearTimeout,
+              requestAnimationFrame: () => 0,
+              cancelAnimationFrame: () => {{}},
+            }};
+            vm.createContext(context);
+            const source = fs.readFileSync("__APP_JS__", "utf8").replace(/\\nboot\\(\\);\\s*$/, "\\n");
+            vm.runInContext(source, context);
+
+            const map = {{
+              project: "DemoProject",
+              round: "selected-round",
+              title: "Selected Round",
+              valid: true,
+              status: "candidate",
+              routes: [
+                {{ id: "route-1", label: "Route <One>", description: "Desc", review_status: "candidate" }},
+              ],
+              papers: [
+                {{
+                  id: "paper-1",
+                  title: "<img src=x onerror=alert(1)>",
+                  summary: "<script>alert(1)</script>",
+                  route: "route-1",
+                  source_url: "javascript:alert(1)",
+                  review_status: "candidate",
+                }},
+              ],
+              explicit_edges: [],
+            }};
+            const table = context.renderLineagePaperTable(map);
+            assert(!table.includes('href="javascript:alert(1)"'), table);
+            assert(table.includes("unsafe source_url"), table);
+            assert.equal(context.safeExternalSourceUrl("https://example.org/paper"), "https://example.org/paper");
+            assert.equal(context.safeExternalSourceUrl("http://example.org/paper"), "http://example.org/paper");
+            assert.equal(context.safeExternalSourceUrl("/relative/paper"), "");
+            assert.equal(context.safeExternalSourceUrl("javascript:alert(1)"), "");
+
+            const node = context.renderLineagePaperNode(map.papers[0]);
+            assert(node.includes("&lt;img src=x onerror=alert(1)&gt;"), node);
+            assert(node.includes("&lt;script&gt;alert(1)&lt;/script&gt;"), node);
+            assert(!node.includes("<script>alert(1)</script>"), node);
+
+            context.fixtureMaps = [
+              {{ ...map, id: "DemoProject/zz-round", round: "zz-round", title: "ZZ Round" }},
+              {{ ...map, id: "DemoProject/selected-round", round: "selected-round", title: "Selected Round" }},
+            ];
+            vm.runInContext(`
+              state.data = {{
+                schema_version: "research-browser-v2",
+                projects: [{{ id: "DemoProject", title: "Demo Project" }}],
+                lineage_maps: fixtureMaps,
+              }};
+              state.projectId = "DemoProject";
+            `, context);
+            context.renderLineagePage();
+            assert.equal(elements["page-title"].textContent, "Selected Round");
+
+            window.location.search = "?project=DemoProject";
+            context.renderLineagePage();
+            assert.equal(elements["page-title"].textContent, "ZZ Round");
+            """
+        ).replace("__APP_JS__", (ROOT / "dashboard" / "app.js").as_posix()).replace("{{", "{").replace("}}", "}")
+        completed = subprocess.run(
+            ["node", "-e", script],
+            cwd=ROOT,
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+
+        self.assertEqual(completed.returncode, 0, completed.stderr or completed.stdout)
 
 
 if __name__ == "__main__":
