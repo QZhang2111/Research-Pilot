@@ -1,10 +1,14 @@
+import contextlib
+import io
 import json
 import subprocess
+import tempfile
 import unittest
 from pathlib import Path
 
 from tools.build_dashboard_index import build_index
 from tools.related_work_lineage_cli import validate_lineage_map
+from tools.research_pilot_init import main as research_pilot_init_main
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -86,3 +90,89 @@ class DemoProjectTest(unittest.TestCase):
             text=True,
         )
         self.assertEqual(completed.returncode, 0, completed.stderr or completed.stdout)
+
+    def test_init_copies_demo_visual_affordance_by_default(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace = Path(tmp) / "workspace"
+
+            stdout = io.StringIO()
+            with contextlib.redirect_stdout(stdout):
+                result = research_pilot_init_main([str(workspace), "--no-git"])
+
+            self.assertEqual(result, 0)
+            output = stdout.getvalue()
+            self.assertIn("Demo project installed: DemoVisualAffordance", output)
+            self.assertIn(
+                "Delete it by removing wiki/projects/DemoVisualAffordance and "
+                "wiki/graphs/events/projects/DemoVisualAffordance.jsonl.",
+                output,
+            )
+            self.assertTrue(
+                (
+                    workspace
+                    / "wiki"
+                    / "projects"
+                    / "DemoVisualAffordance"
+                    / "overview.md"
+                ).exists()
+            )
+            self.assertTrue(
+                (
+                    workspace
+                    / "wiki"
+                    / "graphs"
+                    / "events"
+                    / "projects"
+                    / "DemoVisualAffordance.jsonl"
+                ).exists()
+            )
+
+    def test_init_no_demo_skips_demo_copy(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace = Path(tmp) / "workspace"
+
+            with contextlib.redirect_stdout(io.StringIO()):
+                result = research_pilot_init_main(
+                    [str(workspace), "--no-git", "--no-demo"]
+                )
+
+            self.assertEqual(result, 0)
+            self.assertFalse(
+                (workspace / "wiki" / "projects" / "DemoVisualAffordance").exists()
+            )
+            self.assertFalse(
+                (
+                    workspace
+                    / "wiki"
+                    / "graphs"
+                    / "events"
+                    / "projects"
+                    / "DemoVisualAffordance.jsonl"
+                ).exists()
+            )
+
+    def test_init_preserves_demo_edits_unless_overwrite_requested(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace = Path(tmp) / "workspace"
+            overview = (
+                workspace
+                / "wiki"
+                / "projects"
+                / "DemoVisualAffordance"
+                / "overview.md"
+            )
+
+            with contextlib.redirect_stdout(io.StringIO()):
+                research_pilot_init_main([str(workspace), "--no-git"])
+            overview.write_text("local edit\n", encoding="utf-8")
+
+            with contextlib.redirect_stdout(io.StringIO()):
+                research_pilot_init_main([str(workspace), "--no-git"])
+            self.assertEqual(overview.read_text(encoding="utf-8"), "local edit\n")
+
+            with contextlib.redirect_stdout(io.StringIO()):
+                research_pilot_init_main([str(workspace), "--no-git", "--overwrite"])
+            self.assertEqual(
+                overview.read_text(encoding="utf-8"),
+                (PROJECT / "overview.md").read_text(encoding="utf-8"),
+            )
