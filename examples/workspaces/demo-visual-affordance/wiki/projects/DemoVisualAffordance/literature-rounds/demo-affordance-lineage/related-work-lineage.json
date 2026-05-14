@@ -1,0 +1,192 @@
+{
+  "schema_version": "related-work-lineage-v1",
+  "project": "DemoVisualAffordance",
+  "round": "demo-affordance-lineage",
+  "title": "Demo Visual Affordance Related Work Lineage",
+  "status": "candidate",
+  "source_boundary": "related_work_lineage_only_not_graph_truth",
+  "max_papers": 20,
+  "created": "2026-05-14",
+  "updated": "2026-05-14",
+  "route_narrowing": {
+    "input_mode": "baseline_papers",
+    "user_direction": "Visual affordance grounding with geometry and interaction cues.",
+    "selected_anchor_papers": [
+      "paper:luo2022-agd20k",
+      "paper:li2024-ooal"
+    ],
+    "candidate_routes": []
+  },
+  "routes": [
+    {
+      "id": "affordance-datasets-and-grounding",
+      "label": "Affordance Datasets And Grounding",
+      "description": "Dataset and localization anchors for visual affordance regions.",
+      "review_status": "candidate"
+    },
+    {
+      "id": "part-and-geometry-priors",
+      "label": "Part And Geometry Priors",
+      "description": "Dense descriptors and part correspondences that can support affordance transfer.",
+      "review_status": "candidate"
+    },
+    {
+      "id": "open-vocabulary-affordance",
+      "label": "Open Vocabulary Affordance",
+      "description": "Methods that broaden affordance prediction beyond fixed labels or heavy supervision.",
+      "review_status": "candidate"
+    },
+    {
+      "id": "foundation-model-probing",
+      "label": "Foundation Model Probing",
+      "description": "Large visual encoders used as probes for affordance-relevant visual structure.",
+      "review_status": "candidate"
+    }
+  ],
+  "papers": [
+    {
+      "id": "paper:luo2022-agd20k",
+      "kind": "paper",
+      "title": "Learning Affordance Grounding from Exocentric Images",
+      "year": 2022,
+      "route": "affordance-datasets-and-grounding",
+      "roles": ["dataset-anchor", "grounding-baseline"],
+      "source_url": "https://www.semanticscholar.org/search?q=Learning%20Affordance%20Grounding%20from%20Exocentric%20Images",
+      "identity": {
+        "anchor": "Luo2022 AGD20K"
+      },
+      "source_evidence": "Public paper anchor named in Task 1 plan.",
+      "summary": "Introduces an exocentric affordance grounding setting and dataset-style evaluation anchor.",
+      "review_status": "candidate"
+    },
+    {
+      "id": "paper:li2023-locate",
+      "kind": "paper",
+      "title": "LOCATE",
+      "year": 2023,
+      "route": "affordance-datasets-and-grounding",
+      "roles": ["localization-anchor"],
+      "source_url": "https://www.semanticscholar.org/search?q=LOCATE%20affordance%20Li%202023",
+      "identity": {
+        "anchor": "Li2023 LOCATE"
+      },
+      "source_evidence": "Public paper anchor named in Task 1 plan.",
+      "summary": "Provides a localization-oriented affordance anchor for dataset and grounding comparisons.",
+      "review_status": "candidate"
+    },
+    {
+      "id": "paper:amir2022-dense-vit-descriptors",
+      "kind": "paper",
+      "title": "Deep ViT Features as Dense Visual Descriptors",
+      "year": 2022,
+      "route": "part-and-geometry-priors",
+      "roles": ["dense-descriptor-anchor", "part-correspondence-prior"],
+      "source_url": "https://arxiv.org/abs/2112.05814",
+      "identity": {
+        "anchor": "Amir2022 dense ViT descriptors"
+      },
+      "source_evidence": "Public paper anchor named in Task 1 plan.",
+      "summary": "Shows that transformer features can serve as dense descriptors for visual correspondence.",
+      "review_status": "candidate"
+    },
+    {
+      "id": "paper:li2024-ooal",
+      "kind": "paper",
+      "title": "One-Shot Open Affordance Learning with Foundation Models",
+      "year": 2024,
+      "route": "open-vocabulary-affordance",
+      "roles": ["open-vocabulary-anchor", "foundation-model-adaptation"],
+      "source_url": "https://www.semanticscholar.org/search?q=One-Shot%20Open%20Affordance%20Learning%20with%20Foundation%20Models",
+      "identity": {
+        "anchor": "Li2024 OOAL"
+      },
+      "source_evidence": "Public paper anchor named in Task 1 plan.",
+      "summary": "Uses foundation models to adapt affordance prediction with limited examples and broader labels.",
+      "review_status": "candidate"
+    },
+    {
+      "id": "paper:qian2024-affordancellm",
+      "kind": "paper",
+      "title": "AffordanceLLM",
+      "year": 2024,
+      "route": "open-vocabulary-affordance",
+      "roles": ["language-guided-affordance", "semantic-prior"],
+      "source_url": "https://www.semanticscholar.org/search?q=AffordanceLLM%20Qian%202024",
+      "identity": {
+        "anchor": "Qian2024 AffordanceLLM"
+      },
+      "source_evidence": "Public paper anchor named in Task 1 plan.",
+      "summary": "Connects language-model affordance knowledge with visual grounding needs.",
+      "review_status": "candidate"
+    },
+    {
+      "id": "paper:simeoni2025-dinov3",
+      "kind": "paper",
+      "title": "DINOv3",
+      "year": 2025,
+      "route": "foundation-model-probing",
+      "roles": ["foundation-encoder-anchor", "feature-probing"],
+      "source_url": "https://www.semanticscholar.org/search?q=DINOv3%20Simeoni%202025",
+      "identity": {
+        "anchor": "Simeoni2025 DINOv3"
+      },
+      "source_evidence": "Public paper anchor named in Task 1 plan.",
+      "summary": "Serves as a public anchor for probing dense signals in modern self-supervised visual encoders.",
+      "review_status": "candidate"
+    },
+    {
+      "id": "paper:bolya2025-perception-encoder",
+      "kind": "paper",
+      "title": "Perception Encoder",
+      "year": 2025,
+      "route": "foundation-model-probing",
+      "roles": ["foundation-encoder-anchor", "representation-probing"],
+      "source_url": "https://www.semanticscholar.org/search?q=Perception%20Encoder%20Bolya%202025",
+      "identity": {
+        "anchor": "Bolya2025 Perception Encoder"
+      },
+      "source_evidence": "Public paper anchor named in Task 1 plan.",
+      "summary": "Serves as a public anchor for broad visual representation probing.",
+      "review_status": "candidate"
+    }
+  ],
+  "explicit_edges": [
+    {
+      "source": "paper:luo2022-agd20k",
+      "target": "paper:li2023-locate",
+      "relation": "influences",
+      "rationale": "Both papers anchor affordance localization and grounding evaluation.",
+      "confidence": "medium",
+      "source_evidence": "Task 1 anchor list groups both as safe affordance grounding references.",
+      "review_status": "candidate"
+    },
+    {
+      "source": "paper:amir2022-dense-vit-descriptors",
+      "target": "paper:li2024-ooal",
+      "relation": "influences",
+      "rationale": "Dense feature correspondence motivates foundation-model affordance transfer probes.",
+      "confidence": "medium",
+      "source_evidence": "Task 1 anchor list spans dense descriptors and open affordance learning.",
+      "review_status": "candidate"
+    },
+    {
+      "source": "paper:li2024-ooal",
+      "target": "paper:qian2024-affordancellm",
+      "relation": "contrasts-with",
+      "rationale": "One route emphasizes visual foundation-model adaptation while the other emphasizes language-guided affordance priors.",
+      "confidence": "medium",
+      "source_evidence": "Task 1 anchor list includes both open-vocabulary affordance anchors.",
+      "review_status": "candidate"
+    },
+    {
+      "source": "paper:simeoni2025-dinov3",
+      "target": "paper:bolya2025-perception-encoder",
+      "relation": "competes-with",
+      "rationale": "Both are foundation-model probing anchors for general visual representations.",
+      "confidence": "medium",
+      "source_evidence": "Task 1 anchor list includes both foundation-model probing anchors.",
+      "review_status": "candidate"
+    }
+  ],
+  "positioning_note": "Demo project sits between affordance grounding, dense geometry priors, and open-vocabulary foundation-model probing."
+}
