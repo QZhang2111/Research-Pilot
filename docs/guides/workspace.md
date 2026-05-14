@@ -23,6 +23,20 @@ Do not publish a workspace unless it is explicitly sanitized.
 
 Do not commit PDFs, Zotero credentials, local Zotero databases, generated SQLite files, or dashboard read models.
 
+## Demo Project
+
+New workspaces include `DemoVisualAffordance` by default. It is sanitized example data for learning the workflow and inspecting dashboard changes.
+
+Delete it from a workspace:
+
+```bash
+rm -rf wiki/projects/DemoVisualAffordance
+rm -f wiki/graphs/events/projects/DemoVisualAffordance.jsonl
+python3 "$PLUGIN_ROOT/tools/build_dashboard_index.py" --repo "$PWD" --output .dashboard/index.json
+```
+
+The dashboard is read-only and does not delete projects.
+
 ## Program Context
 
 `wiki/program/` is context-only memory for long-term research taste, north-star framing, and background preferences.

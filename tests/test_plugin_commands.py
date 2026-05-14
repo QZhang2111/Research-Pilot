@@ -93,6 +93,17 @@ class PluginCommandTests(unittest.TestCase):
             self.assertTrue(workflow.exists())
             self.assertIn("must not append graph events", workflow.read_text(encoding="utf-8"))
 
+    def test_docs_explain_default_demo_project_and_deletion(self) -> None:
+        install = (REPO / "docs" / "guides" / "install.md").read_text(encoding="utf-8")
+        dashboard = (REPO / "docs" / "guides" / "dashboard.md").read_text(encoding="utf-8")
+        workspace = (REPO / "docs" / "guides" / "workspace.md").read_text(encoding="utf-8")
+        readme = (REPO / "README.md").read_text(encoding="utf-8")
+        for text in [install, dashboard, workspace, readme]:
+            self.assertIn("DemoVisualAffordance", text)
+        self.assertIn("--no-demo", install)
+        self.assertIn("rm -rf wiki/projects/DemoVisualAffordance", workspace)
+        self.assertIn("wiki/graphs/events/projects/DemoVisualAffordance.jsonl", workspace)
+
 
 if __name__ == "__main__":
     unittest.main()

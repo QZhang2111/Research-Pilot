@@ -114,6 +114,8 @@ The agent creates the workspace, collects minimum project context, and stops at 
 
 Your research data lives in that workspace, not in the hidden plugin checkout.
 
+Fresh workspaces include a deletable `DemoVisualAffordance` demo project; pass `--no-demo` to the init helper for an empty workspace.
+
 ### 3. Continue inside your workspace
 
 ```bash

@@ -35,6 +35,8 @@ python3 tools/research_browser_server.py --repo "$WORKSPACE" --port 8765
 
 Project cards prefer `overview.md` display metadata. `project-query-pack.md` title is only a fallback when `overview.md` is missing.
 
+Projects with `demo: true`, such as `DemoVisualAffordance`, display a `Demo` badge; this marks example data only.
+
 Dashboard question labels distinguish:
 
 - `seed_questions`: setup prompts for early project formation;
