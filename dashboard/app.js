@@ -197,6 +197,10 @@ function statusPill(value) {
   return `<span class="status-pill status-${escapeAttr(status.replace(/[^a-z0-9_-]+/g, "-"))}">${escapeHtml(STATUS_LABELS[status] || status)}</span>`;
 }
 
+function renderDemoBadge(project) {
+  return project?.demo ? '<span class="demo-badge">Demo</span>' : "";
+}
+
 function displayFamily(value) {
   const family = normalizeToken(value) || "unknown";
   return FAMILY_LABELS[family] || String(value || "").trim() || FAMILY_LABELS.unknown;
@@ -449,7 +453,7 @@ function renderProjectsIndex() {
           <article class="project-entry">
             <div>
               <p class="eyebrow">项目</p>
-              <h2><a href="./project.html?project=${escapeAttr(project.id)}">${escapeHtml(displayProjectTitle(project))}</a></h2>
+              <h2><a href="./project.html?project=${escapeAttr(project.id)}">${escapeHtml(displayProjectTitle(project))}</a>${renderDemoBadge(project)}</h2>
               <p class="project-question">${escapeHtml(project.card?.working_question || project.overview?.direction || "暂无项目问题。")}</p>
             </div>
             <dl class="metric-row">
@@ -486,6 +490,13 @@ async function renderProjectWorkspace() {
   ]);
   const gate = project.card?.gate_progress || {};
   setHeader("项目", displayProjectTitle(project), project.overview?.direction || "");
+  if (project.demo && el.subtitle) {
+    el.subtitle.className = "project-title-meta";
+    el.subtitle.innerHTML = `
+      ${renderDemoBadge(project)}
+      <span>${escapeHtml(project.overview?.direction || "")}</span>
+    `;
+  }
   el.content.innerHTML = `
     <section class="workspace-grid project-workspace-grid">
       <article class="context-panel">

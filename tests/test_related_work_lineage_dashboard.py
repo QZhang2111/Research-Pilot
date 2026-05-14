@@ -28,6 +28,88 @@ class RelatedWorkLineageDashboardTest(unittest.TestCase):
         self.assertIn(".lineage-lane", css)
         self.assertIn(".lineage-paper-node", css)
 
+    def test_demo_badge_renders_for_demo_projects(self):
+        script = textwrap.dedent(
+            """
+            const fs = require("fs");
+            const vm = require("vm");
+            const assert = require("assert");
+
+            const elements = {
+              "page-title": { textContent: "", innerHTML: "", className: "" },
+              "page-subtitle": { textContent: "", innerHTML: "", className: "" },
+              "page-kicker": { textContent: "", innerHTML: "", className: "" },
+              "page-content": { textContent: "", innerHTML: "", className: "" },
+              "project-nav": { textContent: "", innerHTML: "", className: "" },
+            };
+            const body = {
+              dataset: { page: "projects" },
+              querySelector: () => null,
+            };
+            const document = {
+              body,
+              documentElement: { dataset: {} },
+              getElementById: (id) => elements[id] || null,
+              querySelector: () => null,
+              querySelectorAll: () => [],
+            };
+            const window = {
+              location: { search: "" },
+              localStorage: { getItem: () => null, setItem: () => null },
+            };
+            const context = {
+              console,
+              document,
+              window,
+              URL,
+              URLSearchParams,
+              Map,
+              Set,
+              fetch: async () => ({ ok: true, json: async () => ({}) }),
+              setTimeout,
+              clearTimeout,
+              requestAnimationFrame: () => 0,
+              cancelAnimationFrame: () => {},
+            };
+            vm.createContext(context);
+            const source = fs.readFileSync("__APP_JS__", "utf8").replace(/\\nboot\\(\\);\\s*$/, "\\n");
+            vm.runInContext(source, context);
+
+            assert.equal(context.renderDemoBadge({ demo: true }), '<span class="demo-badge">Demo</span>');
+            assert.equal(context.renderDemoBadge({ demo: false }), "");
+            assert.equal(context.renderDemoBadge({}), "");
+
+            vm.runInContext(`
+              state.data = {
+                schema_version: "research-browser-v2",
+                projects: [
+                  {
+                    id: "DemoProject",
+                    title: "Demo Project",
+                    demo: true,
+                    overview: { direction: "Demo direction" },
+                    stats: {},
+                  }
+                ],
+                papers: [],
+                literature_rounds: [],
+                lineage_maps: [],
+              };
+            `, context);
+            context.renderProjectsIndex();
+            assert(elements["page-content"].innerHTML.includes('<span class="demo-badge">Demo</span>'));
+            """
+        ).replace("__APP_JS__", (ROOT / "dashboard" / "app.js").as_posix())
+        completed = subprocess.run(
+            ["node", "-e", script],
+            cwd=ROOT,
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+
+        self.assertEqual(completed.returncode, 0, completed.stderr or completed.stdout)
+
     def test_lineage_rendering_regressions(self):
         script = textwrap.dedent(
             """
