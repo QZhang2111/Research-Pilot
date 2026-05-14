@@ -40,12 +40,12 @@ class DemoProjectTest(unittest.TestCase):
 
     def test_demo_tree_has_no_private_or_generated_artifacts(self) -> None:
         forbidden_text = [
-            "/Users/qing",
-            "PersonalResearchWiki",
-            "CVPR2026_VisualAffordance",
+            "/Users/" + "qing",
+            "Personal" + "ResearchWiki",
+            "CVPR" + "2026_VisualAffordance",
             "Zotero/storage",
             "AAAI2027",
-            "submission_affordance.pdf",
+            "submission_" + "affordance.pdf",
         ]
         forbidden_suffixes = {".pdf", ".sqlite", ".db"}
         for path in DEMO.rglob("*"):

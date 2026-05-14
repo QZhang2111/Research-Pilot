@@ -7,7 +7,7 @@ Status: Draft
 
 Research Pilot now has dashboard pages for project state, paper library, and related-work lineage, but a fresh plugin checkout has no realistic project data. The existing `examples/demo` fixture only contains small graph-event JSON and is useful for tests, not for visual inspection.
 
-The local workspace at `/Users/qing/Research/PersonalResearchWiki/wiki/projects/CVPR2026_VisualAffordance` is a better source shape because it has project overview, query pack, paper dossiers, graph read-model content, and enough related-work material to exercise dashboard views. It must not be copied as-is because it contains private absolute paths, Zotero attachment references, submission-specific wording, and unpublished project claims.
+The local visual-affordance workspace is a better source shape because it has project overview, query pack, paper dossiers, graph read-model content, and enough related-work material to exercise dashboard views. It must not be copied as-is because it contains private absolute paths, Zotero attachment references, submission-specific wording, and unpublished project claims.
 
 ## Goal
 
@@ -23,7 +23,7 @@ The demo should make these surfaces observable:
 
 ## Non-Goals
 
-- Do not publish the raw `CVPR2026_VisualAffordance` workspace.
+- Do not publish the raw private visual-affordance workspace.
 - Do not commit PDFs, Zotero local paths, Zotero attachment IDs, generated dashboard indexes, SQLite DB files, or private submission text.
 - Do not make the dashboard mutate or delete projects.
 - Do not turn demo data into a required product dependency.
@@ -97,13 +97,13 @@ No new dashboard editing surface is needed.
 
 Before committing the demo, run a repository scan against the demo tree. The demo must not contain:
 
-- `/Users/qing`;
-- `Zotero/storage`;
+- private absolute home paths;
+- local Zotero storage paths;
 - local PDF paths;
 - Zotero attachment IDs;
 - unpublished submission PDF names;
-- `CVPR2026_VisualAffordance`;
-- private future-project references such as `AAAI2027`;
+- private source project ids;
+- private future-project references;
 - generated `.dashboard` files;
 - `graph.db`;
 - raw PDF files.

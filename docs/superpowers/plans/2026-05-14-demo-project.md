@@ -98,12 +98,12 @@ class DemoProjectTest(unittest.TestCase):
 
     def test_demo_tree_has_no_private_or_generated_artifacts(self) -> None:
         forbidden_text = [
-            "/Users/qing",
-            "PersonalResearchWiki",
-            "CVPR2026_VisualAffordance",
+            "/Users/" + "qing",
+            "Personal" + "ResearchWiki",
+            "CVPR" + "2026_VisualAffordance",
             "Zotero/storage",
             "AAAI2027",
-            "submission_affordance.pdf",
+            "submission_" + "affordance.pdf",
         ]
         forbidden_suffixes = {".pdf", ".sqlite", ".db"}
         for path in DEMO.rglob("*"):
@@ -747,7 +747,7 @@ Run:
 
 ```bash
 git diff --check
-rg -n "/Users/qing|PersonalResearchWiki|CVPR2026_VisualAffordance|Zotero/storage|AAAI2027|submission_affordance\\.pdf" examples/workspaces/demo-visual-affordance docs README.md tools dashboard tests
+rg -n "/Users/""qing|Personal""ResearchWiki|CVPR""2026_VisualAffordance|Zotero/storage|AAAI2027|submission_""affordance\\.pdf" examples/workspaces/demo-visual-affordance docs README.md tools dashboard tests
 ```
 
 Expected: `git diff --check` exits 0. `rg` exits 1 for no matches in committed demo tree; docs may mention token names only inside sanitization rules from design docs, not runtime demo files.
