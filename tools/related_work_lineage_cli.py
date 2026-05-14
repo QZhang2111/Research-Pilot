@@ -162,6 +162,9 @@ def validate_lineage_map(payload: Any) -> Dict[str, Any]:
         require_string(paper, "title", f"papers[{index}]", errors)
         require_string(paper, "source_url", f"papers[{index}]", errors)
         require_string(paper, "source_evidence", f"papers[{index}]", errors)
+        identity = paper.get("identity")
+        if not isinstance(identity, dict) or not identity:
+            errors.append(f"papers[{index}].identity must be a non-empty object")
         route = str(paper.get("route") or "").strip()
         if route not in route_ids:
             errors.append(f"papers[{index}].route unknown route: {route}")
@@ -354,7 +357,7 @@ def main(argv: Optional[List[str]] = None) -> int:
                 )
                 output.write_text(text, encoding="utf-8")
                 result = {"valid": True, "output": str(output)}
-    except ValueError as exc:
+    except (OSError, json.JSONDecodeError, UnicodeDecodeError, ValueError) as exc:
         result = {"valid": False, "created": False, "errors": [str(exc)]}
     print(
         json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True)

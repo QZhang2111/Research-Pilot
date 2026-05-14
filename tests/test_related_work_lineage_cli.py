@@ -126,6 +126,15 @@ class RelatedWorkLineageCliTest(unittest.TestCase):
         self.assertFalse(result["valid"])
         self.assertIn("papers[0].kind must be paper", result["errors"])
 
+    def test_rejects_paper_without_identity(self):
+        payload = json.loads(json.dumps(VALID_MAP))
+        del payload["papers"][0]["identity"]
+
+        result = validate_lineage_map(payload)
+
+        self.assertFalse(result["valid"])
+        self.assertIn("papers[0].identity must be a non-empty object", result["errors"])
+
     def test_rejects_more_than_twenty_papers(self):
         payload = json.loads(json.dumps(VALID_MAP))
         payload["papers"] = [
@@ -223,6 +232,14 @@ class RelatedWorkLineageCliTest(unittest.TestCase):
 
             self.assertEqual(result, 1)
             self.assertFalse((Path(tmp).parent / "escape").exists())
+
+    def test_cli_validate_missing_file_returns_structured_error(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            missing = Path(tmp) / "missing.json"
+
+            result = main(["validate", "--path", str(missing), "--json"])
+
+        self.assertEqual(result, 1)
 
 
 if __name__ == "__main__":

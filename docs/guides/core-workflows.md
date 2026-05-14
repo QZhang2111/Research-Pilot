@@ -21,8 +21,8 @@ Use when a project needs a paper-only technical route map before or alongside Pr
 
 ```bash
 python3 tools/related_work_lineage_cli.py create --repo "$WORKSPACE" --project "$PROJECT" --round "$ROUND" --title "$TITLE" --direction "$DIRECTION" --baseline-paper "$PAPER_ID" --json
-python3 tools/related_work_lineage_cli.py validate --repo "$WORKSPACE" --project "$PROJECT" --round "$ROUND" --json
-python3 tools/related_work_lineage_cli.py render-summary --repo "$WORKSPACE" --project "$PROJECT" --round "$ROUND"
+python3 tools/related_work_lineage_cli.py validate --path "$WORKSPACE/wiki/projects/$PROJECT/literature-rounds/$ROUND/related-work-lineage.json" --json
+python3 tools/related_work_lineage_cli.py render-summary --path "$WORKSPACE/wiki/projects/$PROJECT/literature-rounds/$ROUND/related-work-lineage.json"
 ```
 
 The lineage artifact is not graph truth and does not create D* events.
