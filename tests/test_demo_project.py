@@ -64,8 +64,6 @@ class DemoProjectTest(unittest.TestCase):
         self.assertGreaterEqual(result["paper_count"], 6)
         self.assertLessEqual(result["paper_count"], 10)
 
-    # Expected until Task 3 adds dashboard demo metadata to build_index project records.
-    @unittest.expectedFailure
     def test_demo_dashboard_index_exposes_project_lineage_and_demo_flag(self) -> None:
         index = build_index(DEMO)
         project = next(item for item in index["projects"] if item["id"] == "DemoVisualAffordance")

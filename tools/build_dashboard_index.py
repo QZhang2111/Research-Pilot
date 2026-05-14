@@ -284,6 +284,7 @@ def collect_projects(root: Path, project_graphs: Optional[List[Dict[str, Any]]] 
             {
                 "id": project_dir.name,
                 "title": scalar(frontmatter, "display_title") or scalar(frontmatter, "title", project_dir.name),
+                "demo": bool(frontmatter.get("demo")),
                 "path": relpath(project_dir, root),
                 "overview": {
                     "direction": direction,
@@ -317,6 +318,7 @@ def ensure_graph_projects(projects: List[Dict[str, Any]], project_graphs: List[D
             {
                 "id": project_id,
                 "title": str(graph.get("title") or project_id),
+                "demo": False,
                 "path": relpath(root / "wiki" / "projects" / project_id, root),
                 "overview": {
                     "direction": "Graph-only project initialized from graph events.",

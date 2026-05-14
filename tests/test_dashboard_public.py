@@ -223,9 +223,24 @@ class DashboardPublicTest(unittest.TestCase):
             index = build_index(root)
 
         self.assertEqual(index["projects"][0]["id"], "DemoProject")
+        self.assertFalse(index["projects"][0]["demo"])
         self.assertEqual(index["project_graphs"][0]["project"], "DemoProject")
         self.assertEqual(index["project_graphs"][0]["nodes"][0]["id"], "C0")
         json.dumps(index)
+
+    def test_project_index_exposes_demo_flag_from_overview_frontmatter(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            project = root / "wiki" / "projects" / "DemoProject"
+            project.mkdir(parents=True)
+            (project / "overview.md").write_text(
+                "---\ntitle: Demo Project\ntype: project-overview\ndemo: true\n---\n# Demo Project\n",
+                encoding="utf-8",
+            )
+
+            index = build_index(root)
+
+        self.assertTrue(index["projects"][0]["demo"])
 
     def test_build_index_exposes_durable_job_records(self):
         with tempfile.TemporaryDirectory() as tmp:
