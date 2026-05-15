@@ -3860,6 +3860,11 @@ body[data-page="papers"] .page-content {
   gap: 16px;
 }
 
+.lineage-map-shell:has(.lineage-atlas-root) {
+  overflow: hidden;
+  padding: 0;
+}
+
 .lineage-map-shell .section-head {
   align-items: start;
   border-bottom: 1px solid rgba(49, 57, 71, 0.82);

@@ -838,6 +838,13 @@ def list_field(payload: Any, key: str, limit: Optional[int] = None) -> List[Any]
     return value[:limit] if limit is not None else value
 
 
+def dict_field(payload: Any, key: str) -> Dict[str, Any]:
+    if not isinstance(payload, dict):
+        return {}
+    value = payload.get(key)
+    return value if isinstance(value, dict) else {}
+
+
 def collect_lineage_maps(root: Path) -> List[Dict[str, Any]]:
     lineage_maps: List[Dict[str, Any]] = []
     projects_root = root / "wiki" / "projects"
@@ -877,6 +884,7 @@ def collect_lineage_maps(root: Path) -> List[Dict[str, Any]]:
                 "project": path_project,
                 "round": path_round,
                 "title": str(payload.get("title") or "").strip() if isinstance(payload, dict) else "",
+                "topic_name": str(payload.get("topic_name") or "").strip() if isinstance(payload, dict) else "",
                 "status": str(payload.get("status") or "").strip() if isinstance(payload, dict) else "",
                 "source_boundary": str(payload.get("source_boundary") or "").strip() if isinstance(payload, dict) else "",
                 "path": relpath(lineage_path, root),
@@ -886,7 +894,15 @@ def collect_lineage_maps(root: Path) -> List[Dict[str, Any]]:
                 "paper_count": validation.get("paper_count", 0),
                 "route_count": validation.get("route_count", 0),
                 "edge_count": validation.get("edge_count", 0),
-                "route_narrowing": payload.get("route_narrowing", {}) if isinstance(payload, dict) else {},
+                "display": dict_field(payload, "display"),
+                "baseline_paper_field_scope": dict_field(payload, "baseline_paper_field_scope"),
+                "axis_candidates": list_field(payload, "axis_candidates", MAX_LINEAGE_DASHBOARD_ITEMS),
+                "survey_catalog": list_field(payload, "survey_catalog", MAX_LINEAGE_DASHBOARD_ITEMS),
+                "timeline_tracks": list_field(payload, "timeline_tracks", MAX_LINEAGE_DASHBOARD_ITEMS),
+                "major_trends": list_field(payload, "major_trends", MAX_LINEAGE_DASHBOARD_ITEMS),
+                "notable_forks": list_field(payload, "notable_forks", MAX_LINEAGE_DASHBOARD_ITEMS),
+                "search_log": list_field(payload, "search_log", MAX_LINEAGE_DASHBOARD_ITEMS),
+                "route_narrowing": dict_field(payload, "route_narrowing"),
                 "routes": list_field(payload, "routes", MAX_LINEAGE_DASHBOARD_ITEMS),
                 "papers": list_field(payload, "papers", MAX_LINEAGE_DASHBOARD_ITEMS),
                 "explicit_edges": list_field(payload, "explicit_edges", MAX_LINEAGE_DASHBOARD_ITEMS),

@@ -3,11 +3,12 @@ import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
+from urllib.parse import quote
 
 from tools.build_dashboard_index import build_index
 from tools.build_graph_db import main as build_graph_db_main
 from tools.build_graph_snapshot import main as build_snapshot_main
-from tools.research_browser_server import handle_project_graph_maintenance_request
+from tools.research_browser_server import handle_paper_graph_request, handle_project_graph_maintenance_request
 
 
 class DashboardPublicTest(unittest.TestCase):
@@ -373,6 +374,131 @@ class DashboardPublicTest(unittest.TestCase):
         self.assertEqual([delta["id"] for delta in model["review_queue"]["deltas"]], ["D0"])
         self.assertEqual(model["claim_paths"][0]["claim"]["id"], "C0")
         self.assertEqual(model["claim_paths"][0]["supporting_links"][0]["premises"][0]["id"], "E0")
+
+    def test_paper_graph_api_derives_contribution_from_project_snapshot(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            paper_path = root / "wiki" / "projects" / "DemoProject" / "papers" / "demo-paper" / "index.md"
+            paper_path.parent.mkdir(parents=True)
+            paper_path.write_text(
+                "---\ntitle: Demo Paper\ntype: paper-dossier\n---\n# Demo Paper\n\n## Deep Read Notes\n\nDemo notes.\n",
+                encoding="utf-8",
+            )
+            rel_paper = "wiki/projects/DemoProject/papers/demo-paper/index.md"
+            snapshot_path = root / "wiki" / "graphs" / "snapshots" / "projects" / "DemoProject.graph.json"
+            snapshot_path.parent.mkdir(parents=True)
+            snapshot_path.write_text(
+                json.dumps(
+                    {
+                        "schema_version": "graph-snapshot-v1",
+                        "graph_id": "project:DemoProject",
+                        "generated_at": "2026-05-15T00:00:00Z",
+                        "event_count": 3,
+                        "nodes": [
+                            {
+                                "node_id": "project:DemoProject:C0",
+                                "local_id": "C0",
+                                "node_type": "Claim",
+                                "text": "Project claim from paper.",
+                                "scope": "project",
+                                "project_id": "DemoProject",
+                                "paper_id": None,
+                                "status": "active",
+                                "lifecycle_status": "active",
+                                "confidence": "medium",
+                                "human_review": "approved",
+                                "source_refs": [rel_paper],
+                                "supersedes": [],
+                                "superseded_by": [],
+                                "derived_from": [],
+                                "metadata": {"status": "primary"},
+                            },
+                            {
+                                "node_id": "project:DemoProject:E0",
+                                "local_id": "E0",
+                                "node_type": "Evidence",
+                                "text": "Paper evidence.",
+                                "scope": "project",
+                                "project_id": "DemoProject",
+                                "paper_id": None,
+                                "status": "active",
+                                "lifecycle_status": "active",
+                                "confidence": "medium",
+                                "human_review": "approved",
+                                "source_refs": [rel_paper],
+                                "supersedes": [],
+                                "superseded_by": [],
+                                "derived_from": [],
+                                "metadata": {"evidence_kind": "baseline"},
+                            },
+                            {
+                                "node_id": "project:DemoProject:W0",
+                                "local_id": "W0",
+                                "node_type": "Warrant",
+                                "text": "Paper warrant.",
+                                "scope": "project",
+                                "project_id": "DemoProject",
+                                "paper_id": None,
+                                "status": "active",
+                                "lifecycle_status": "active",
+                                "confidence": "medium",
+                                "human_review": "approved",
+                                "source_refs": [rel_paper],
+                                "supersedes": [],
+                                "superseded_by": [],
+                                "derived_from": [],
+                                "metadata": {"basis": "demo warrant"},
+                            },
+                        ],
+                        "links": [
+                            {
+                                "link_id": "project:DemoProject:RL0",
+                                "local_id": "RL0",
+                                "link_type": "ReasoningLink",
+                                "relation": "supports",
+                                "from_nodes": ["project:DemoProject:E0"],
+                                "to_nodes": ["project:DemoProject:C0"],
+                                "warrant_nodes": ["project:DemoProject:W0"],
+                                "limitation_nodes": [],
+                                "confidence": "medium",
+                                "human_review": "approved",
+                                "source_refs": [rel_paper],
+                            }
+                        ],
+                        "deltas": [
+                            {
+                                "delta_id": "project:DemoProject:D1",
+                                "local_id": "D1",
+                                "operation": ["add_node"],
+                                "summary": "Add project claim.",
+                                "source_refs": [rel_paper],
+                                "source_dossier": rel_paper,
+                                "source_paper_nodes": [],
+                                "affected_nodes": ["project:DemoProject:C0"],
+                                "affected_links": ["project:DemoProject:RL0"],
+                                "status": "accepted",
+                                "lifecycle_status": "accepted",
+                                "human_review": "approved",
+                            }
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            status, payload = handle_paper_graph_request(root, f"/api/paper-graph?path={quote(rel_paper)}")
+            model = json.loads(payload.decode("utf-8"))
+
+        self.assertEqual(status, 200)
+        self.assertEqual(model["schema_version"], "paper-graph-v1")
+        self.assertEqual(model["paper"], "demo-paper")
+        self.assertEqual([node["id"] for node in model["nodes"]], ["P-C0", "P-E0", "P-W0"])
+        self.assertEqual(model["paper_links"][0]["premises"], ["P-E0"])
+        self.assertEqual(model["paper_links"][0]["target"], "P-C0")
+        self.assertEqual(model["paper_links"][0]["warrant"], "P-W0")
+        self.assertEqual(model["translations"][0]["paper_nodes"], ["P-C0"])
+        self.assertEqual(model["translations"][0]["project_nodes"], ["C0"])
+        self.assertEqual(model["deltas"][0]["id"], "D1")
 
     def test_project_card_prefers_overview_display_title_over_query_pack(self):
         with tempfile.TemporaryDirectory() as tmp:

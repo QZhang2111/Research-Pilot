@@ -64,7 +64,7 @@ class DemoProjectTest(unittest.TestCase):
         self.assertGreaterEqual(result["paper_count"], 6)
         self.assertLessEqual(result["paper_count"], 20)
         self.assertIn(
-            "paper:zhang2026-geometry-interaction-affordance",
+            "https://arxiv.org/abs/2602.20501",
             payload["route_narrowing"]["selected_anchor_papers"],
         )
 

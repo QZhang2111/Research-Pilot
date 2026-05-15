@@ -9,7 +9,7 @@ import sys
 from http import HTTPStatus
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, List, Tuple
 from urllib.parse import parse_qs, unquote, urlsplit
 
 THIS_DIR = Path(__file__).resolve().parent
@@ -59,6 +59,213 @@ def resolve_project_markdown_path(root: Path, requested: str) -> Path | None:
     return target
 
 
+def resolve_paper_dossier_path(root: Path, requested: str) -> Path | None:
+    target = resolve_project_markdown_path(root, requested)
+    if target is None:
+        return None
+    try:
+        rel_parts = target.resolve().relative_to(root.resolve()).parts
+    except ValueError:
+        return None
+    if len(rel_parts) < 6:
+        return None
+    if rel_parts[0] != "wiki" or rel_parts[1] != "projects" or rel_parts[3] != "papers":
+        return None
+    if rel_parts[-1] != "index.md":
+        return None
+    return target
+
+
+def paper_project_and_slug(root: Path, target: Path) -> Tuple[str, str]:
+    rel_parts = target.resolve().relative_to(root.resolve()).parts
+    return rel_parts[2], rel_parts[4]
+
+
+def normalize_source_ref(value: Any) -> str:
+    text = unquote(str(value or "").strip()).replace("\\", "/")
+    if text.startswith("./"):
+        text = text[2:]
+    if text.endswith("/index"):
+        text = f"{text}.md"
+    return text
+
+
+def source_refs_match_paper(source_refs: Any, paper_relpath: str, paper_slug: str) -> bool:
+    refs = source_refs if isinstance(source_refs, list) else [source_refs]
+    paper_relpath = normalize_source_ref(paper_relpath)
+    paper_ref = f"paper:{paper_slug}"
+    for raw_ref in refs:
+        ref = normalize_source_ref(raw_ref)
+        if ref == paper_relpath or ref.endswith(f"/{paper_relpath}"):
+            return True
+        if ref == paper_ref:
+            return True
+    return False
+
+
+def raw_snapshot_for_project(root: Path, project_id: str) -> Dict[str, Any] | None:
+    snapshot_path = root / "wiki" / "graphs" / "snapshots" / "projects" / f"{project_id}.graph.json"
+    if snapshot_path.exists():
+        return json.loads(snapshot_path.read_text(encoding="utf-8"))
+    event_paths = graph_event_paths(root, project_id)
+    if not event_paths:
+        return None
+    return build_snapshot_from_event_files(event_paths)
+
+
+def local_graph_id(value: Any) -> str:
+    return str(value or "").rsplit(":", 1)[-1]
+
+
+def paper_node_id(project_local_id: str) -> str:
+    return f"P-{project_local_id}"
+
+
+def paper_node_subtitle(node: Dict[str, Any]) -> str:
+    metadata = node.get("metadata") if isinstance(node.get("metadata"), dict) else {}
+    node_type = str(node.get("node_type") or "")
+    if node_type == "Evidence":
+        return str(metadata.get("evidence_kind") or metadata.get("source_type") or node.get("status") or "")
+    if node_type == "Warrant":
+        return str(metadata.get("basis") or node.get("status") or "")
+    if node_type == "Limitation":
+        return str(metadata.get("severity") or node.get("status") or "")
+    return str(metadata.get("role") or metadata.get("status") or node.get("status") or "")
+
+
+def paper_node_kind(node: Dict[str, Any]) -> str:
+    return str(node.get("node_type") or "").lower()
+
+
+def paper_graph_nodes_for_source(
+    snapshot: Dict[str, Any],
+    paper_relpath: str,
+    paper_slug: str,
+) -> Tuple[List[Dict[str, Any]], Dict[str, str]]:
+    nodes: List[Dict[str, Any]] = []
+    project_to_paper: Dict[str, str] = {}
+    for project_node in snapshot.get("nodes", []):
+        if not source_refs_match_paper(project_node.get("source_refs", []), paper_relpath, paper_slug):
+            continue
+        local_id = local_graph_id(project_node.get("local_id") or project_node.get("node_id"))
+        if not local_id:
+            continue
+        p_id = paper_node_id(local_id)
+        project_to_paper[str(project_node.get("node_id") or "")] = p_id
+        nodes.append(
+            {
+                "id": p_id,
+                "kind": paper_node_kind(project_node),
+                "label": str(project_node.get("text") or local_id),
+                "subtitle": paper_node_subtitle(project_node),
+                "project_node": local_id,
+                "source_refs": list(project_node.get("source_refs") or []),
+            }
+        )
+    return nodes, project_to_paper
+
+
+def paper_graph_links_for_source(snapshot: Dict[str, Any], project_to_paper: Dict[str, str]) -> List[Dict[str, Any]]:
+    links: List[Dict[str, Any]] = []
+    for project_link in snapshot.get("links", []):
+        if str(project_link.get("link_type") or "") != "ReasoningLink":
+            continue
+        premises = [project_to_paper[ref] for ref in project_link.get("from_nodes", []) if ref in project_to_paper]
+        targets = [project_to_paper[ref] for ref in project_link.get("to_nodes", []) if ref in project_to_paper]
+        warrants = [project_to_paper[ref] for ref in project_link.get("warrant_nodes", []) if ref in project_to_paper]
+        limitations = [project_to_paper[ref] for ref in project_link.get("limitation_nodes", []) if ref in project_to_paper]
+        if not targets or not (premises or warrants or limitations):
+            continue
+        links.append(
+            {
+                "id": local_graph_id(project_link.get("local_id") or project_link.get("link_id")),
+                "relation": str(project_link.get("relation") or ""),
+                "premises": premises,
+                "target": targets[0],
+                "warrant": warrants[0] if warrants else "",
+                "limitations": limitations,
+                "project_link": local_graph_id(project_link.get("local_id") or project_link.get("link_id")),
+            }
+        )
+    return links
+
+
+def paper_graph_translations(project_to_paper: Dict[str, str]) -> List[Dict[str, Any]]:
+    translations: List[Dict[str, Any]] = []
+    for index, (project_node_id, p_id) in enumerate(project_to_paper.items(), start=1):
+        local_id = local_graph_id(project_node_id)
+        translations.append(
+            {
+                "id": f"TL{index}",
+                "paper_nodes": [p_id],
+                "project_nodes": [local_id],
+                "relation": "source_supports_project_node",
+                "interpretation": f"Paper dossier contribution is projected into project node {local_id}.",
+                "caveat": "Derived read model; source dossier remains unchanged.",
+            }
+        )
+    return translations
+
+
+def paper_graph_deltas_for_source(
+    snapshot: Dict[str, Any],
+    paper_relpath: str,
+    paper_slug: str,
+    project_to_paper: Dict[str, str],
+) -> List[Dict[str, Any]]:
+    deltas: List[Dict[str, Any]] = []
+    affected_project_ids = set(project_to_paper)
+    for delta in snapshot.get("deltas", []):
+        affected_nodes = list(delta.get("affected_nodes") or [])
+        affected_links = list(delta.get("affected_links") or [])
+        matches_source = (
+            source_refs_match_paper(delta.get("source_refs", []), paper_relpath, paper_slug)
+            or source_refs_match_paper(delta.get("source_dossier", ""), paper_relpath, paper_slug)
+            or bool(affected_project_ids.intersection(affected_nodes))
+        )
+        if not matches_source:
+            continue
+        source_paper_nodes = [
+            project_to_paper[node_id]
+            for node_id in affected_nodes
+            if node_id in project_to_paper
+        ]
+        deltas.append(
+            {
+                "id": local_graph_id(delta.get("local_id") or delta.get("delta_id")),
+                "operation": ", ".join(str(item) for item in delta.get("operation", []) if item),
+                "status": str(delta.get("lifecycle_status") or delta.get("status") or ""),
+                "human_review": str(delta.get("human_review") or ""),
+                "source_paper_nodes": source_paper_nodes,
+                "affected": [local_graph_id(item) for item in affected_nodes + affected_links],
+                "proposed_change": str(delta.get("summary") or ""),
+            }
+        )
+    return deltas
+
+
+def build_paper_graph_model(root: Path, target: Path) -> Dict[str, Any] | None:
+    project_id, paper_slug = paper_project_and_slug(root, target)
+    snapshot = raw_snapshot_for_project(root, project_id)
+    if snapshot is None:
+        return None
+    paper_relpath = relpath(target, root)
+    frontmatter, _ = read_markdown(target)
+    nodes, project_to_paper = paper_graph_nodes_for_source(snapshot, paper_relpath, paper_slug)
+    return {
+        "schema_version": "paper-graph-v1",
+        "project": project_id,
+        "paper": paper_slug,
+        "title": str(frontmatter.get("title") or paper_slug),
+        "path": paper_relpath,
+        "source_boundary": "derived_from_project_graph_and_paper_dossier",
+        "nodes": nodes,
+        "paper_links": paper_graph_links_for_source(snapshot, project_to_paper),
+        "translations": paper_graph_translations(project_to_paper),
+        "deltas": paper_graph_deltas_for_source(snapshot, paper_relpath, paper_slug, project_to_paper),
+    }
+
+
 def snapshot_graph_for_project(root: Path, project_id: str) -> Dict[str, Any] | None:
     snapshot_path = root / "wiki" / "graphs" / "snapshots" / "projects" / f"{project_id}.graph.json"
     if not snapshot_path.exists():
@@ -94,6 +301,17 @@ def handle_project_graph_request(root: Path, request_path: str) -> Tuple[int, by
     if not valid_project_id(project_id):
         return json_response({"error": "Not Found"}, HTTPStatus.NOT_FOUND)
     graph = snapshot_graph_for_project(root, project_id)
+    if graph is None:
+        return json_response({"error": "Not Found"}, HTTPStatus.NOT_FOUND)
+    return json_response(graph)
+
+
+def handle_paper_graph_request(root: Path, request_path: str) -> Tuple[int, bytes]:
+    requested = parse_qs(urlsplit(request_path).query).get("path", [""])[0]
+    target = resolve_paper_dossier_path(root.resolve(), requested)
+    if target is None:
+        return json_response({"error": "Not Found"}, HTTPStatus.NOT_FOUND)
+    graph = build_paper_graph_model(root.resolve(), target)
     if graph is None:
         return json_response({"error": "Not Found"}, HTTPStatus.NOT_FOUND)
     return json_response(graph)
@@ -149,6 +367,11 @@ class ResearchBrowserHandler(SimpleHTTPRequestHandler):
     def do_GET(self) -> None:
         root = Path(self.directory)
         request_api_path = urlsplit(self.path).path
+        if request_api_path == "/":
+            self.send_response(HTTPStatus.FOUND)
+            self.send_header("Location", "/dashboard/index.html")
+            self.end_headers()
+            return
         if request_api_path == "/api/wiki-page":
             status, payload = handle_wiki_page_request(root, self.path)
         elif request_api_path == "/api/project-graph":
@@ -157,11 +380,11 @@ class ResearchBrowserHandler(SimpleHTTPRequestHandler):
             status, payload = handle_project_graph_maintenance_request(root, self.path)
         elif request_api_path == "/api/experiment-proposals":
             status, payload = handle_experiment_proposals_request(root, self.path)
-        elif request_api_path in {"/api/paper-graph", "/api/graph-delta/propose-from-dossier"}:
+        elif request_api_path == "/api/paper-graph":
+            status, payload = handle_paper_graph_request(root, self.path)
+        elif request_api_path == "/api/graph-delta/propose-from-dossier":
             status, payload = json_response({"error": "Not Found"}, HTTPStatus.NOT_FOUND)
         else:
-            if request_api_path == "/":
-                self.path = "/dashboard/index.html"
             super().do_GET()
             return
         self.send_response(status)

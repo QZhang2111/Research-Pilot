@@ -4,9 +4,9 @@ display_title: "Demo Visual Affordance"
 type: project-overview
 demo: true
 created: 2026-05-14
-updated: 2026-05-14
+updated: 2026-05-15
 domains: [embodied-intelligence, scene-understanding]
-tags: [demo, affordance, related-work-lineage]
+tags: [demo, affordance]
 status: active
 human_review: approved
 confidence: medium
@@ -16,19 +16,21 @@ confidence: medium
 
 ## Project Direction
 
-Probe how visual affordance systems move from dataset-grounded object interaction labels toward open-vocabulary grounding with part, geometry, and foundation-model priors.
+Reconstruct the baseline paper's mechanistic account of visual affordance reasoning in VFMs as a Research Pilot demo: geometry primitive plus interaction prior, bridged into task-level affordance grounding.
 
 ## Current Questions
 
-- Which dataset and grounding assumptions still shape visual affordance benchmarks?
-- Which part-level and geometry priors transfer across object categories?
-- Which foundation-model probes reveal affordance signals without task-specific training?
+- What mechanistic primitives make visual affordance understanding possible in Visual Foundation Models?
+- Can affordance reasoning in VFMs be explained as composition of geometric perception and interaction perception?
+- How can we distinguish genuine affordance-relevant cues from object semantics, part segmentation, or prompt-conditioned localization?
 
 ## Accepted Questions
 
-- What evidence links open-vocabulary visual features to actionable part-level affordance predictions?
+- What mechanistic primitives make visual affordance understanding possible in Visual Foundation Models?
+- Can affordance reasoning in VFMs be explained as composition of geometric perception and interaction perception?
+- How can we distinguish genuine affordance-relevant cues from object semantics, part segmentation, or prompt-conditioned localization?
 
 ## Human Gates
 
-- Treat demo graph events as illustrative only.
-- Keep lineage artifacts separate from graph truth until human review.
+- D1 rebuild accepted on 2026-05-15 for demo graph truth.
+- Treat paper dossiers as project-local interpretation unless separately promoted.

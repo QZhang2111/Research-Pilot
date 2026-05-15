@@ -3,7 +3,7 @@ title: "Demo Visual Affordance Query Pack"
 type: project-query-pack
 project: DemoVisualAffordance
 created: 2026-05-14
-updated: 2026-05-14
+updated: 2026-05-15
 tags: [demo, affordance, query-pack]
 status: active
 human_review: approved
@@ -14,11 +14,11 @@ confidence: medium
 
 ## Search Questions
 
-- Visual affordance grounding datasets part interaction labels.
-- Open vocabulary affordance learning foundation models.
-- Dense visual descriptors object part correspondence affordance.
-- DINO and perception encoder probing for action affordance.
+- Geometry perception cues for affordance localization in VFMs.
+- Interaction priors from generative or language-conditioned foundation models.
+- Object-part affordance grounding as spatial substrate for action regions.
+- Evidence boundaries between semantic localization, part segmentation, and affordance grounding.
 
 ## First Search Contract
 
-Find public papers that connect affordance grounding, part geometry, open-vocabulary recognition, and foundation-model visual descriptors.
+Use the approved lineage and seven deep-read dossiers to support the demo PUG rebuild around geometry primitive, interaction prior, and training-free compositional bridge.

@@ -3359,6 +3359,51 @@ function renderDeepReadsPage() {
   `;
 }
 
+function renderLineageAtlasFallback(map) {
+  const routes = Array.isArray(map?.routes)
+    ? map.routes.filter((route) => route && typeof route === "object" && !Array.isArray(route))
+    : [];
+  const papers = Array.isArray(map?.papers)
+    ? map.papers.filter((paper) => paper && typeof paper === "object" && !Array.isArray(paper))
+    : [];
+  const topic = map?.topic_name || map?.display?.topic_name || map?.title || "Related Work Lineage";
+  const routeIds = routes.map((route) => route.id).filter(Boolean);
+  papers.forEach((paper) => {
+    const routeId = paper.route || "unassigned";
+    if (!routeIds.includes(routeId)) routeIds.push(routeId);
+  });
+
+  return `
+    <section class="lineage-atlas-fallback" aria-label="Lineage atlas fallback">
+      <header>
+        <p class="eyebrow">Lineage Atlas</p>
+        <h2>${escapeHtml(topic)}</h2>
+      </header>
+      <div class="lineage-lanes">
+        ${routeIds.length ? routeIds.map((routeId) => {
+          const route = routes.find((item) => item.id === routeId) || { id: routeId, label: routeId, description: "" };
+          const routePapers = sortedLineagePapers(papers.filter((paper) => (paper.route || "unassigned") === routeId));
+          return `
+            <section class="lineage-lane">
+              <header>
+                <div>
+                  <span>${escapeHtml(route.review_status || "candidate")}</span>
+                  <h3>${escapeHtml(route.label || route.id || "Unnamed route")}</h3>
+                </div>
+                <small>${escapeHtml(route.id || "route")}</small>
+              </header>
+              <p>${escapeHtml(route.description || "No route description.")}</p>
+              <div class="lineage-paper-track">
+                ${routePapers.length ? routePapers.map((paper) => renderLineagePaperNode(paper)).join("") : `<div class="empty-state">No papers assigned.</div>`}
+              </div>
+            </section>
+          `;
+        }).join("") : `<div class="empty-state">No routes in this lineage map.</div>`}
+      </div>
+    </section>
+  `;
+}
+
 function renderLineagePage() {
   const project = projectById();
   if (!project) {
@@ -3393,30 +3438,16 @@ function renderLineagePage() {
 
   el.content.innerHTML = `
     <section class="section-block lineage-map-shell">
-      <div class="section-head">
-        <div>
-          <p class="eyebrow">Read-only Lineage Map</p>
-          <h2>${escapeHtml(selectedMap.title || selectedMap.round || "Related Work Lineage")}</h2>
-          <p class="section-note">${escapeHtml(selectedMap.positioning_note || "暂无 positioning note。")}</p>
-        </div>
-        <div class="lineage-map-switcher" aria-label="lineage map rounds">
-          ${maps.map((map) => {
-            const current = map.id === selectedMap.id ? ' aria-current="page"' : "";
-            return `<a href="${escapeAttr(lineageUrl(project.id, map.round))}"${current}>${escapeHtml(map.round || "unknown")}</a>`;
-          }).join("")}
-        </div>
-      </div>
-      ${renderLineageSummaryFacts(selectedMap)}
-      ${renderLineageGraph(selectedMap)}
-      ${renderLineageLanes(selectedMap)}
-      ${renderLineageEdgeList(selectedMap)}
-      ${renderLineagePaperTable(selectedMap)}
-      <aside class="lineage-boundary-note">
-        <strong>Boundary</strong>
-        <span>Dashboard is read-only. This related-work lineage artifact is not Project Understanding Graph truth and creates no D* events.</span>
-      </aside>
+      <div id="lineage-atlas-root" class="lineage-atlas-root"></div>
     </section>
   `;
+  const root = document.getElementById("lineage-atlas-root");
+  if (!root) return;
+  if (window.ResearchBrowserLineageAtlas?.mount) {
+    window.ResearchBrowserLineageAtlas.mount(root, { map: selectedMap, project });
+  } else {
+    root.innerHTML = renderLineageAtlasFallback(selectedMap);
+  }
 }
 
 function renderLineageSummaryFacts(map) {
@@ -3802,7 +3833,7 @@ function renderEmpty(message) {
 }
 
 async function loadData() {
-  const response = await fetch("/.dashboard/index.json");
+  const response = await fetch("/.dashboard/index.json", { cache: "no-store" });
   state.data = await response.json();
 }
 
