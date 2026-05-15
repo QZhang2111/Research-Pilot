@@ -114,6 +114,8 @@ The agent creates the workspace, collects minimum project context, and stops at 
 
 Your research data lives in that workspace, not in the hidden plugin checkout.
 
+Fresh workspaces include a deletable `DemoVisualAffordance` demo project; pass `--no-demo` to the init helper for an empty workspace.
+
 ### 3. Continue inside your workspace
 
 ```bash
@@ -310,6 +312,8 @@ wiki/graphs/events/**/*.jsonl
 - Human-gated delta dry-run, registration, and decision commands.
 - Project-local paper dossier creation, validation, and delta export.
 - Zotero-first source identity intake with manual source-reference capture for setup/dry-run cases.
+- Paper-only related-work lineage workflow for project-scoped technical route maps.
+- Related-work lineage dashboard view over generated read models.
 - Research Browser dashboard served from plugin UI files over workspace read models.
 
 ---

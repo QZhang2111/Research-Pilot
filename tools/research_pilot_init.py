@@ -29,10 +29,11 @@ def repo_root() -> Path:
     return Path(__file__).resolve().parents[1]
 
 
-def copy_template_tree(template_root: Path, target_root: Path, overwrite: bool) -> None:
+def copy_template_tree(template_root: Path, target_root: Path, overwrite: bool) -> bool:
     if not template_root.is_dir():
         raise SystemExit(f"template directory not found: {template_root}")
 
+    copied = False
     for source in template_root.rglob("*"):
         relative = source.relative_to(template_root)
         target = target_root / relative
@@ -45,6 +46,14 @@ def copy_template_tree(template_root: Path, target_root: Path, overwrite: bool) 
         if target.exists() and not overwrite:
             continue
         shutil.copy2(source, target)
+        copied = True
+
+    return copied
+
+
+def copy_demo_workspace(repo: Path, target_root: Path, overwrite: bool) -> bool:
+    demo_root = repo / "examples" / "workspaces" / "demo-visual-affordance"
+    return copy_template_tree(demo_root, target_root, overwrite)
 
 
 def ensure_gitignore(target_root: Path) -> None:
@@ -85,20 +94,35 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
         action="store_true",
         help="Do not run git init in the target workspace.",
     )
+    parser.add_argument(
+        "--no-demo",
+        action="store_true",
+        help="Do not install the DemoVisualAffordance demo project.",
+    )
     return parser.parse_args(argv)
 
 
 def main(argv: list[str]) -> int:
     args = parse_args(argv)
     target_root = Path(args.workspace).expanduser().resolve()
-    template_root = repo_root() / "templates" / "workspace"
+    repo = repo_root()
+    template_root = repo / "templates" / "workspace"
 
     target_root.mkdir(parents=True, exist_ok=True)
     copy_template_tree(template_root, target_root, args.overwrite)
+    demo_copied = False
+    if not args.no_demo:
+        demo_copied = copy_demo_workspace(repo, target_root, args.overwrite)
     ensure_gitignore(target_root)
     maybe_git_init(target_root, args.no_git)
 
     print(f"Research Pilot workspace initialized: {target_root}")
+    if demo_copied:
+        print("Demo project installed: DemoVisualAffordance")
+        print(
+            "Delete it by removing wiki/projects/DemoVisualAffordance and "
+            "wiki/graphs/events/projects/DemoVisualAffordance.jsonl."
+        )
     print("")
     print("Next steps:")
     print(f"  cd {target_root}")

@@ -74,6 +74,14 @@ The agent can also resolve `PLUGIN_ROOT` and run:
 python3 "$PLUGIN_ROOT/tools/research_pilot_init.py" "$WORKSPACE_PATH"
 ```
 
+By default, initialization installs the deletable `DemoVisualAffordance` project so the dashboard has visible data immediately.
+
+Clean workspace fallback:
+
+```bash
+python3 "$PLUGIN_ROOT/tools/research_pilot_init.py" "$WORKSPACE_PATH" --no-demo
+```
+
 Run the agent inside the private workspace after initialization:
 
 ```bash

@@ -1,0 +1,437 @@
+.lineage-atlas-root {
+  min-width: 0;
+  min-height: calc(100vh - 150px);
+}
+
+.lineage-atlas-shell {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 340px);
+  gap: 0;
+  min-height: max(620px, calc(100vh - 150px));
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--accent) 10%, transparent), transparent 34%),
+    linear-gradient(180deg, var(--surface-2), var(--bg));
+  color: var(--text-main);
+}
+
+.lineage-atlas-main {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-width: 0;
+  min-height: 0;
+  background:
+    radial-gradient(circle at 16% 22%, color-mix(in srgb, var(--accent) 12%, transparent), transparent 27%),
+    linear-gradient(90deg, color-mix(in srgb, var(--surface-2) 72%, transparent), transparent 58%),
+    var(--bg);
+}
+
+.lineage-atlas-controlbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 10px;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 86%, transparent);
+  background: color-mix(in srgb, var(--surface-1) 88%, transparent);
+}
+
+.lineage-atlas-controlbar input,
+.lineage-atlas-controlbar select,
+.lineage-atlas-controlbar button {
+  min-height: 34px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface-2);
+  color: var(--text-main);
+  font: inherit;
+  font-size: 13px;
+}
+
+.lineage-atlas-controlbar input,
+.lineage-atlas-controlbar select {
+  padding: 7px 10px;
+}
+
+.lineage-atlas-controlbar input::placeholder {
+  color: var(--text-muted);
+}
+
+.lineage-atlas-controlbar input[type="search"] {
+  flex: 1 1 260px;
+  min-width: 180px;
+}
+
+.lineage-atlas-controlbar button {
+  padding: 7px 12px;
+  cursor: pointer;
+}
+
+.lineage-atlas-controlbar button:hover,
+.lineage-atlas-controlbar button:focus-visible,
+.lineage-atlas-controlbar select:focus-visible,
+.lineage-atlas-controlbar input:focus-visible {
+  border-color: color-mix(in srgb, var(--accent) 72%, var(--border));
+  outline: 2px solid color-mix(in srgb, var(--accent) 22%, transparent);
+  outline-offset: 1px;
+}
+
+.lineage-atlas-controlbar label {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 34px;
+  color: var(--text-muted);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.lineage-atlas-controlbar input[type="checkbox"] {
+  width: 16px;
+  min-height: 16px;
+  margin: 0;
+  accent-color: var(--accent);
+}
+
+.lineage-atlas-flow {
+  --graph-grid-color: color-mix(in srgb, var(--border) 42%, transparent);
+  min-height: 0;
+  background:
+    linear-gradient(color-mix(in srgb, var(--border) 18%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--border) 18%, transparent) 1px, transparent 1px),
+    var(--bg);
+  background-size: 72px 72px;
+}
+
+.lineage-atlas-flow .react-flow__attribution {
+  background: color-mix(in srgb, var(--surface-1) 84%, transparent);
+  color: var(--text-muted);
+}
+
+.lineage-atlas-flow .react-flow__controls {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface-1);
+  box-shadow: 0 12px 28px color-mix(in srgb, var(--bg) 56%, transparent);
+}
+
+.lineage-atlas-flow .react-flow__controls-button {
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text-main);
+  fill: var(--text-main);
+}
+
+.lineage-atlas-flow .react-flow__controls-button:hover,
+.lineage-atlas-flow .react-flow__controls-button:focus-visible {
+  background: color-mix(in srgb, var(--accent) 18%, var(--surface-2));
+  color: var(--text-main);
+  fill: var(--text-main);
+  outline: 2px solid color-mix(in srgb, var(--accent) 28%, transparent);
+  outline-offset: -2px;
+}
+
+.lineage-atlas-flow .react-flow__controls-button svg {
+  fill: currentColor;
+}
+
+.lineage-atlas-inspector {
+  min-width: 0;
+  overflow-y: auto;
+  border-left: 1px solid color-mix(in srgb, var(--border) 86%, transparent);
+  padding: 16px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--surface-2) 88%, transparent), var(--surface-1)),
+    var(--surface-1);
+  color: var(--text-main);
+  scrollbar-color: color-mix(in srgb, var(--text-muted) 52%, transparent) var(--surface-1);
+  scrollbar-width: thin;
+}
+
+.lineage-atlas-inspector p {
+  margin: 0 0 8px;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.4;
+  text-transform: uppercase;
+}
+
+.lineage-atlas-inspector .eyebrow {
+  margin-bottom: 10px;
+  color: var(--accent);
+}
+
+.lineage-atlas-inspector h2 {
+  margin: 0 0 12px;
+  color: var(--text-main);
+  font-size: 18px;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.lineage-atlas-inspector dl {
+  display: grid;
+  gap: 8px;
+  margin: 14px 0;
+}
+
+.lineage-atlas-inspector dl div {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+}
+
+.lineage-atlas-inspector dt {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.lineage-atlas-inspector dd {
+  margin: 0;
+  color: var(--text-main);
+  font-size: 12px;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.lineage-atlas-inspector ol {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0 0;
+  padding-left: 18px;
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.lineage-atlas-inspector details {
+  margin-top: 12px;
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+}
+
+.lineage-atlas-inspector summary {
+  color: var(--text-main);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.lineage-atlas-inspector details p {
+  margin-top: 8px;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.45;
+  text-transform: none;
+}
+
+.lineage-atlas-tagrow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 12px 0;
+}
+
+.lineage-atlas-tagrow span {
+  max-width: 100%;
+  border: 1px solid color-mix(in srgb, var(--accent) 34%, var(--border));
+  border-radius: 999px;
+  padding: 4px 8px;
+  color: var(--text-muted);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.lineage-atlas-source-link {
+  display: inline-flex;
+  margin: 4px 0 8px;
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.lineage-atlas-boundary {
+  margin-top: 12px;
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.lineage-atlas-topic-node,
+.lineage-atlas-route-node,
+.lineage-atlas-paper-node {
+  overflow: hidden;
+  border-radius: 8px;
+  background: var(--surface-1);
+  color: var(--text-main);
+}
+
+.lineage-atlas-topic-node {
+  width: 230px;
+  border: 1px solid color-mix(in srgb, var(--accent) 64%, var(--border));
+  background:
+    linear-gradient(145deg, color-mix(in srgb, var(--accent) 16%, var(--surface-2)), var(--surface-1) 72%),
+    var(--surface-1);
+  box-shadow: 0 16px 34px color-mix(in srgb, var(--bg) 64%, transparent);
+}
+
+.lineage-atlas-node-button {
+  display: grid;
+  gap: 5px;
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  padding: 12px 14px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.lineage-atlas-node-button:hover,
+.lineage-atlas-node-button:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 32%, transparent);
+  outline-offset: -2px;
+}
+
+.lineage-atlas-topic-node .lineage-atlas-node-button {
+  gap: 6px;
+  padding: 14px 16px;
+}
+
+.lineage-atlas-node-button span {
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.lineage-atlas-node-button strong {
+  display: -webkit-box;
+  color: var(--text-main);
+  font-size: 14px;
+  line-height: 1.25;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+.lineage-atlas-node-button em {
+  display: -webkit-box;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-style: normal;
+  line-height: 1.3;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+.lineage-atlas-route-node {
+  width: 188px;
+  border: 2px solid var(--route-color, var(--accent));
+  box-shadow: 0 12px 28px color-mix(in srgb, var(--bg) 52%, transparent);
+}
+
+.lineage-atlas-paper-node {
+  width: 234px;
+  border: 1px solid color-mix(in srgb, var(--route-color, var(--accent)) 46%, var(--border));
+  border-left: 5px solid var(--route-color, var(--accent));
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--route-color, var(--accent)) 10%, transparent), transparent 58%),
+    var(--surface-1);
+}
+
+.lineage-atlas-route-node.is-selected,
+.lineage-atlas-paper-node.is-selected {
+  outline: 3px solid color-mix(in srgb, var(--route-color, var(--accent)) 34%, transparent);
+  outline-offset: 2px;
+}
+
+.lineage-atlas-paper-node.is-baseline {
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--accent) 18%, transparent), transparent 62%),
+    var(--surface-2);
+}
+
+.lineage-atlas-handle {
+  width: 9px;
+  height: 9px;
+  border: 2px solid var(--surface-1);
+  background: var(--route-color, var(--accent));
+}
+
+.lineage-atlas-route-edge,
+.lineage-atlas-paper-edge {
+  opacity: 0.76;
+}
+
+.lineage-atlas-route-edge path,
+.lineage-atlas-paper-edge path {
+  stroke-width: 2;
+}
+
+.lineage-atlas-explicit-edge {
+  stroke-dasharray: 6 5;
+}
+
+.lineage-atlas-explicit-edge path {
+  stroke: var(--accent);
+  stroke-width: 2.2;
+}
+
+.lineage-atlas-explicit-edge text {
+  fill: var(--text-main);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.lineage-atlas-minimap {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface-1);
+}
+
+@media (max-width: 980px) {
+  .lineage-atlas-shell {
+    grid-template-columns: 1fr;
+    min-height: 760px;
+  }
+
+  .lineage-atlas-inspector {
+    max-height: 260px;
+    border-top: 1px solid var(--border);
+    border-left: 0;
+  }
+}
+
+@media (max-width: 760px) {
+  .lineage-atlas-shell {
+    border-radius: 0;
+  }
+
+  .lineage-atlas-controlbar {
+    align-items: stretch;
+  }
+
+  .lineage-atlas-controlbar input[type="search"],
+  .lineage-atlas-controlbar select,
+  .lineage-atlas-controlbar button,
+  .lineage-atlas-controlbar label {
+    flex: 1 1 100%;
+  }
+}

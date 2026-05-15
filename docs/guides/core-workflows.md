@@ -15,6 +15,18 @@ python3 tools/build_project_graph_report.py --repo "$WORKSPACE" --project "$PROJ
 
 The generated report is a read model. Graph truth remains append-only JSONL events.
 
+## Related Work Lineage
+
+Use when a project needs a paper-only technical route map before or alongside Project Understanding Graph work.
+
+```bash
+python3 tools/related_work_lineage_cli.py create --repo "$WORKSPACE" --project "$PROJECT" --round "$ROUND" --title "$TITLE" --direction "$DIRECTION" --baseline-paper "$PAPER_ID" --json
+python3 tools/related_work_lineage_cli.py validate --path "$WORKSPACE/wiki/projects/$PROJECT/literature-rounds/$ROUND/related-work-lineage.json" --json
+python3 tools/related_work_lineage_cli.py render-summary --path "$WORKSPACE/wiki/projects/$PROJECT/literature-rounds/$ROUND/related-work-lineage.json"
+```
+
+The lineage artifact is not graph truth and does not create D* events.
+
 ## Gap Detection
 
 ```bash

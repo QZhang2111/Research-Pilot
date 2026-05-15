@@ -17,6 +17,7 @@ if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
 from tools.job_records import list_job_records
+from tools.related_work_lineage_cli import validate_lineage_map
 
 VALID_REVIEW_STATUSES = {
     "inbox",
@@ -28,6 +29,7 @@ VALID_REVIEW_STATUSES = {
     "rejected",
     "archived",
 }
+MAX_LINEAGE_DASHBOARD_ITEMS = 20
 
 
 def parse_frontmatter(text: str) -> Tuple[Dict[str, Any], str]:
@@ -282,6 +284,7 @@ def collect_projects(root: Path, project_graphs: Optional[List[Dict[str, Any]]] 
             {
                 "id": project_dir.name,
                 "title": scalar(frontmatter, "display_title") or scalar(frontmatter, "title", project_dir.name),
+                "demo": bool(frontmatter.get("demo")),
                 "path": relpath(project_dir, root),
                 "overview": {
                     "direction": direction,
@@ -315,6 +318,7 @@ def ensure_graph_projects(projects: List[Dict[str, Any]], project_graphs: List[D
             {
                 "id": project_id,
                 "title": str(graph.get("title") or project_id),
+                "demo": False,
                 "path": relpath(root / "wiki" / "projects" / project_id, root),
                 "overview": {
                     "direction": "Graph-only project initialized from graph events.",
@@ -825,6 +829,89 @@ def collect_project_graphs(root: Path) -> List[Dict[str, Any]]:
     return [graphs_by_project[project] for project in sorted(graphs_by_project)]
 
 
+def list_field(payload: Any, key: str, limit: Optional[int] = None) -> List[Any]:
+    if not isinstance(payload, dict):
+        return []
+    value = payload.get(key)
+    if not isinstance(value, list):
+        return []
+    return value[:limit] if limit is not None else value
+
+
+def dict_field(payload: Any, key: str) -> Dict[str, Any]:
+    if not isinstance(payload, dict):
+        return {}
+    value = payload.get(key)
+    return value if isinstance(value, dict) else {}
+
+
+def collect_lineage_maps(root: Path) -> List[Dict[str, Any]]:
+    lineage_maps: List[Dict[str, Any]] = []
+    projects_root = root / "wiki" / "projects"
+    if not projects_root.exists():
+        return lineage_maps
+
+    for lineage_path in sorted(projects_root.glob("*/literature-rounds/*/related-work-lineage.json")):
+        relative = lineage_path.relative_to(projects_root)
+        path_project = relative.parts[0]
+        path_round = relative.parts[2]
+        payload: Any = {}
+        parse_errors: List[str] = []
+        try:
+            payload = json.loads(lineage_path.read_text(encoding="utf-8"))
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+            parse_errors.append(f"{exc.__class__.__name__}: {exc}")
+
+        validation = validate_lineage_map(payload) if not parse_errors else {
+            "valid": False,
+            "errors": parse_errors,
+            "paper_count": 0,
+            "route_count": 0,
+            "edge_count": 0,
+        }
+        errors = list(validation.get("errors", []))
+        if isinstance(payload, dict):
+            payload_project = str(payload.get("project") or "").strip()
+            payload_round = str(payload.get("round") or "").strip()
+            if payload_project and payload_project != path_project:
+                errors.append(f"payload project does not match path project: {payload_project} != {path_project}")
+            if payload_round and payload_round != path_round:
+                errors.append(f"payload round does not match path round: {payload_round} != {path_round}")
+        markdown_path = lineage_path.with_suffix(".md")
+        lineage_maps.append(
+            {
+                "id": f"{path_project}/{path_round}",
+                "project": path_project,
+                "round": path_round,
+                "title": str(payload.get("title") or "").strip() if isinstance(payload, dict) else "",
+                "topic_name": str(payload.get("topic_name") or "").strip() if isinstance(payload, dict) else "",
+                "status": str(payload.get("status") or "").strip() if isinstance(payload, dict) else "",
+                "source_boundary": str(payload.get("source_boundary") or "").strip() if isinstance(payload, dict) else "",
+                "path": relpath(lineage_path, root),
+                "markdown_path": relpath(markdown_path, root) if markdown_path.exists() else "",
+                "valid": bool(validation.get("valid")) and not errors,
+                "errors": errors,
+                "paper_count": validation.get("paper_count", 0),
+                "route_count": validation.get("route_count", 0),
+                "edge_count": validation.get("edge_count", 0),
+                "display": dict_field(payload, "display"),
+                "baseline_paper_field_scope": dict_field(payload, "baseline_paper_field_scope"),
+                "axis_candidates": list_field(payload, "axis_candidates", MAX_LINEAGE_DASHBOARD_ITEMS),
+                "survey_catalog": list_field(payload, "survey_catalog", MAX_LINEAGE_DASHBOARD_ITEMS),
+                "timeline_tracks": list_field(payload, "timeline_tracks", MAX_LINEAGE_DASHBOARD_ITEMS),
+                "major_trends": list_field(payload, "major_trends", MAX_LINEAGE_DASHBOARD_ITEMS),
+                "notable_forks": list_field(payload, "notable_forks", MAX_LINEAGE_DASHBOARD_ITEMS),
+                "search_log": list_field(payload, "search_log", MAX_LINEAGE_DASHBOARD_ITEMS),
+                "route_narrowing": dict_field(payload, "route_narrowing"),
+                "routes": list_field(payload, "routes", MAX_LINEAGE_DASHBOARD_ITEMS),
+                "papers": list_field(payload, "papers", MAX_LINEAGE_DASHBOARD_ITEMS),
+                "explicit_edges": list_field(payload, "explicit_edges", MAX_LINEAGE_DASHBOARD_ITEMS),
+                "positioning_note": str(payload.get("positioning_note") or "").strip() if isinstance(payload, dict) else "",
+            }
+        )
+    return lineage_maps
+
+
 def load_round_decisions(round_dir: Path) -> Dict[str, Dict[str, str]]:
     decisions_path = round_dir / "review-decisions.md"
     if not decisions_path.exists():
@@ -1042,6 +1129,7 @@ def build_index(root: Path) -> Dict[str, Any]:
     rounds = collect_rounds(root, papers)
     round_candidates = collect_round_candidates(root, raw_papers)
     claims = collect_claims(root, papers)
+    lineage_maps = collect_lineage_maps(root)
     attach_stats(projects, papers, rounds, claims)
     attach_project_cards(projects, raw_papers, rounds, round_candidates)
     jobs = list_job_records(root)
@@ -1055,6 +1143,7 @@ def build_index(root: Path) -> Dict[str, Any]:
         "rounds": rounds,
         "round_candidates": round_candidates,
         "claims": claims,
+        "lineage_maps": lineage_maps,
         "jobs": jobs,
     }
 
@@ -1081,7 +1170,8 @@ def main(argv: Optional[List[str]] = None) -> int:
         print(f"Wrote {output_path.relative_to(root)}")
     print(
         f"Projects: {len(data['projects'])} Papers: {len(data['papers'])} "
-        f"Rounds: {len(data['rounds'])} Claims: {len(data['claims'])}"
+        f"Rounds: {len(data['rounds'])} Claims: {len(data['claims'])} "
+        f"Lineage maps: {len(data['lineage_maps'])}"
     )
     return 0
 
