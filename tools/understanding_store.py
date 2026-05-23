@@ -137,15 +137,21 @@ def validate_understanding_update(update: Dict[str, Any]) -> Dict[str, Any]:
 
     for claim in _optional_object_array(update, "changed_claims", errors):
         _require_item_string(claim, "claim_id", "changed_claim", errors)
+        _require_item_string(claim, "text", "changed_claim", errors)
 
     for item in _optional_object_array(update, "new_evidence", errors):
         _require_item_string(item, "evidence_id", "evidence", errors)
+        _require_item_string(item, "text", "evidence", errors)
 
     for gap in _optional_object_array(update, "new_gaps", errors):
         _require_item_string(gap, "gap_id", "gap", errors)
+        _require_item_string(gap, "text", "gap", errors)
 
     for status_change in _optional_object_array(update, "status_changes", errors):
         _require_item_string(status_change, "target_id", "status_change", errors)
+        _require_item_string(status_change, "status", "status_change", errors)
+        if status_change.get("status") and status_change.get("status") not in CONFIDENCE_STATUSES:
+            errors.append(f"unsupported status_change.status: {status_change.get('status')}")
 
     for move in _optional_object_array(update, "next_moves", errors):
         _require_item_string(move, "move_id", "next_move", errors)

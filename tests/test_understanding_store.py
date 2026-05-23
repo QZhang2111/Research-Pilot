@@ -180,6 +180,34 @@ class UnderstandingStoreTest(unittest.TestCase):
         self.assertIn("gap.gap_id must be non-empty", result["errors"])
         self.assertIn("status_change.target_id must be non-empty", result["errors"])
 
+    def test_validate_rejects_projection_items_without_text(self):
+        update = sample_update()
+        update["changed_claims"] = [{"claim_id": "C1"}]
+        update["new_evidence"] = [{"evidence_id": "E1"}]
+        update["new_gaps"] = [{"gap_id": "G1"}]
+        result = validate_understanding_update(update)
+
+        self.assertFalse(result["valid"])
+        self.assertIn("changed_claim.text must be non-empty", result["errors"])
+        self.assertIn("evidence.text must be non-empty", result["errors"])
+        self.assertIn("gap.text must be non-empty", result["errors"])
+
+    def test_validate_rejects_status_change_without_status(self):
+        update = sample_update()
+        update["status_changes"] = [{"target_id": "C1"}]
+        result = validate_understanding_update(update)
+
+        self.assertFalse(result["valid"])
+        self.assertIn("status_change.status must be non-empty", result["errors"])
+
+    def test_validate_rejects_status_change_with_unsupported_status(self):
+        update = sample_update()
+        update["status_changes"] = [{"target_id": "C1", "status": "unsupported"}]
+        result = validate_understanding_update(update)
+
+        self.assertFalse(result["valid"])
+        self.assertIn("unsupported status_change.status: unsupported", result["errors"])
+
     def test_append_rejects_malformed_projection_fields(self):
         update = sample_update()
         update["new_gaps"] = ["not an object"]
