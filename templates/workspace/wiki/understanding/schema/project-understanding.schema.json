@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://research-pilot.local/schema/project-understanding-v1",
+  "title": "Research Pilot Project Understanding v1",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "project_id",
+    "generated_at",
+    "project_brief",
+    "sources",
+    "claims",
+    "evidence",
+    "gaps",
+    "recent_changes",
+    "next_moves",
+    "inputs"
+  ],
+  "properties": {
+    "schema_version": { "const": "project-understanding-v1" },
+    "project_id": { "type": "string", "minLength": 1 },
+    "generated_at": { "type": "string", "minLength": 1 },
+    "project_brief": { "type": "object" },
+    "sources": { "type": "array", "items": { "type": "object" } },
+    "claims": { "type": "array", "items": { "type": "object" } },
+    "evidence": { "type": "array", "items": { "type": "object" } },
+    "gaps": { "type": "array", "items": { "type": "object" } },
+    "recent_changes": { "type": "array", "items": { "type": "object" } },
+    "next_moves": { "type": "array", "items": { "type": "object" } },
+    "inputs": { "type": "array", "items": { "type": "string" } }
+  }
+}
