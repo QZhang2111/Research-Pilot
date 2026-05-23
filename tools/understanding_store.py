@@ -32,6 +32,16 @@ CONFIDENCE_STATUSES = {"agent-inferred", "source-backed", "user-confirmed", "con
 NEXT_MOVE_TYPES = {"read", "search", "compare", "test", "revise", "write", "clarify"}
 
 
+def valid_project_id(project_id: str) -> bool:
+    parts = Path(project_id).parts
+    return bool(project_id) and len(parts) == 1 and not any(part in {"", ".", ".."} for part in parts)
+
+
+def require_valid_project_id(project_id: str) -> None:
+    if not valid_project_id(project_id):
+        raise ValueError("invalid project_id")
+
+
 def utc_now() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
@@ -48,10 +58,12 @@ def relpath(path: Path, root: Path) -> str:
 
 
 def understanding_event_path(root: Path, project_id: str) -> Path:
+    require_valid_project_id(project_id)
     return Path(root) / "wiki" / "understanding" / "events" / f"{project_id}.jsonl"
 
 
 def project_understanding_path(root: Path, project_id: str) -> Path:
+    require_valid_project_id(project_id)
     return Path(root) / "wiki" / "understanding" / "project-understanding" / f"{project_id}.json"
 
 
@@ -63,6 +75,27 @@ def _require_string(update: Dict[str, Any], field: str, errors: List[str]) -> No
 def _require_list(update: Dict[str, Any], field: str, errors: List[str]) -> None:
     if not isinstance(update.get(field), list):
         errors.append(f"{field} must be an array")
+
+
+def _optional_object_array(update: Dict[str, Any], field: str, errors: List[str]) -> List[Dict[str, Any]]:
+    if field not in update:
+        return []
+    value = update.get(field)
+    if not isinstance(value, list):
+        errors.append(f"{field} must be an array")
+        return []
+    items: List[Dict[str, Any]] = []
+    for item in value:
+        if not isinstance(item, dict):
+            errors.append(f"{field} items must be objects")
+            continue
+        items.append(item)
+    return items
+
+
+def _require_item_string(item: Dict[str, Any], field: str, label: str, errors: List[str]) -> None:
+    if not isinstance(item.get(field), str) or not item.get(field):
+        errors.append(f"{label}.{field} must be non-empty")
 
 
 def validate_understanding_update(update: Dict[str, Any]) -> Dict[str, Any]:
@@ -78,6 +111,8 @@ def validate_understanding_update(update: Dict[str, Any]) -> Dict[str, Any]:
 
     if update["schema_version"] != SCHEMA_VERSION:
         errors.append("schema_version must be understanding-update-v1")
+    if not valid_project_id(update["project_id"]):
+        errors.append("invalid project_id")
     if update["actor"] not in ACTORS:
         errors.append(f"unsupported actor: {update['actor']}")
     if update["confidence"] not in CONFIDENCE_STATUSES:
@@ -91,12 +126,8 @@ def validate_understanding_update(update: Dict[str, Any]) -> Dict[str, Any]:
     if not isinstance(task.get("summary"), str) or not task.get("summary"):
         errors.append("task.summary must be a non-empty string")
 
-    for source in update.get("new_sources") or []:
-        if not isinstance(source, dict):
-            errors.append("new_sources items must be objects")
-            continue
-        if not source.get("source_id"):
-            errors.append("source.source_id must be non-empty")
+    for source in _optional_object_array(update, "new_sources", errors):
+        _require_item_string(source, "source_id", "source", errors)
         if source.get("type") not in SOURCE_TYPES:
             errors.append(f"unsupported source.type: {source.get('type')}")
         if source.get("status") not in SOURCE_STATUSES:
@@ -104,12 +135,20 @@ def validate_understanding_update(update: Dict[str, Any]) -> Dict[str, Any]:
         if not source.get("title"):
             errors.append("source.title must be non-empty")
 
-    for move in update.get("next_moves") or []:
-        if not isinstance(move, dict):
-            errors.append("next_moves items must be objects")
-            continue
-        if not move.get("move_id"):
-            errors.append("next_move.move_id must be non-empty")
+    for claim in _optional_object_array(update, "changed_claims", errors):
+        _require_item_string(claim, "claim_id", "changed_claim", errors)
+
+    for item in _optional_object_array(update, "new_evidence", errors):
+        _require_item_string(item, "evidence_id", "evidence", errors)
+
+    for gap in _optional_object_array(update, "new_gaps", errors):
+        _require_item_string(gap, "gap_id", "gap", errors)
+
+    for status_change in _optional_object_array(update, "status_changes", errors):
+        _require_item_string(status_change, "target_id", "status_change", errors)
+
+    for move in _optional_object_array(update, "next_moves", errors):
+        _require_item_string(move, "move_id", "next_move", errors)
         if move.get("type") not in NEXT_MOVE_TYPES:
             errors.append(f"unsupported next_move.type: {move.get('type')}")
         if not move.get("text"):
@@ -138,6 +177,8 @@ def read_understanding_updates(root: Path, project_id: str) -> List[Dict[str, An
 
 def append_understanding_update(root: Path, project_id: str, update: Dict[str, Any]) -> Dict[str, Any]:
     root = Path(root).resolve()
+    if not valid_project_id(project_id):
+        return {"valid": False, "appended": False, "errors": ["invalid project_id"], "warnings": []}
     validation = validate_understanding_update(update)
     if not validation["valid"]:
         return {"valid": False, "appended": False, "errors": validation["errors"], "warnings": []}
@@ -166,8 +207,15 @@ def _upsert_by_id(items: Dict[str, Dict[str, Any]], item: Dict[str, Any], key: s
     items[value] = merged
 
 
+def _dict_items(value: Any) -> List[Dict[str, Any]]:
+    if not isinstance(value, list):
+        return []
+    return [item for item in value if isinstance(item, dict)]
+
+
 def build_project_understanding(root: Path, project_id: str, generated_at: str | None = None) -> Dict[str, Any]:
     root = Path(root).resolve()
+    require_valid_project_id(project_id)
     updates = read_understanding_updates(root, project_id)
     sources: Dict[str, Dict[str, Any]] = {}
     claims: Dict[str, Dict[str, Any]] = {}
@@ -178,15 +226,15 @@ def build_project_understanding(root: Path, project_id: str, generated_at: str |
 
     for update in updates:
         update_id = str(update.get("update_id") or "")
-        for source in update.get("new_sources") or []:
+        for source in _dict_items(update.get("new_sources")):
             _upsert_by_id(sources, dict(source), "source_id", update_id)
-        for claim in update.get("changed_claims") or []:
+        for claim in _dict_items(update.get("changed_claims")):
             _upsert_by_id(claims, dict(claim), "claim_id", update_id)
-        for item in update.get("new_evidence") or []:
+        for item in _dict_items(update.get("new_evidence")):
             _upsert_by_id(evidence, dict(item), "evidence_id", update_id)
-        for gap in update.get("new_gaps") or []:
+        for gap in _dict_items(update.get("new_gaps")):
             _upsert_by_id(gaps, dict(gap), "gap_id", update_id)
-        for move in update.get("next_moves") or []:
+        for move in _dict_items(update.get("next_moves")):
             _upsert_by_id(next_moves, dict(move), "move_id", update_id)
         recent_changes.append(
             {

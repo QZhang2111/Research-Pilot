@@ -1,6 +1,8 @@
+import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from tools.understanding_store import (
     append_understanding_update,
@@ -9,6 +11,7 @@ from tools.understanding_store import (
     read_understanding_updates,
     understanding_event_path,
     validate_understanding_update,
+    write_project_understanding,
 )
 
 
@@ -134,6 +137,85 @@ class UnderstandingStoreTest(unittest.TestCase):
         root = Path("/tmp/research-pilot-test")
         self.assertEqual(root / "wiki" / "understanding" / "events" / "DemoProject.jsonl", understanding_event_path(root, "DemoProject"))
         self.assertEqual(root / "wiki" / "understanding" / "project-understanding" / "DemoProject.json", project_understanding_path(root, "DemoProject"))
+
+    def test_paths_reject_project_ids_with_path_parts(self):
+        root = Path("/tmp/research-pilot-test")
+        for project_id in ["../x", "a/b", "/tmp/escape"]:
+            with self.subTest(project_id=project_id):
+                with self.assertRaises(ValueError):
+                    understanding_event_path(root, project_id)
+                with self.assertRaises(ValueError):
+                    project_understanding_path(root, project_id)
+
+    def test_paths_accept_valid_project_slug(self):
+        root = Path("/tmp/research-pilot-test")
+        self.assertEqual(root / "wiki" / "understanding" / "events" / "valid-slug_01.jsonl", understanding_event_path(root, "valid-slug_01"))
+
+    def test_append_rejects_invalid_project_id(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            result = append_understanding_update(Path(tmp), "../x", sample_update())
+
+        self.assertFalse(result["appended"])
+        self.assertIn("invalid project_id", result["errors"])
+
+    def test_validate_rejects_projection_fields_that_are_not_arrays(self):
+        update = sample_update()
+        update["changed_claims"] = {"claim_id": "C1"}
+        result = validate_understanding_update(update)
+
+        self.assertFalse(result["valid"])
+        self.assertIn("changed_claims must be an array", result["errors"])
+
+    def test_validate_rejects_projection_field_items_without_ids(self):
+        update = sample_update()
+        update["changed_claims"] = [{"text": "No id."}]
+        update["new_evidence"] = [{"text": "No id."}]
+        update["new_gaps"] = [{"text": "No id."}]
+        update["status_changes"] = [{"status": "weak"}]
+        result = validate_understanding_update(update)
+
+        self.assertFalse(result["valid"])
+        self.assertIn("changed_claim.claim_id must be non-empty", result["errors"])
+        self.assertIn("evidence.evidence_id must be non-empty", result["errors"])
+        self.assertIn("gap.gap_id must be non-empty", result["errors"])
+        self.assertIn("status_change.target_id must be non-empty", result["errors"])
+
+    def test_append_rejects_malformed_projection_fields(self):
+        update = sample_update()
+        update["new_gaps"] = ["not an object"]
+
+        with tempfile.TemporaryDirectory() as tmp:
+            result = append_understanding_update(Path(tmp), "DemoProject", update)
+
+        self.assertFalse(result["appended"])
+        self.assertIn("new_gaps items must be objects", result["errors"])
+
+    def test_projection_ignores_malformed_existing_projection_items(self):
+        update = sample_update()
+        update["changed_claims"] = ["not an object"]
+        update["new_evidence"] = [None]
+        update["new_gaps"] = [42]
+        update["next_moves"] = ["bad"]
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            path = understanding_event_path(root, "DemoProject")
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(json.dumps(update) + "\n", encoding="utf-8")
+            projection = build_project_understanding(root, "DemoProject", generated_at="2026-05-23T00:10:00Z")
+
+        self.assertEqual([], projection["claims"])
+        self.assertEqual([], projection["evidence"])
+        self.assertEqual([], projection["gaps"])
+        self.assertEqual([], projection["next_moves"])
+
+    def test_write_project_understanding_rejects_invalid_project_id_before_writing(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            with patch("tools.understanding_store.Path.open") as path_open:
+                with self.assertRaises(ValueError):
+                    write_project_understanding(root, "../x")
+                path_open.assert_not_called()
 
 
 if __name__ == "__main__":
