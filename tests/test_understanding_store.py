@@ -247,6 +247,16 @@ class UnderstandingStoreTest(unittest.TestCase):
                     write_project_understanding(root, "../x")
                 path_open.assert_not_called()
 
+    def test_demo_understanding_update_example_is_valid(self):
+        import json
+
+        path = Path("examples/demo/understanding/demo-understanding-update.json")
+        update = json.loads(path.read_text(encoding="utf-8"))
+        result = validate_understanding_update(update)
+
+        self.assertTrue(result["valid"], result["errors"])
+        self.assertEqual("DemoVisualAffordance", update["project_id"])
+
 
 if __name__ == "__main__":
     unittest.main()
