@@ -121,6 +121,13 @@ def _optional_item_string_array(item: Dict[str, Any], field: str, label: str, er
         errors.append(f"{label}.{field} items must be strings")
 
 
+def _optional_item_string(item: Dict[str, Any], field: str, label: str, errors: List[str]) -> None:
+    if field not in item:
+        return
+    if not isinstance(item.get(field), str):
+        errors.append(f"{label}.{field} must be a string")
+
+
 def validate_understanding_update(update: Dict[str, Any]) -> Dict[str, Any]:
     errors: List[str] = []
     for field in ["schema_version", "update_id", "project_id", "created_at", "actor", "recent_change_summary", "confidence"]:
@@ -156,12 +163,21 @@ def validate_understanding_update(update: Dict[str, Any]) -> Dict[str, Any]:
         if source.get("status") not in SOURCE_STATUSES:
             errors.append(f"unsupported source.status: {source.get('status')}")
         _require_item_string(source, "title", "source", errors)
+        _optional_item_string(source, "locator", "source", errors)
+        _optional_item_string(source, "relevance", "source", errors)
         _optional_item_string_array(source, "related_claims", "source", errors)
         _optional_item_string_array(source, "related_gaps", "source", errors)
 
     for claim in _optional_object_array(update, "changed_claims", errors):
         _require_item_string(claim, "claim_id", "changed_claim", errors)
         _require_item_string(claim, "text", "changed_claim", errors)
+        _optional_item_string(claim, "change", "changed_claim", errors)
+        _optional_item_string(claim, "weakness", "changed_claim", errors)
+        if "status" in claim:
+            if not isinstance(claim.get("status"), str):
+                errors.append("changed_claim.status must be a string")
+            elif claim["status"] not in CONFIDENCE_STATUSES:
+                errors.append(f"unsupported changed_claim.status: {claim['status']}")
         _optional_item_string_array(claim, "supporting_sources", "changed_claim", errors)
         _optional_item_string_array(claim, "challenging_sources", "changed_claim", errors)
 
@@ -174,12 +190,15 @@ def validate_understanding_update(update: Dict[str, Any]) -> Dict[str, Any]:
     for gap in _optional_object_array(update, "new_gaps", errors):
         _require_item_string(gap, "gap_id", "gap", errors)
         _require_item_string(gap, "text", "gap", errors)
+        _optional_item_string(gap, "type", "gap", errors)
         _optional_item_string_array(gap, "related_claims", "gap", errors)
         _optional_item_string_array(gap, "related_sources", "gap", errors)
 
     for status_change in _optional_object_array(update, "status_changes", errors):
         _require_item_string(status_change, "target_id", "status_change", errors)
         _require_item_string(status_change, "status", "status_change", errors)
+        _optional_item_string(status_change, "target_type", "status_change", errors)
+        _optional_item_string(status_change, "reason", "status_change", errors)
         if status_change.get("status") and status_change.get("status") not in CONFIDENCE_STATUSES:
             errors.append(f"unsupported status_change.status: {status_change.get('status')}")
 
@@ -188,6 +207,8 @@ def validate_understanding_update(update: Dict[str, Any]) -> Dict[str, Any]:
         if move.get("type") not in NEXT_MOVE_TYPES:
             errors.append(f"unsupported next_move.type: {move.get('type')}")
         _require_item_string(move, "text", "next_move", errors)
+        _optional_item_string(move, "rationale", "next_move", errors)
+        _optional_item_string(move, "suggested_prompt", "next_move", errors)
 
     return {"valid": not errors, "errors": errors}
 

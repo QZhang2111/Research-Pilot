@@ -259,6 +259,46 @@ class UnderstandingStoreTest(unittest.TestCase):
         self.assertFalse(result["valid"])
         self.assertIn("changed_claim.supporting_sources items must be strings", result["errors"])
 
+    def test_validate_rejects_changed_claim_status_with_non_string_value(self):
+        update = sample_update()
+        update["changed_claims"][0]["status"] = 123
+        result = validate_understanding_update(update)
+
+        self.assertFalse(result["valid"])
+        self.assertIn("changed_claim.status must be a string", result["errors"])
+
+    def test_validate_rejects_changed_claim_status_with_unsupported_value(self):
+        update = sample_update()
+        update["changed_claims"][0]["status"] = "certain"
+        result = validate_understanding_update(update)
+
+        self.assertFalse(result["valid"])
+        self.assertIn("unsupported changed_claim.status: certain", result["errors"])
+
+    def test_validate_rejects_new_source_locator_with_non_string_value(self):
+        update = sample_update()
+        update["new_sources"][0]["locator"] = 123
+        result = validate_understanding_update(update)
+
+        self.assertFalse(result["valid"])
+        self.assertIn("source.locator must be a string", result["errors"])
+
+    def test_validate_rejects_status_change_target_type_with_non_string_value(self):
+        update = sample_update()
+        update["status_changes"][0]["target_type"] = 123
+        result = validate_understanding_update(update)
+
+        self.assertFalse(result["valid"])
+        self.assertIn("status_change.target_type must be a string", result["errors"])
+
+    def test_validate_rejects_next_move_rationale_with_non_string_value(self):
+        update = sample_update()
+        update["next_moves"][0]["rationale"] = 123
+        result = validate_understanding_update(update)
+
+        self.assertFalse(result["valid"])
+        self.assertIn("next_move.rationale must be a string", result["errors"])
+
     def test_append_rejects_malformed_projection_fields(self):
         update = sample_update()
         update["new_gaps"] = ["not an object"]
