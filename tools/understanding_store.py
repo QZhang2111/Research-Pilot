@@ -33,8 +33,11 @@ NEXT_MOVE_TYPES = {"read", "search", "compare", "test", "revise", "write", "clar
 
 
 def valid_project_id(project_id: str) -> bool:
-    parts = Path(project_id).parts
-    return bool(project_id) and len(parts) == 1 and not any(part in {"", ".", ".."} for part in parts)
+    if not project_id or project_id in {".", ".."}:
+        return False
+    if "/" in project_id or "\\" in project_id:
+        return False
+    return project_id == Path(project_id).name
 
 
 def require_valid_project_id(project_id: str) -> None:

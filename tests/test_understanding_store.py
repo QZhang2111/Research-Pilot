@@ -140,7 +140,7 @@ class UnderstandingStoreTest(unittest.TestCase):
 
     def test_paths_reject_project_ids_with_path_parts(self):
         root = Path("/tmp/research-pilot-test")
-        for project_id in ["../x", "a/b", "/tmp/escape"]:
+        for project_id in ["../x", "a/b", "/tmp/escape", "a/", "a/.", "a\\"]:
             with self.subTest(project_id=project_id):
                 with self.assertRaises(ValueError):
                     understanding_event_path(root, project_id)
@@ -150,6 +150,8 @@ class UnderstandingStoreTest(unittest.TestCase):
     def test_paths_accept_valid_project_slug(self):
         root = Path("/tmp/research-pilot-test")
         self.assertEqual(root / "wiki" / "understanding" / "events" / "valid-slug_01.jsonl", understanding_event_path(root, "valid-slug_01"))
+        self.assertEqual(root / "wiki" / "understanding" / "events" / "DemoProject.jsonl", understanding_event_path(root, "DemoProject"))
+        self.assertEqual(root / "wiki" / "understanding" / "events" / "AAAI2027Affordance.jsonl", understanding_event_path(root, "AAAI2027Affordance"))
 
     def test_append_rejects_invalid_project_id(self):
         with tempfile.TemporaryDirectory() as tmp:
