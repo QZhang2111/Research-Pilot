@@ -133,6 +133,31 @@ class UnderstandingStoreTest(unittest.TestCase):
         self.assertEqual("Find counterfactual VLM affordance benchmarks.", projection["next_moves"][0]["text"])
         self.assertIn("wiki/understanding/events/DemoProject.jsonl", projection["inputs"])
 
+    def test_project_understanding_projection_applies_status_changes(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            append_understanding_update(root, "DemoProject", sample_update("UU0001"))
+            update = sample_update("UU0002")
+            update["changed_claims"] = []
+            update["new_sources"] = []
+            update["new_evidence"] = []
+            update["new_gaps"] = []
+            update["next_moves"] = []
+            update["status_changes"] = [
+                {
+                    "target_id": "C1",
+                    "target_type": "claim",
+                    "status": "source-backed",
+                    "reason": "Direct support found in S2.",
+                }
+            ]
+            append_understanding_update(root, "DemoProject", update)
+            projection = build_project_understanding(root, "DemoProject", generated_at="2026-05-23T00:10:00Z")
+
+        self.assertEqual("source-backed", projection["claims"][0]["status"])
+        self.assertEqual("Direct support found in S2.", projection["claims"][0]["status_reason"])
+        self.assertEqual("UU0002", projection["claims"][0]["last_update_id"])
+
     def test_paths_are_under_understanding_directory(self):
         root = Path("/tmp/research-pilot-test")
         self.assertEqual(root / "wiki" / "understanding" / "events" / "DemoProject.jsonl", understanding_event_path(root, "DemoProject"))
@@ -209,6 +234,30 @@ class UnderstandingStoreTest(unittest.TestCase):
 
         self.assertFalse(result["valid"])
         self.assertIn("unsupported status_change.status: unsupported", result["errors"])
+
+    def test_validate_rejects_source_refs_with_non_string_items(self):
+        update = sample_update()
+        update["source_refs"] = [123]
+        result = validate_understanding_update(update)
+
+        self.assertFalse(result["valid"])
+        self.assertIn("source_refs items must be strings", result["errors"])
+
+    def test_validate_rejects_source_title_with_non_string_value(self):
+        update = sample_update()
+        update["new_sources"][0]["title"] = 123
+        result = validate_understanding_update(update)
+
+        self.assertFalse(result["valid"])
+        self.assertIn("source.title must be non-empty", result["errors"])
+
+    def test_validate_rejects_nested_string_array_non_string_items(self):
+        update = sample_update()
+        update["changed_claims"][0]["supporting_sources"] = ["S1", 123]
+        result = validate_understanding_update(update)
+
+        self.assertFalse(result["valid"])
+        self.assertIn("changed_claim.supporting_sources items must be strings", result["errors"])
 
     def test_append_rejects_malformed_projection_fields(self):
         update = sample_update()

@@ -80,6 +80,15 @@ def _require_list(update: Dict[str, Any], field: str, errors: List[str]) -> None
         errors.append(f"{field} must be an array")
 
 
+def _require_string_array(update: Dict[str, Any], field: str, errors: List[str]) -> None:
+    value = update.get(field)
+    if not isinstance(value, list):
+        errors.append(f"{field} must be an array")
+        return
+    if not all(isinstance(item, str) for item in value):
+        errors.append(f"{field} items must be strings")
+
+
 def _optional_object_array(update: Dict[str, Any], field: str, errors: List[str]) -> List[Dict[str, Any]]:
     if field not in update:
         return []
@@ -101,12 +110,23 @@ def _require_item_string(item: Dict[str, Any], field: str, label: str, errors: L
         errors.append(f"{label}.{field} must be non-empty")
 
 
+def _optional_item_string_array(item: Dict[str, Any], field: str, label: str, errors: List[str]) -> None:
+    if field not in item:
+        return
+    value = item.get(field)
+    if not isinstance(value, list):
+        errors.append(f"{label}.{field} must be an array")
+        return
+    if not all(isinstance(member, str) for member in value):
+        errors.append(f"{label}.{field} items must be strings")
+
+
 def validate_understanding_update(update: Dict[str, Any]) -> Dict[str, Any]:
     errors: List[str] = []
     for field in ["schema_version", "update_id", "project_id", "created_at", "actor", "recent_change_summary", "confidence"]:
         _require_string(update, field, errors)
     for field in ["source_refs"]:
-        _require_list(update, field, errors)
+        _require_string_array(update, field, errors)
     if not isinstance(update.get("task"), dict):
         errors.append("missing task")
     if errors:
@@ -135,20 +155,27 @@ def validate_understanding_update(update: Dict[str, Any]) -> Dict[str, Any]:
             errors.append(f"unsupported source.type: {source.get('type')}")
         if source.get("status") not in SOURCE_STATUSES:
             errors.append(f"unsupported source.status: {source.get('status')}")
-        if not source.get("title"):
-            errors.append("source.title must be non-empty")
+        _require_item_string(source, "title", "source", errors)
+        _optional_item_string_array(source, "related_claims", "source", errors)
+        _optional_item_string_array(source, "related_gaps", "source", errors)
 
     for claim in _optional_object_array(update, "changed_claims", errors):
         _require_item_string(claim, "claim_id", "changed_claim", errors)
         _require_item_string(claim, "text", "changed_claim", errors)
+        _optional_item_string_array(claim, "supporting_sources", "changed_claim", errors)
+        _optional_item_string_array(claim, "challenging_sources", "changed_claim", errors)
 
     for item in _optional_object_array(update, "new_evidence", errors):
         _require_item_string(item, "evidence_id", "evidence", errors)
         _require_item_string(item, "text", "evidence", errors)
+        _optional_item_string_array(item, "source_refs", "evidence", errors)
+        _optional_item_string_array(item, "related_claims", "evidence", errors)
 
     for gap in _optional_object_array(update, "new_gaps", errors):
         _require_item_string(gap, "gap_id", "gap", errors)
         _require_item_string(gap, "text", "gap", errors)
+        _optional_item_string_array(gap, "related_claims", "gap", errors)
+        _optional_item_string_array(gap, "related_sources", "gap", errors)
 
     for status_change in _optional_object_array(update, "status_changes", errors):
         _require_item_string(status_change, "target_id", "status_change", errors)
@@ -160,8 +187,7 @@ def validate_understanding_update(update: Dict[str, Any]) -> Dict[str, Any]:
         _require_item_string(move, "move_id", "next_move", errors)
         if move.get("type") not in NEXT_MOVE_TYPES:
             errors.append(f"unsupported next_move.type: {move.get('type')}")
-        if not move.get("text"):
-            errors.append("next_move.text must be non-empty")
+        _require_item_string(move, "text", "next_move", errors)
 
     return {"valid": not errors, "errors": errors}
 
@@ -222,6 +248,22 @@ def _dict_items(value: Any) -> List[Dict[str, Any]]:
     return [item for item in value if isinstance(item, dict)]
 
 
+def _apply_status_change(buckets: Dict[str, Dict[str, Dict[str, Any]]], change: Dict[str, Any], update_id: str) -> None:
+    target_type = change.get("target_type")
+    target_id = change.get("target_id")
+    status = change.get("status")
+    if not isinstance(target_type, str) or not isinstance(target_id, str) or not isinstance(status, str):
+        return
+    bucket = buckets.get(target_type)
+    if bucket is None or target_id not in bucket:
+        return
+    bucket[target_id]["status"] = status
+    bucket[target_id]["last_update_id"] = update_id
+    reason = change.get("reason")
+    if isinstance(reason, str) and reason:
+        bucket[target_id]["status_reason"] = reason
+
+
 def build_project_understanding(root: Path, project_id: str, generated_at: str | None = None) -> Dict[str, Any]:
     root = Path(root).resolve()
     require_valid_project_id(project_id)
@@ -245,6 +287,15 @@ def build_project_understanding(root: Path, project_id: str, generated_at: str |
             _upsert_by_id(gaps, dict(gap), "gap_id", update_id)
         for move in _dict_items(update.get("next_moves")):
             _upsert_by_id(next_moves, dict(move), "move_id", update_id)
+        buckets = {
+            "source": sources,
+            "claim": claims,
+            "evidence": evidence,
+            "gap": gaps,
+            "next_move": next_moves,
+        }
+        for change in _dict_items(update.get("status_changes")):
+            _apply_status_change(buckets, change, update_id)
         recent_changes.append(
             {
                 "update_id": update_id,
