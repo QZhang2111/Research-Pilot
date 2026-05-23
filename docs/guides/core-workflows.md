@@ -15,6 +15,12 @@ python3 tools/build_project_graph_report.py --repo "$WORKSPACE" --project "$PROJ
 
 The generated report is a read model. Graph truth remains append-only JSONL events.
 
+## Ambient Understanding Updates
+
+Normal Research Pilot use starts with chat. After a meaningful research task, the agent records an `UnderstandingUpdate` in `wiki/understanding/events/<project>.jsonl`. This captures what changed in project understanding: sources seen, claims changed, evidence added, gaps found, and next moves suggested.
+
+Graph deltas remain available for advanced review mode. They are not required for every lightweight source note or agent observation.
+
 ## Related Work Lineage
 
 Use when a project needs a paper-only technical route map before or alongside Project Understanding Graph work.

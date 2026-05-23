@@ -4,7 +4,8 @@ Tools execute local Research Pilot workflows. They are not research truth.
 
 Truth boundaries:
 
-- `wiki/graphs/events/**/*.jsonl` is append-only graph truth.
+- `wiki/understanding/events/**/*.jsonl` is normal product truth for ambient agent understanding updates.
+- `wiki/graphs/events/**/*.jsonl` is advanced graph truth.
 - `wiki/program/` is context-only taste and north-star memory, not evidence or graph truth.
 - `wiki/graphs/graph.db`, snapshots, reports, and `.dashboard/index.json` are rebuildable read models.
 - Zotero remains the normal paper metadata/PDF source of truth.
@@ -14,6 +15,7 @@ Truth boundaries:
 | Area | Files | Responsibility |
 | --- | --- | --- |
 | workspace | `research_pilot_init.py` | Create private user workspace from templates. |
+| understanding | `understanding_store.py`, `understanding_cli.py` | Record ambient UnderstandingUpdates and build ProjectUnderstanding read models. |
 | graph | `graph_store.py`, `graph_validate.py`, `build_graph_snapshot.py`, `build_graph_db.py`, `build_project_graph_report.py`, `graph_query_cli.py` | Validate/replay graph events and query read models. |
 | delta | `graph_delta_api.py`, `graph_delta_cli.py` | Dry-run, register, and decide human-gated graph deltas. |
 | dossier | `paper_dossier_cli.py`, `source_intake_cli.py` | Create project-local paper/source dossiers and export proposed deltas. |
