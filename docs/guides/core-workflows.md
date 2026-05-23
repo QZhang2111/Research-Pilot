@@ -39,7 +39,7 @@ The lineage artifact is not graph truth and does not create D* events.
 python3 tools/project_gap_cli.py detect --repo "$WORKSPACE" --project "$PROJECT" --json
 ```
 
-Gap reports are read-only. If a gap should change project understanding, turn it into a D* delta.
+Gap reports are read-only. If a gap should update ambient/current understanding, append an `UnderstandingUpdate`; if it changes graph-level Q/C/E/W/L/RL/TL truth, use D* delta.
 
 ## Project Understanding Update
 
