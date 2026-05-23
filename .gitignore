@@ -231,6 +231,7 @@ output/
 
 # Local plugin installation checkouts and symlink scratch
 .research-pilot-install/
+.superpowers/
 
 # Dashboard dependencies
 dashboard/node_modules/
