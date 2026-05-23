@@ -36,6 +36,15 @@ def print_result(result: Dict[str, Any], as_json: bool) -> None:
         print(json.dumps(result, ensure_ascii=False, sort_keys=True))
 
 
+def command_error(command: str, exc: Exception) -> Dict[str, Any]:
+    result: Dict[str, Any] = {"valid": False, "errors": [str(exc)], "warnings": []}
+    if command == "append":
+        result["appended"] = False
+    if command == "build-project-understanding":
+        result["written"] = False
+    return result
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Manage Research Pilot understanding updates.")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -70,13 +79,23 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             result = {"valid": False, "appended": False, "errors": [str(exc)], "warnings": []}
             print_result(result, bool(args.json))
             return 1
-        result = append_understanding_update(root, args.project, update)
+        try:
+            result = append_understanding_update(root, args.project, update)
+        except (OSError, json.JSONDecodeError, ValueError) as exc:
+            result = command_error(args.command, exc)
+            print_result(result, bool(args.json))
+            return 1
         print_result(result, bool(args.json))
         return 0 if result.get("valid") else 1
 
     if args.command == "validate":
         errors = []
-        updates = read_understanding_updates(root, args.project)
+        try:
+            updates = read_understanding_updates(root, args.project)
+        except (OSError, json.JSONDecodeError, ValueError) as exc:
+            result = command_error(args.command, exc)
+            print_result(result, bool(args.json))
+            return 1
         for index, update in enumerate(updates, start=1):
             validation = validate_understanding_update(update)
             for error in validation["errors"]:
@@ -85,7 +104,12 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         print_result(result, bool(args.json))
         return 0 if result["valid"] else 1
 
-    result = write_project_understanding(root, args.project)
+    try:
+        result = write_project_understanding(root, args.project)
+    except (OSError, json.JSONDecodeError, ValueError) as exc:
+        result = command_error(args.command, exc)
+        print_result(result, bool(args.json))
+        return 1
     output = dict(result)
     output.pop("project_understanding", None)
     print_result(output, bool(args.json))
