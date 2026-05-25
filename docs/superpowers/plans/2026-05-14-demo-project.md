@@ -101,8 +101,8 @@ class DemoProjectTest(unittest.TestCase):
             "/Users/" + "qing",
             "Personal" + "ResearchWiki",
             "CVPR" + "2026_VisualAffordance",
-            "Zotero/storage",
-            "AAAI2027",
+            "ZOTERO_STORAGE",
+            "EXAMPLE_VENUE",
             "submission_" + "affordance.pdf",
         ]
         forbidden_suffixes = {".pdf", ".sqlite", ".db"}
@@ -747,7 +747,7 @@ Run:
 
 ```bash
 git diff --check
-rg -n "/Users/""qing|Personal""ResearchWiki|CVPR""2026_VisualAffordance|Zotero/storage|AAAI2027|submission_""affordance\\.pdf" examples/workspaces/demo-visual-affordance docs README.md tools dashboard tests
+rg -n "/Users/""qing|Personal""ResearchWiki|CVPR""2026_VisualAffordance|ZOTERO_STORAGE|EXAMPLE_VENUE|submission_""affordance\\.pdf" examples/workspaces/demo-visual-affordance docs README.md tools dashboard tests
 ```
 
 Expected: `git diff --check` exits 0. `rg` exits 1 for no matches in committed demo tree; docs may mention token names only inside sanitization rules from design docs, not runtime demo files.

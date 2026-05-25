@@ -141,7 +141,7 @@ unknown
 ---
 title: "AAAI 2027 Affordance Estimation"
 type: project-overview
-project_id: AAAI2027Affordance
+project_id: EXAMPLE_VENUEAffordance
 display_title: "AAAI 2027 Affordance Estimation"
 target_venue: "AAAI 2027"
 maturity_stage: "project_shell"
@@ -211,7 +211,7 @@ Example:
 {
   "id": "job-20260512-001",
   "type": "paper_search",
-  "project": "AAAI2027Affordance",
+  "project": "EXAMPLE_VENUEAffordance",
   "status": "needs_review",
   "created_at": "2026-05-12T00:00:00Z",
   "updated_at": "2026-05-12T00:10:00Z",
@@ -221,7 +221,7 @@ Example:
     "gap_id": "RL0"
   },
   "artifacts": [
-    "wiki/projects/AAAI2027Affordance/literature-rounds/round-001/search-results.md"
+    "wiki/projects/EXAMPLE_VENUEAffordance/literature-rounds/round-001/search-results.md"
   ],
   "result_summary": "Search produced candidate papers. No graph truth changed."
 }

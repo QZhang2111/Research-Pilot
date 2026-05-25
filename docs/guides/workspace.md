@@ -5,6 +5,7 @@ Research Pilot public repo is plugin source. User workspace is private research 
 Initialized workspace:
 
 ```text
+research-pilot.db
 AGENTS.md
 wiki/
   index.md
@@ -21,21 +22,33 @@ wiki/
 
 Do not publish a workspace unless it is explicitly sanitized.
 
-Do not commit PDFs, Zotero credentials, local Zotero databases, generated SQLite files, or dashboard read models.
+Research-Pilot workspaces have one `research-pilot.db` at the workspace root. It is the local dataset for that workspace, not a repo-global database and not a dashboard cache. Projects are rows in the `projects` table; project-owned records in sources, understanding, experiments, literature, updates, and audit tables are connected by `project_id`.
+
+Do not publish PDFs, Zotero credentials, local Zotero databases, private workspace datasets, or dashboard read models unless explicitly sanitized.
+Generated dashboard/read-model artifacts include `.dashboard/`, `wiki/graphs/graph.db`, and `wiki/graphs/snapshots/`.
+Legacy Markdown, JSONL, and JSON workspace artifacts can still be used for imports, exports, reports, and fallback workflows while migration continues.
 
 ## Demo Project
 
-New workspaces include `DemoVisualAffordance` by default. It is sanitized example data for learning the workflow and inspecting dashboard changes.
+New workspaces include `DemoVisualAffordance` by default. Initialization copies the sanitized demo source files into the workspace and imports the demo project into the workspace `research-pilot.db`.
 
-Delete it from a workspace:
+The public repo also includes an example workspace at `examples/workspaces`. Treat that directory as a normal initialized workspace for demos: it has one root `research-pilot.db`, and `DemoVisualAffordance` is one project in that DB.
+
+The reusable demo seed lives under `examples/archive/seed-workspaces/demo-visual-affordance` and keeps durable seed inputs only:
+
+- project markdown under `wiki/projects/DemoVisualAffordance/`;
+- graph events under `wiki/graphs/events/projects/DemoVisualAffordance.jsonl`;
+- understanding events under `wiki/understanding/events/DemoVisualAffordance.jsonl`.
+
+The user workspace DB created by `research_pilot_init.py` is the default runtime dataset. Generated dashboard/index, graph database, and graph snapshots are intentionally rebuildable and should not be treated as demo source.
+
+Start without the demo:
 
 ```bash
-rm -rf wiki/projects/DemoVisualAffordance
-rm -f wiki/graphs/events/projects/DemoVisualAffordance.jsonl
-python3 "$PLUGIN_ROOT/tools/build_dashboard_index.py" --repo "$PWD" --output .dashboard/index.json
+python3 "$PLUGIN_ROOT/tools/research_pilot_init.py" "$WORKSPACE_PATH" --no-demo
 ```
 
-The dashboard is read-only and does not delete projects.
+The dashboard is read-only and does not create or delete projects.
 
 ## Program Context
 

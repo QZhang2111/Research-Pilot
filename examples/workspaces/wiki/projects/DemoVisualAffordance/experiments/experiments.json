@@ -1,0 +1,318 @@
+{
+  "schema_version": "experiments-v1",
+  "project_id": "DemoVisualAffordance",
+  "summary": {
+    "strongest_current_evidence": "The demo paper's AGD20K evidence shows training-free Interaction x Geometry improves over Only Interaction: KLD 1.825 -> 1.493, SIM 0.271 -> 0.326, NSS 1.050 -> 1.090.",
+    "highest_priority_unresolved": "The evidence is imported from the paper, not reproduced locally; next step is a local AGD20K reproduction with geometry-only, interaction-only, and fused controls."
+  },
+  "experiments": [
+    {
+      "id": "EXP1",
+      "title": "Geometry probe for affordance segmentation",
+      "status": "completed",
+      "question": "Do geometry-aware VFM representations make affordance segmentation linearly separable?",
+      "hypothesis": "If affordance reasoning needs geometric primitives, VFMs with stronger part-level geometry should score higher on UMD mIoU, and explicit depth or surface-normal cues should help models with weaker geometric priors.",
+      "linked_claims": ["C2", "C4"],
+      "linked_gaps": ["G1"],
+      "benchmark": "UMD affordance segmentation; AGD20K remains target for local follow-up",
+      "dataset": "UMD, seven affordance categories, 11,800 training images, 14,020 testing images",
+      "models": ["DINO", "DINOv2", "DINOv3", "CLIP", "SigLIP", "SAM", "Stable Diffusion", "Metric3Dv2 depth and surface normals"],
+      "baselines": ["frozen VFM features", "frozen VFM features plus depth", "frozen VFM features plus surface normals"],
+      "metrics": ["mIoU", "linear-probe separability", "part-level PCA coherence"],
+      "protocol": [
+        "Freeze each visual backbone.",
+        "Extract and fuse four equally spaced ViT layers where applicable.",
+        "Train a BatchNorm plus 1x1 Conv linear head with cross-entropy loss.",
+        "Evaluate UMD affordance mask prediction with mIoU.",
+        "Concatenate Metric3Dv2 depth and surface-normal cues to test whether explicit 3D signals improve each backbone."
+      ],
+      "expected_evidence": "Geometry-aware models should produce stronger mIoU and more coherent part-level PCA structure; depth and normals should improve semantic models more than DINO-family models.",
+      "risks": [
+        "Linear probing measures separability, not causal affordance understanding.",
+        "UMD masks are categorical affordance labels, not verb-conditioned interaction heatmaps.",
+        "This is imported paper evidence and is not reproduced in the local workspace."
+      ],
+      "next_action": "Reproduce the UMD probe locally or use it as the geometry-only control for the AGD20K fusion reproduction."
+    },
+    {
+      "id": "EXP2",
+      "title": "Verb-conditioned interaction prior from Flux Kontext",
+      "status": "completed",
+      "question": "Can verb-conditioned generative attention localize plausible contact regions without affordance-specific training?",
+      "hypothesis": "If generative models encode interaction priors, Flux Kontext verb-token attention should align with action-bearing regions and produce useful zero-shot AGD20K affordance heatmaps.",
+      "linked_claims": ["C3", "C4"],
+      "linked_gaps": ["G1"],
+      "benchmark": "AGD20K zero-shot affordance heatmap estimation",
+      "dataset": "AGD20K egocentric object images paired with exocentric interaction exemplars",
+      "models": ["Flux Kontext", "GroundingDINO", "MaskCLIP", "EVF-SAM"],
+      "baselines": ["Only Interaction", "GroundingDINO attention", "MaskCLIP attention", "EVF-SAM attention"],
+      "metrics": ["KLD", "SIM", "NSS", "qualitative contact-region alignment"],
+      "protocol": [
+        "Prompt the generative model with object and verb conditions.",
+        "Extract verb-conditioned cross-attention maps.",
+        "Treat verb attention as a zero-shot affordance heatmap.",
+        "Compare against AGD20K ground-truth heatmaps and qualitative attention baselines."
+      ],
+      "expected_evidence": "Flux Kontext verb attention should highlight physically plausible contact regions and approach weakly supervised affordance performance without task-specific training.",
+      "risks": [
+        "Attention maps are proxy evidence, not direct action execution.",
+        "Generative output can fail even when attention stays spatially plausible.",
+        "Noun attention noise can pollute the object region used by the fusion pipeline."
+      ],
+      "next_action": "Re-run verb-attention extraction on the demo AGD20K examples and save heatmap artifacts."
+    },
+    {
+      "id": "EXP3",
+      "title": "Training-free geometry-interaction fusion",
+      "status": "completed",
+      "question": "Does composing DINOv3 geometry with Flux Kontext interaction attention improve zero-shot affordance localization?",
+      "hypothesis": "If geometric and interaction primitives are complementary, selecting DINOv3 PCA geometry components aligned to Flux verb attention should outperform interaction-only heatmaps.",
+      "linked_claims": ["C2", "C3", "C4"],
+      "linked_gaps": ["G1"],
+      "benchmark": "AGD20K quantitative evaluation; UMD qualitative validation",
+      "dataset": "AGD20K unseen egocentric objects for KLD/SIM/NSS; UMD categorical masks for qualitative part alignment",
+      "models": ["DINOv3", "Flux Kontext"],
+      "baselines": ["Only Interaction", "Interaction x Geometry", "AffordanceLLM", "Cross-View-AG", "LOCATE", "Affordance-R1"],
+      "metrics": ["KLD", "SIM", "NSS", "mIoU", "qualitative contact-region consistency"],
+      "protocol": [
+        "Use object attention to crop a DINOv3 region of interest.",
+        "Run PCA on ROI features to obtain part-level geometric bases.",
+        "Use Flux Kontext verb attention as the probable action region.",
+        "Compute NSS between each geometric basis and verb attention.",
+        "Select the best-aligned geometry component and fuse it with verb attention.",
+        "Evaluate on AGD20K and inspect UMD hold, cut, and drink examples."
+      ],
+      "expected_evidence": "Interaction x Geometry should reduce KLD and improve SIM/NSS relative to Only Interaction, while UMD examples should align hold with handles, cut with blades, and drink with rims or openings.",
+      "risks": [
+        "Fusion is shallow and open-loop.",
+        "The result does not prove embodied causal understanding.",
+        "AGD20K and UMD only approximate richer action-object relations.",
+        "Local reproduction is still missing."
+      ],
+      "next_action": "Make EXP3 the first local reproduction target and attach generated masks to each run."
+    },
+    {
+      "id": "EXP4",
+      "title": "Semantic assimilation control for geometry",
+      "status": "completed",
+      "question": "Are DINO geometry correspondences pure shape evidence, or can object semantics suppress geometric matches?",
+      "hypothesis": "If DINO geometry is entangled with global semantics, local shape correspondence should work in simplified scenes but weaken when the full object context is visible.",
+      "linked_claims": ["C2"],
+      "linked_gaps": ["G2"],
+      "benchmark": "Mug-handle patch correspondence control",
+      "dataset": "Paper qualitative control scenes containing ring-like shapes and full mug context",
+      "models": ["DINOv3"],
+      "baselines": ["local patch correspondence", "full-scene correspondence"],
+      "metrics": ["cosine similarity response", "qualitative activation map"],
+      "protocol": [
+        "Select a mug-handle patch as the reference feature.",
+        "Compare activation over simplified ring-like shapes.",
+        "Compare activation over full-scene object context.",
+        "Use the failure mode to bound claims about pure geometric representation."
+      ],
+      "expected_evidence": "Ring-like simplified shapes should activate from local geometry, while full scene context can suppress those responses through object semantics.",
+      "risks": [
+        "Qualitative control only.",
+        "Does not quantify how much semantic assimilation affects downstream affordance masks."
+      ],
+      "next_action": "Add a local category-scrambling control to separate geometry, object semantics, and action contact evidence."
+    }
+  ],
+  "runs": [
+    {
+      "id": "RUN1",
+      "experiment_id": "EXP1",
+      "status": "completed",
+      "evidence_type": "imported_paper_evidence",
+      "completed_at": "2026-03-16",
+      "summary": "The paper reports a controlled UMD linear probe: stronger geometric awareness correlates with higher affordance mIoU, while Metric3Dv2 depth and normal cues especially improve semantic models such as CLIP and SigLIP.",
+      "metrics": [
+        {"name": "UMD train images", "value": "11800"},
+        {"name": "UMD test images", "value": "14020"},
+        {"name": "affordance categories", "value": "7"},
+        {"name": "mIoU", "value": "reported in Figure 4"}
+      ],
+      "artifacts": [
+        {
+          "type": "paper_dossier",
+          "path_or_url": "wiki/projects/DemoVisualAffordance/papers/zhang2026-geometry-interaction-vfm/index.md",
+          "label": "Geometry-interaction baseline dossier",
+          "description": "Imported source evidence for geometry probing on UMD."
+        },
+        {
+          "type": "source",
+          "path_or_url": "https://arxiv.org/abs/2602.20501",
+          "label": "arXiv 2602.20501",
+          "description": "Paper source for imported experiment evidence."
+        }
+      ],
+      "interpretation": "This supports C2 as source-backed but still weak: geometry helps affordance separability, but this is not local reproduction and does not prove causal interaction understanding.",
+      "claim_impacts": [
+        {"claim": "C2", "impact": "supports", "strength": "medium"},
+        {"claim": "C4", "impact": "supports", "strength": "weak"}
+      ],
+      "weaknesses": [
+        "Evidence is imported from the baseline paper and not reproduced in this local workspace.",
+        "UMD categorical masks do not test rich verb-conditioned interaction reasoning.",
+        "Linear probes can expose useful representation structure without proving mechanistic causality."
+      ]
+    },
+    {
+      "id": "RUN2",
+      "experiment_id": "EXP2",
+      "status": "completed",
+      "evidence_type": "imported_paper_evidence",
+      "completed_at": "2026-03-16",
+      "summary": "The paper treats Flux Kontext verb attention as zero-shot AGD20K affordance prediction. Only Interaction reaches KLD 1.825, SIM 0.271, and NSS 1.050 without affordance-specific training.",
+      "metrics": [
+        {"name": "KLD", "value": "1.825"},
+        {"name": "SIM", "value": "0.271"},
+        {"name": "NSS", "value": "1.050"},
+        {"name": "supervision", "value": "training-free"}
+      ],
+      "artifacts": [
+        {
+          "type": "source",
+          "path_or_url": "https://arxiv.org/abs/2602.20501",
+          "label": "Table 2, Only Interaction",
+          "description": "Imported AGD20K evidence for Flux Kontext verb-attention priors."
+        }
+      ],
+      "interpretation": "This supports C3: verb-conditioned generative attention contains useful interaction priors. It remains proxy evidence because attention is not action execution.",
+      "claim_impacts": [
+        {"claim": "C3", "impact": "supports", "strength": "medium"},
+        {"claim": "C4", "impact": "bounds", "strength": "weak"}
+      ],
+      "weaknesses": [
+        "Evidence is imported from the baseline paper and not reproduced in this local workspace.",
+        "Attention maps can be spatially plausible even when generated image edits fail.",
+        "The run does not isolate object-category semantics from action contact evidence."
+      ]
+    },
+    {
+      "id": "RUN3",
+      "experiment_id": "EXP3",
+      "status": "completed",
+      "evidence_type": "imported_paper_evidence",
+      "completed_at": "2026-03-16",
+      "summary": "The paper's AGD20K fusion run reports that Interaction x Geometry improves over Only Interaction on all reported metrics: KLD 1.493, SIM 0.326, NSS 1.090.",
+      "metrics": [
+        {"name": "KLD", "value": "1.493"},
+        {"name": "SIM", "value": "0.326"},
+        {"name": "NSS", "value": "1.090"},
+        {"name": "KLD improvement vs Only Interaction", "value": "0.332 lower"},
+        {"name": "SIM improvement vs Only Interaction", "value": "0.055 higher"},
+        {"name": "NSS improvement vs Only Interaction", "value": "0.040 higher"}
+      ],
+      "artifacts": [
+        {
+          "type": "source",
+          "path_or_url": "https://arxiv.org/abs/2602.20501",
+          "label": "Table 2, Interaction x Geometry",
+          "description": "Imported AGD20K quantitative result for the central fusion claim."
+        }
+      ],
+      "interpretation": "This is the strongest imported evidence for C4: composing geometry and interaction improves zero-shot affordance localization. It should be displayed as imported evidence until local reproduction exists.",
+      "claim_impacts": [
+        {"claim": "C2", "impact": "supports", "strength": "medium"},
+        {"claim": "C3", "impact": "supports", "strength": "medium"},
+        {"claim": "C4", "impact": "supports", "strength": "medium"}
+      ],
+      "weaknesses": [
+        "Evidence is imported from the baseline paper and not reproduced in this local workspace.",
+        "Fusion uses an open-loop PCA plus attention heuristic.",
+        "The result does not prove human-like or embodied causal affordance understanding."
+      ]
+    },
+    {
+      "id": "RUN4",
+      "experiment_id": "EXP3",
+      "status": "completed",
+      "evidence_type": "imported_paper_evidence",
+      "completed_at": "2026-03-16",
+      "summary": "The paper's UMD qualitative fusion examples show hold regions on handles, cut regions on blades, and drink regions on cup rims or openings without affordance-specific training.",
+      "metrics": [
+        {"name": "hold localization", "value": "handles"},
+        {"name": "cut localization", "value": "blades"},
+        {"name": "drink localization", "value": "rims/openings"},
+        {"name": "supervision", "value": "training-free"}
+      ],
+      "artifacts": [
+        {
+          "type": "source",
+          "path_or_url": "https://arxiv.org/abs/2602.20501",
+          "label": "Figure 12 qualitative UMD fusion",
+          "description": "Imported qualitative evidence for geometry-interaction mask alignment."
+        }
+      ],
+      "interpretation": "This helps users inspect how the experiment page handles qualitative evidence, but it should not be weighted as strongly as the AGD20K metrics.",
+      "claim_impacts": [
+        {"claim": "C4", "impact": "supports", "strength": "weak"}
+      ],
+      "weaknesses": [
+        "Evidence is qualitative.",
+        "UMD masks are categorical, so the paper does not use UMD as the main quantitative interaction benchmark.",
+        "Evidence is imported and not reproduced locally."
+      ]
+    },
+    {
+      "id": "RUN5",
+      "experiment_id": "EXP4",
+      "status": "completed",
+      "evidence_type": "imported_paper_evidence",
+      "completed_at": "2026-03-16",
+      "summary": "The paper's semantic assimilation control reports that a mug-handle patch activates ring-like shapes in simplified scenes, but those responses vanish in full-scene context, showing geometry is affected by object semantics.",
+      "metrics": [
+        {"name": "simplified shape response", "value": "geometry-aligned"},
+        {"name": "full-scene response", "value": "suppressed by semantics"},
+        {"name": "evidence type", "value": "qualitative control"}
+      ],
+      "artifacts": [
+        {
+          "type": "source",
+          "path_or_url": "https://arxiv.org/abs/2602.20501",
+          "label": "Figure 6 semantic assimilation control",
+          "description": "Imported limitation evidence for geometry claims."
+        }
+      ],
+      "interpretation": "This weakens any overclaim that DINO geometry is pure shape reasoning. It gives the experiment page a concrete example of limitation evidence.",
+      "claim_impacts": [
+        {"claim": "C2", "impact": "bounds", "strength": "medium"}
+      ],
+      "weaknesses": [
+        "Qualitative control only.",
+        "No downstream metric quantifies how semantic assimilation changes AGD20K or UMD affordance performance."
+      ]
+    }
+  ],
+  "next_moves": [
+    {
+      "type": "replicate",
+      "rationale": "The strongest current result is imported from Table 2. Local reproduction would make C4 stronger and make the dashboard distinguish imported evidence from completed local evidence.",
+      "suggested_prompt": "Use Research-Pilot to reproduce the AGD20K Only Interaction versus Interaction x Geometry evaluation from arXiv:2602.20501 and record KLD, SIM, and NSS.",
+      "linked_experiment": "EXP3",
+      "linked_claim": "C4"
+    },
+    {
+      "type": "ablate",
+      "rationale": "The paper itself shows geometry can be semantically assimilated, so the project needs controls that separate part geometry from object-category shortcuts.",
+      "suggested_prompt": "Design a category-scrambling or counterfactual-object control that tests whether the fused affordance mask follows contact geometry instead of object identity.",
+      "linked_experiment": "EXP4",
+      "linked_claim": "C2"
+    },
+    {
+      "type": "collect_artifacts",
+      "rationale": "The experiment page will be more useful after each run links masks, heatmaps, tables, and failure cases rather than source-paper summaries only.",
+      "suggested_prompt": "Create artifact folders for EXP1-EXP4 and attach example masks, PCA maps, verb attention maps, and AGD20K metric tables.",
+      "linked_experiment": "EXP3",
+      "linked_claim": "C4"
+    },
+    {
+      "type": "extend",
+      "rationale": "The paper notes that the current fusion is shallow and open-loop. A stronger experiment should test richer spatial alignment or closed-loop embodied tasks.",
+      "suggested_prompt": "Plan the next experiment after reproduction: replace PCA-plus-attention fusion with a stronger spatial alignment method or test the masks in a downstream manipulation/policy setting.",
+      "linked_experiment": "EXP3",
+      "linked_claim": "C4"
+    }
+  ]
+}

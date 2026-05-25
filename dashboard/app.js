@@ -1,75 +1,76 @@
 const STATUS_ORDER = ["inbox", "candidate", "reading", "summarized", "approved", "rejected", "archived"];
+const DASHBOARD_PAGE_VERSION = "english-dashboard-20260523";
 const STATUS_LABELS = {
-  inbox: "收件箱",
-  candidate: "候选",
-  triaged: "已初筛",
-  reading: "待读",
-  summarized: "已总结",
-  approved: "已批准",
-  rejected: "已拒绝",
-  archived: "已归档",
-  unknown: "未知",
+  inbox: "Inbox",
+  candidate: "Candidate",
+  triaged: "Triaged",
+  reading: "Reading",
+  summarized: "Summarized",
+  approved: "Approved",
+  rejected: "Rejected",
+  archived: "Archived",
+  unknown: "Unknown",
 };
 const FAMILY_LABELS = {
-  direct: "直接相关",
-  probing: "表征探测",
-  capability: "能力评估",
-  unknown: "未知",
+  direct: "Direct",
+  probing: "Representation probing",
+  capability: "Capability evaluation",
+  unknown: "Unknown",
 };
 const RELEVANCE_LABELS = {
-  high: "高相关",
-  medium: "中相关",
-  low: "低相关",
-  unscored: "未评分",
+  high: "High",
+  medium: "Medium",
+  low: "Low",
+  unscored: "Unscored",
 };
 const PAPER_STATE_ORDER = ["candidate", "reading", "summarized", "approved", "project-core", "rejected", "archived"];
 const PAPER_STATE_LABELS = {
-  inbox: "收件箱",
-  candidate: "待初筛",
-  reading: "已请求深读",
-  summarized: "已深读待判断",
-  approved: "已纳入项目",
-  "project-core": "项目核心",
-  rejected: "已拒绝",
-  archived: "已归档",
-  unknown: "未知",
+  inbox: "Inbox",
+  candidate: "Needs triage",
+  reading: "Reading requested",
+  summarized: "Deep read complete",
+  approved: "Added to project",
+  "project-core": "Project core",
+  rejected: "Rejected",
+  archived: "Archived",
+  unknown: "Unknown",
 };
 const PAPER_READ_FILTER_LABELS = {
-  "deep-read": "已深读 / 有 memo",
+  "deep-read": "Deep read / memo available",
 };
 const MEMO_SECTION_LABELS = {
-  "Memo overview": "Memo 概览",
-  "Core Contribution": "核心贡献",
-  "Why It Matters For Target Project": "为什么对目标项目重要",
-  "Interpretive Deep Read": "解释型深读",
-  "Teaching-Grade Deep Read": "教学级深读",
-  Evidence: "证据",
-  Claims: "主张",
-  Limitations: "限制",
-  "Project Role Assessment": "项目角色判断",
-  "Open Questions": "开放问题",
-  "Problem Setting": "问题设定",
-  Method: "方法",
-  Connections: "关联",
-  "Human Notes": "人工备注",
-  "Read Provenance": "阅读来源",
-  "Source Identity": "来源身份",
-  "1. Paper's real question": "1. 论文真正问题",
-  "2. Background tension": "2. 背景矛盾",
-  "3. Author's core hypothesis": "3. 作者核心假设",
-  "4. Paper structure": "4. 论文结构",
-  "5. Method mechanism": "5. 方法机制",
-  "6. Experiment logic": "6. 实验逻辑",
-  "7. True insight": "7. 真正 insight",
-  "8. Position for the target project": "8. 对目标项目的位置",
-  "8. Position for the target project": "8. 对目标项目的位置",
-  "9. What not to learn": "9. 不该学什么",
+  "Memo overview": "Memo Overview",
+  "Core Contribution": "Core Contribution",
+  "Why It Matters For Target Project": "Why It Matters for the Target Project",
+  "Interpretive Deep Read": "Interpretive Deep Read",
+  "Teaching-Grade Deep Read": "Teaching-Grade Deep Read",
+  Evidence: "Evidence",
+  Claims: "Claims",
+  Limitations: "Limitations",
+  "Project Role Assessment": "Project Role Assessment",
+  "Open Questions": "Open Questions",
+  "Problem Setting": "Problem Setting",
+  Method: "Method",
+  Connections: "Connections",
+  "Human Notes": "Human Notes",
+  "Read Provenance": "Read Provenance",
+  "Source Identity": "Source Identity",
+  "1. Paper's real question": "1. Paper real question",
+  "2. Background tension": "2. Background tension",
+  "3. Author's core hypothesis": "3. Author core hypothesis",
+  "4. Paper structure": "4. Paper structure",
+  "5. Method mechanism": "5. Method mechanism",
+  "6. Experiment logic": "6. Experiment logic",
+  "7. True insight": "7. Core insight",
+  "8. Position for the target project": "8. Position for the target project",
+  "8. Position for the target project": "8. Position for the target project",
+  "9. What not to learn": "9. What not to learn",
 };
 
 const THEME_STORAGE_KEY = "research-browser-theme";
 const THEME_LABELS = {
-  dark: "暗夜",
-  light: "白天",
+  dark: "Dark",
+  light: "Light",
 };
 
 const GRAPH_PAN_DRAG_THRESHOLD = 5;
@@ -90,6 +91,7 @@ const state = {
   activePaperGraphPath: "",
   graphZoom: 0.82,
   graphMaintenance: null,
+  projectUnderstanding: null,
   selectedGraphDeltaId: "",
 };
 
@@ -143,7 +145,7 @@ function updateThemeToggle() {
   if (!button) return;
   const theme = normalizeTheme(document.body.dataset.theme);
   const nextTheme = theme === "light" ? "dark" : "light";
-  button.setAttribute("aria-label", `切换到${THEME_LABELS[nextTheme]}模式`);
+  button.setAttribute("aria-label", `Toggle to ${THEME_LABELS[nextTheme]} mode`);
   button.setAttribute("aria-pressed", theme === "light" ? "true" : "false");
   button.dataset.activeTheme = theme;
   const text = button.querySelector(".theme-toggle-text");
@@ -160,8 +162,12 @@ const el = {
   projectNav: document.getElementById("project-nav"),
 };
 
-function params() {
-  return new URLSearchParams(window.location.search);
+function params(search = window.location.search) {
+  try {
+    return new URLSearchParams(search);
+  } catch (_error) {
+    return new URLSearchParams();
+  }
 }
 
 function normalizeToken(value) {
@@ -263,6 +269,19 @@ async function loadProjectGraphMaintenanceFromApi(projectId = state.projectId) {
   }
 }
 
+async function loadProjectUnderstandingFromApi(projectId = state.projectId) {
+  if (!projectId) return null;
+  try {
+    const response = await fetch(`/api/project-understanding?project=${encodeURIComponent(projectId)}`, { cache: "no-store" });
+    if (!response.ok) return null;
+    const understanding = await response.json();
+    state.projectUnderstanding = understanding;
+    return understanding;
+  } catch {
+    return null;
+  }
+}
+
 async function loadPaperGraphFromApi(path) {
   const graphPath = normalizePaperDossierPath(path);
   if (!graphPath) return null;
@@ -282,14 +301,29 @@ async function loadProjectGraphPaper(path) {
   return loadPaperGraphFromApi(path);
 }
 
-async function loadExperimentProposalsFromApi(projectId = state.projectId) {
-  if (!projectId) return { proposals: [], empty_message: "No experiment proposals yet." };
+function emptyExperimentsModel(projectId = state.projectId) {
+  return {
+    schema_version: "experiments-v1",
+    project_id: projectId || "",
+    mutating: false,
+    summary: {},
+    experiments: [],
+    runs: [],
+    next_moves: [],
+    legacy_proposals: { found: false, count: 0, path: projectId ? `wiki/projects/${projectId}/experiment-proposals` : "" },
+    empty_message: "No experiments recorded yet.",
+  };
+}
+
+async function loadExperimentsFromApi(projectId) {
+  if (!projectId) return emptyExperimentsModel(projectId);
   try {
-    const response = await fetch(`/api/experiment-proposals?project=${encodeURIComponent(projectId)}`, { cache: "no-store" });
-    if (!response.ok) return { proposals: [], empty_message: "No experiment proposals yet." };
-    return response.json();
+    const response = await fetch(`/api/experiments?project=${encodeURIComponent(projectId)}`, { cache: "no-store" });
+    if (!response.ok) return emptyExperimentsModel(projectId);
+    const model = await response.json();
+    return model && typeof model === "object" ? model : emptyExperimentsModel(projectId);
   } catch {
-    return { proposals: [], empty_message: "No experiment proposals yet." };
+    return emptyExperimentsModel(projectId);
   }
 }
 
@@ -385,7 +419,7 @@ function setHeader(kicker, title, subtitle = "") {
 }
 
 function setPaperDetailHeader(project, paper) {
-  setHeader("论文", paper.title || "未命名", "");
+  setHeader("Paper", paper.title || "Untitled", "");
   el.subtitle.className = "paper-title-meta";
   el.subtitle.innerHTML = `
     <span>${escapeHtml(displayProjectTitle(project))}</span>
@@ -394,36 +428,36 @@ function setPaperDetailHeader(project, paper) {
   `;
 }
 
+function dashboardPageUrl(pageName, params = {}) {
+  const search = new URLSearchParams({ v: DASHBOARD_PAGE_VERSION });
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== "") search.set(key, value);
+  });
+  return `./${pageName}.html?${search.toString()}`;
+}
+
 function projectUrl(projectId) {
-  return `./project.html?project=${encodeURIComponent(projectId)}`;
+  return dashboardPageUrl("project", { project: projectId });
 }
 
 function roundUrl(projectId, roundName) {
-  return `./round.html?project=${encodeURIComponent(projectId)}&round=${encodeURIComponent(roundName || "")}`;
+  return dashboardPageUrl("round", { project: projectId, round: roundName || "" });
 }
 
 function papersUrl(projectId, filters = {}) {
-  const params = new URLSearchParams({ project: projectId });
-  Object.entries(filters).forEach(([key, value]) => {
-    if (value) params.set(key, value);
-  });
-  return `./papers.html?${params.toString()}`;
+  return dashboardPageUrl("papers", { project: projectId, ...filters });
 }
 
 function paperUrl(projectId, paperId, roundName = "") {
-  const params = new URLSearchParams({ project: projectId, paper: paperId });
-  if (roundName) params.set("round", roundName);
-  return `./paper.html?${params.toString()}`;
+  return dashboardPageUrl("paper", { project: projectId, paper: paperId, round: roundName });
 }
 
-function experimentProposalsUrl(projectId) {
-  return `./experiment-proposals.html?project=${encodeURIComponent(projectId)}`;
+function experimentsUrl(projectId) {
+  return dashboardPageUrl("experiments", { project: projectId });
 }
 
 function lineageUrl(projectId, roundName) {
-  const params = new URLSearchParams({ project: projectId });
-  if (roundName) params.set("round", roundName);
-  return `./lineage.html?${params.toString()}`;
+  return dashboardPageUrl("lineage", { project: projectId, round: roundName });
 }
 
 function renderProjectNav(project) {
@@ -432,17 +466,17 @@ function renderProjectNav(project) {
   const projectCurrent = current === "project" ? ' aria-current="page"' : "";
   const papersCurrent = ["papers", "round", "paper", "deep-reads"].includes(current) ? ' aria-current="page"' : "";
   const lineageCurrent = current === "lineage" ? ' aria-current="page"' : "";
-  const experimentsCurrent = current === "experiment-proposals" ? ' aria-current="page"' : "";
+  const experimentsCurrent = current === "experiments" ? ' aria-current="page"' : "";
   el.projectNav.innerHTML = `
-    <a href="${escapeAttr(projectUrl(project.id))}"${projectCurrent}>项目</a>
-    <a href="${escapeAttr(papersUrl(project.id))}"${papersCurrent}>论文库</a>
-    <a href="${escapeAttr(lineageUrl(project.id))}"${lineageCurrent}>技术路线</a>
-    <a href="${escapeAttr(experimentProposalsUrl(project.id))}"${experimentsCurrent}>实验建议</a>
+    <a href="${escapeAttr(projectUrl(project.id))}"${projectCurrent}>Project</a>
+    <a href="${escapeAttr(papersUrl(project.id))}"${papersCurrent}>Papers</a>
+    <a href="${escapeAttr(lineageUrl(project.id))}"${lineageCurrent}>Technical Lineage</a>
+    <a href="${escapeAttr(experimentsUrl(project.id))}"${experimentsCurrent}>Experiments</a>
   `;
 }
 
 function renderProjectsIndex() {
-  setHeader("项目", "项目", "选择项目，查看项目论文、搜索状态和图谱状态。");
+  setHeader("Project", "Project", "Select a project to inspect project papers, search status, and graph state.");
   el.content.innerHTML = `
     <div class="project-entry-list">
       ${(state.data.projects || []).map((project) => {
@@ -452,21 +486,21 @@ function renderProjectsIndex() {
         return `
           <article class="project-entry">
             <div>
-              <p class="eyebrow">项目</p>
-              <h2><a href="./project.html?project=${escapeAttr(project.id)}">${escapeHtml(displayProjectTitle(project))}</a>${renderDemoBadge(project)}</h2>
-              <p class="project-question">${escapeHtml(project.card?.working_question || project.overview?.direction || "暂无项目问题。")}</p>
+              <p class="eyebrow">Project</p>
+              <h2><a href="${escapeAttr(projectUrl(project.id))}">${escapeHtml(displayProjectTitle(project))}</a>${renderDemoBadge(project)}</h2>
+              <p class="project-question">${escapeHtml(project.card?.working_question || project.overview?.direction || "No project question yet.")}</p>
             </div>
             <dl class="metric-row">
-              <div><dt>候选</dt><dd>${stats.candidate_papers || 0}</dd></div>
-              <div><dt>项目论文</dt><dd>${stats.summarized_papers || 0}</dd></div>
+              <div><dt>Candidate</dt><dd>${stats.candidate_papers || 0}</dd></div>
+              <div><dt>ProjectPaper</dt><dd>${stats.summarized_papers || 0}</dd></div>
               <div><dt>paper_count</dt><dd>${paperCount || round?.paper_count || 0}</dd></div>
-              <div><dt>轮次</dt><dd>${stats.literature_rounds || 0}</dd></div>
-              <div><dt>主张</dt><dd>${stats.claims || 0}</dd></div>
+              <div><dt>Rounds</dt><dd>${stats.literature_rounds || 0}</dd></div>
+              <div><dt>Claims</dt><dd>${stats.claims || 0}</dd></div>
             </dl>
             <div class="entry-actions">
-              <span class="latest-round-label">最新状态 ${escapeHtml(projectStatusLine(project, round))}</span>
-              <a class="primary-action" href="${escapeAttr(projectUrl(project.id))}">打开项目</a>
-              <a class="primary-action review-action" href="${escapeAttr(papersUrl(project.id))}">论文库</a>
+              <span class="latest-round-label">Latest status ${escapeHtml(projectStatusLine(project, round))}</span>
+              <a class="primary-action" href="${escapeAttr(projectUrl(project.id))}">OpenProject</a>
+              <a class="primary-action review-action" href="${escapeAttr(papersUrl(project.id))}">Papers</a>
             </div>
           </article>
         `;
@@ -478,18 +512,15 @@ function renderProjectsIndex() {
 async function renderProjectWorkspace() {
   const project = projectById();
   if (!project) {
-    renderEmpty("未找到项目。");
+    renderEmpty("Project not found.");
     return;
   }
   renderProjectNav(project);
-  const round = latestRound(project.id);
-  const questions = project.overview?.current_questions || [];
-  const [graph, maintenance] = await Promise.all([
+  const [graph, understanding] = await Promise.all([
     loadProjectGraphFromApi(project.id),
-    loadProjectGraphMaintenanceFromApi(project.id),
+    loadProjectUnderstandingFromApi(project.id),
   ]);
-  const gate = project.card?.gate_progress || {};
-  setHeader("项目", displayProjectTitle(project), project.overview?.direction || "");
+  setHeader("Project", displayProjectTitle(project), project.overview?.direction || "");
   if (project.demo && el.subtitle) {
     el.subtitle.className = "project-title-meta";
     el.subtitle.innerHTML = `
@@ -498,50 +529,86 @@ async function renderProjectWorkspace() {
     `;
   }
   el.content.innerHTML = `
-    <section class="workspace-grid project-workspace-grid">
-      <article class="context-panel">
-        <p class="eyebrow">当前问题</p>
-        <h2>${escapeHtml(project.card?.working_question || project.overview?.direction || "暂无问题。")}</h2>
-        <ul class="question-list">
-          ${questions.map((question) => `<li>${escapeHtml(question)}</li>`).join("") || "<li>暂无当前问题记录。</li>"}
-        </ul>
-      </article>
-      <article class="round-panel search-status-panel">
-        <p class="eyebrow">搜索状态</p>
-        <h2>${escapeHtml(searchStatusTitle(project, round))}</h2>
-        <p>${escapeHtml(searchStatusSummary(project, round))}</p>
-        <dl class="status-strip">
-          <div><dt>候选</dt><dd>${Number(gate.candidate || 0)}</dd></div>
-          <div><dt>待读</dt><dd>${Number(gate.reading || 0)}</dd></div>
-          <div><dt>已总结</dt><dd>${Number(gate.summarized || 0)}</dd></div>
-          <div><dt>已批准</dt><dd>${Number(gate.approved || 0)}</dd></div>
-        </dl>
-        <div class="entry-actions compact-actions">
-          <a class="primary-action review-action" href="${escapeAttr(papersUrl(project.id))}">打开论文库</a>
-        </div>
-      </article>
-    </section>
+    ${renderProjectUnderstandingPanel(understanding)}
     <section class="section-block project-graph-panel" id="project-graph">
       <div class="section-head">
         <div>
-          <p class="eyebrow">理解图谱</p>
+          <p class="eyebrow">Understanding Graph</p>
           <h2>Project Understanding Graph</h2>
         </div>
       </div>
-      ${renderProjectGraphView(graph, maintenance)}
+      ${renderProjectGraphView(graph)}
     </section>
   `;
   wireClickableRows();
   wireGraphStudio(graph);
-  wireHumanGatePanel();
 }
 
-function renderProjectGraphView(graph, maintenance = state.graphMaintenance) {
-  if (!graph) return `<div class="empty-state">当前项目还没有 project-understanding-graph.md。</div>`;
+function hasProjectUnderstanding(model) {
+  return Boolean(
+    model
+    && (
+      (Array.isArray(model.recent_changes) && model.recent_changes.length)
+      || (Array.isArray(model.next_moves) && model.next_moves.length)
+      || (Array.isArray(model.sources) && model.sources.length)
+      || (Array.isArray(model.claims) && model.claims.length)
+      || (Array.isArray(model.gaps) && model.gaps.length)
+    )
+  );
+}
+
+function renderProjectUnderstandingPanel(model) {
+  if (!hasProjectUnderstanding(model)) return "";
+  const recentChanges = [...(model.recent_changes || [])].slice(-3).reverse();
+  const nextMoves = [...(model.next_moves || [])].slice(0, 3);
+  return `
+    <section class="section-block project-understanding-panel" aria-label="Project Understanding Updates">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Project Understanding</p>
+          <h2>Recent Understanding</h2>
+          <p class="section-note">Read-only agent update projection. Keep acting through chat.</p>
+        </div>
+        <dl class="status-strip understanding-counts">
+          <div><dt>sources</dt><dd>${(model.sources || []).length}</dd></div>
+          <div><dt>claims</dt><dd>${(model.claims || []).length}</dd></div>
+          <div><dt>gaps</dt><dd>${(model.gaps || []).length}</dd></div>
+          <div><dt>moves</dt><dd>${(model.next_moves || []).length}</dd></div>
+        </dl>
+      </div>
+      <div class="understanding-grid">
+        <article>
+          <h3>Recent Understanding</h3>
+          <ul class="understanding-list">
+            ${recentChanges.map((change) => `
+              <li>
+                <strong>${escapeHtml(change.summary || change.task?.summary || "Understanding updated.")}</strong>
+                <span>${escapeHtml([change.task?.kind, change.confidence, change.created_at].filter(Boolean).join(" · "))}</span>
+              </li>
+            `).join("") || "<li><strong>No recent understanding changes.</strong></li>"}
+          </ul>
+        </article>
+        <article>
+          <h3>Next Moves</h3>
+          <ul class="understanding-list">
+            ${nextMoves.map((move) => `
+              <li>
+                <strong>${escapeHtml(move.text || "Next move")}</strong>
+                <span>${escapeHtml(move.suggested_prompt || move.rationale || move.type || "")}</span>
+              </li>
+            `).join("") || "<li><strong>No next moves.</strong></li>"}
+          </ul>
+        </article>
+      </div>
+    </section>
+  `;
+}
+
+function renderProjectGraphView(graph) {
+  if (!graph) return `<div class="empty-state">No Project Understanding Graph yet.</div>`;
   return `
     <div id="project-graph-explorer">
       ${renderGraphStudio(graph)}
-      ${renderHumanGatePanel(maintenance)}
     </div>
   `;
 }
@@ -562,10 +629,10 @@ function renderGraphStudio(graph) {
       <div class="graph-studio-toolbar">
         <div>
           <p class="eyebrow">Project Argument Map</p>
-          <h3>GSN / Toulmin 论证图</h3>
-          <span>Question 定义项目问题；Claim 是论证单元；Evidence、Warrant、Limitation 被放回 claim 内部。</span>
+          <h3>GSN / Toulmin Argument Map</h3>
+          <span>Questions define project problems; claims are argument units; evidence, warrants, and limitations stay inside claims.</span>
         </div>
-        <div class="graph-legend" aria-label="图例">
+        <div class="graph-legend" aria-label="Legend">
           <span data-legend-kind="question">Q</span>
           <span data-legend-kind="claim">C</span>
           <span data-legend-kind="evidence">E</span>
@@ -594,7 +661,7 @@ function renderHumanGatePanel(maintenance) {
         <div>
           <p class="eyebrow">Delta Review Ledger</p>
           <h3>Read-only delta state</h3>
-          <span>Dashboard 是 read-only projection。Use agent chat / CLI to decide or apply this item.</span>
+          <span>Dashboard is a read-only projection. Use agent chat or CLI to decide or apply this item.</span>
         </div>
         <dl class="human-gate-metrics">
           <div><dt>open_deltas</dt><dd>${openDeltas.length}</dd></div>
@@ -637,7 +704,7 @@ function renderDeltaInbox(openDeltas) {
         <strong>${openDeltas.length}</strong>
       </div>
       <div class="delta-card-list">
-        ${openDeltas.map((delta) => renderDeltaInboxCard(delta)).join("") || `<div class="empty-state">暂无 open delta。accepted_history 仍可通过 maintenance model 追踪。</div>`}
+        ${openDeltas.map((delta) => renderDeltaInboxCard(delta)).join("") || `<div class="empty-state">No open deltas. Accepted history remains available through the maintenance model.</div>`}
       </div>
     </aside>
   `;
@@ -670,8 +737,8 @@ function renderDeltaDetail(delta, maintenance) {
       <section class="delta-detail" aria-label="Delta Detail">
         <div class="delta-detail-empty">
           <p class="eyebrow">Delta Detail</p>
-          <h3>暂无待处理 delta</h3>
-          <p>maintenance model 已加载。Dashboard 只展示 delta lifecycle。</p>
+          <h3>No pending delta</h3>
+          <p>Maintenance model loaded. Dashboard only displays the delta lifecycle.</p>
         </div>
       </section>
     `;
@@ -1676,10 +1743,10 @@ function renderBackboneQuestionRail(backbone) {
             <strong>${escapeHtml(truncateText(question.label, 92))}</strong>
           </header>
           <div>
-            ${question.claimIds.map((claimId) => `<button type="button" data-backbone-claim-id="${escapeAttr(claimId)}" data-argument-node-id="${escapeAttr(claimId)}" data-studio-node-id="${escapeAttr(claimId)}">${escapeHtml(claimId)}</button>`).join("") || `<em>暂无 claim</em>`}
+            ${question.claimIds.map((claimId) => `<button type="button" data-backbone-claim-id="${escapeAttr(claimId)}" data-argument-node-id="${escapeAttr(claimId)}" data-studio-node-id="${escapeAttr(claimId)}">${escapeHtml(claimId)}</button>`).join("") || `<em>No claim</em>`}
           </div>
         </article>
-      `).join("") || `<div class="empty-state">暂无 question。</div>`}
+      `).join("") || `<div class="empty-state">No question。</div>`}
     </div>
   `;
 }
@@ -1758,15 +1825,15 @@ function selectedClaimSection(argumentMap) {
 
 function renderSelectedClaimDetail(model, argumentMap) {
   const section = selectedClaimSection(argumentMap);
-  if (!section) return `<section class="selected-claim-detail" id="selected-claim-detail"><div class="empty-state">暂无 claim detail。</div></section>`;
+  if (!section) return `<section class="selected-claim-detail" id="selected-claim-detail"><div class="empty-state">No claim detail。</div></section>`;
   return `
     <section class="selected-claim-detail" id="selected-claim-detail" aria-label="Selected claim Toulmin detail">
       <div class="selected-claim-detail-head">
         <div>
           <p class="eyebrow">Selected Claim Detail</p>
-          <h3>${escapeHtml(section.claim.id)} 的 evidence / warrant / limitation</h3>
+          <h3>${escapeHtml(section.claim.id)} evidence / warrant / limitation</h3>
         </div>
-        <span>点击上方 claim 切换</span>
+        <span>Select a claim above to switch</span>
       </div>
       ${renderArgumentClaimRegion(section)}
     </section>
@@ -1778,7 +1845,7 @@ function renderArgumentQuestionSpine(questions) {
     <section class="argument-question-spine" aria-label="Project questions">
       <div>
         <p class="eyebrow">Question Spine</p>
-        <strong>项目问题层</strong>
+        <strong>Project question layer</strong>
       </div>
       <div class="argument-question-list">
         ${questions.map((question) => `
@@ -1786,7 +1853,7 @@ function renderArgumentQuestionSpine(questions) {
             <span>${escapeHtml(question.id)}</span>
             <strong>${escapeHtml(truncateText(question.label, 92))}</strong>
           </button>
-        `).join("") || `<p class="graph-inspector-empty">暂无 question。</p>`}
+        `).join("") || `<p class="graph-inspector-empty">No question。</p>`}
       </div>
     </section>
   `;
@@ -1813,26 +1880,26 @@ function renderArgumentClaimRegion(section) {
       <div class="argument-flow-grid">
         <section class="argument-lane argument-support-lane">
           <p class="eyebrow">Supporting Claims</p>
-          ${renderArgumentNodeRows(supportClaims, "暂无 supporting claim。")}
+          ${renderArgumentNodeRows(supportClaims, "No supporting claim.")}
         </section>
         <section class="argument-lane argument-evidence-lane">
           <p class="eyebrow">Evidence / Grounds</p>
-          ${renderArgumentNodeRows(evidence, "暂无 evidence。")}
+          ${renderArgumentNodeRows(evidence, "No evidence.")}
         </section>
         <section class="argument-lane argument-warrant-lane">
           <p class="eyebrow">Warrant / Bridge</p>
           <div class="argument-warrant-bridge">
-            ${renderArgumentNodeRows(warrants, "暂无 explicit warrant。")}
+            ${renderArgumentNodeRows(warrants, "No explicit warrant.")}
           </div>
         </section>
         <section class="argument-lane argument-limitation-lane">
           <p class="eyebrow">Limitations / Rebuttal</p>
-          ${renderArgumentNodeRows(limitations, "暂无 limitation。")}
+          ${renderArgumentNodeRows(limitations, "No limitation.")}
         </section>
       </div>
       <div class="argument-source-strip">
-        <span>来自哪些 paper</span>
-        ${sources.map((source) => `<button type="button" data-paper-graph-path="${escapeAttr(source)}">${escapeHtml(argumentSourceLabel(source))}</button>`).join("") || `<em>暂无 paper source。</em>`}
+        <span>Source papers</span>
+        ${sources.map((source) => `<button type="button" data-paper-graph-path="${escapeAttr(source)}">${escapeHtml(argumentSourceLabel(source))}</button>`).join("") || `<em>No paper source.</em>`}
       </div>
     </article>
   `;
@@ -1881,12 +1948,12 @@ function renderProjectClaimAtlas(model) {
 
 function renderGraphZoomControls() {
   return `
-    <div class="graph-zoom-controls" aria-label="画布缩放">
-      <button type="button" data-zoom-command="out" title="缩小">-</button>
+    <div class="graph-zoom-controls" aria-label="Canvas zoom">
+      <button type="button" data-zoom-command="out" title="Zoom out">-</button>
       <span class="graph-zoom-value" data-graph-zoom-value>${Math.round(graphZoomValue() * 100)}%</span>
-      <button type="button" data-zoom-command="in" title="放大">+</button>
-      <button type="button" data-zoom-command="reset" title="重置到 100%">100%</button>
-      <button type="button" data-zoom-command="fit" title="适配当前视窗">适配</button>
+      <button type="button" data-zoom-command="in" title="Zoom in">+</button>
+      <button type="button" data-zoom-command="reset" title="Reset to 100%">100%</button>
+      <button type="button" data-zoom-command="fit" title="Fit viewport">Fit</button>
     </div>
   `;
 }
@@ -2025,7 +2092,7 @@ function renderGraphInspector(model) {
 
 function renderGraphInspectorBody(model) {
   const node = graphStudioSelectedNode(model);
-  if (!node) return `<div class="empty-state">选择节点查看关系。</div>`;
+  if (!node) return `<div class="empty-state">Select a node to inspect relationships.</div>`;
   const connected = graphConnectionsForNode(model, node.id);
   return `
     <div class="graph-inspector-head">
@@ -2034,7 +2101,7 @@ function renderGraphInspectorBody(model) {
     </div>
     <p class="graph-inspector-label">${escapeHtml(node.label)}</p>
     ${node.subtitle ? `<p class="graph-inspector-subtitle">${escapeHtml(node.subtitle)}</p>` : ""}
-    ${node.sourcePath ? `<button type="button" class="paper-graph-button" data-paper-graph-path="${escapeAttr(node.sourcePath)}">打开 paper graph</button>` : ""}
+    ${node.sourcePath ? `<button type="button" class="paper-graph-button" data-paper-graph-path="${escapeAttr(node.sourcePath)}">Open paper graph</button>` : ""}
     <dl class="graph-inspector-facts">
       <div><dt>kind</dt><dd>${escapeHtml(node.kind)}</dd></div>
       <div><dt>degree</dt><dd>${connected.length}</dd></div>
@@ -2047,7 +2114,7 @@ function renderGraphInspectorBody(model) {
           <span>${escapeHtml(displayStudioNodeId(edge.source))} ${escapeHtml(edge.source === node.id ? "->" : "<-")} ${escapeHtml(displayStudioNodeId(edge.target))}</span>
           <strong>${escapeHtml(graphRelationLabel(edge.relation))}</strong>
         </button>
-      `).join("") || `<p class="graph-inspector-empty">暂无连接。</p>`}
+      `).join("") || `<p class="graph-inspector-empty">No connections.</p>`}
     </div>
   `;
 }
@@ -2057,24 +2124,24 @@ function renderGraphAuditTrail(model, node) {
   return `
     <div class="graph-audit-trail" aria-label="Graph audit trail">
       <section class="graph-audit-section">
-        <h4>为什么存在</h4>
+        <h4>Why it exists</h4>
         <p>${escapeHtml(audit.why)}</p>
       </section>
       <section class="graph-audit-section">
-        <h4>被什么支持</h4>
-        ${renderGraphAuditItems(audit.supportedBy, "暂无直接 support path。")}
+        <h4>What supports it</h4>
+        ${renderGraphAuditItems(audit.supportedBy, "No direct support path.")}
       </section>
       <section class="graph-audit-section">
-        <h4>被什么限制</h4>
-        ${renderGraphAuditItems(audit.limitedBy, "暂无显式 limitation。")}
+        <h4>What limits it</h4>
+        ${renderGraphAuditItems(audit.limitedBy, "No explicit limitation.")}
       </section>
       <section class="graph-audit-section">
-        <h4>来自哪些 paper</h4>
-        ${renderGraphAuditItems(audit.paperSources, "暂无 paper source path。")}
+        <h4>Source papers</h4>
+        ${renderGraphAuditItems(audit.paperSources, "No paper source path.")}
       </section>
       <section class="graph-audit-section">
         <h4>pending delta</h4>
-        ${renderGraphAuditItems(audit.pendingDeltas, "暂无 pending delta。")}
+        ${renderGraphAuditItems(audit.pendingDeltas, "No pending delta.")}
       </section>
     </div>
   `;
@@ -2102,13 +2169,13 @@ function graphAuditForNode(model, node) {
 function graphWhyExists(model, node) {
   if (node.kind === "reasoning-link") {
     const link = model.reasoningLinks.find((item) => item.id === node.id);
-    return link ? `${link.id} 把 ${splitGraphIds(link.premises).join(", ") || "premise"} 通过 ${graphRelationLabel(link.relation)} 指向 ${splitGraphIds(link.target).join(", ") || link.target || "target"}。` : "Reasoning link 节点用于显式保存推理关系。";
+    return link ? `${link.id} connects ${splitGraphIds(link.premises).join(", ") || "premise"} through ${graphRelationLabel(link.relation)} to ${splitGraphIds(link.target).join(", ") || link.target || "target"}。` : "Reasoning link nodes store explicit reasoning relations.";
   }
-  if (node.kind === "translation-link") return "TranslationLink 记录 paper-side graph 如何进入 project graph。";
-  if (node.kind === "delta") return "Delta 记录 paper / experiment / discussion 对 project graph 的 proposed delta 或历史变更。";
-  if (node.kind === "paper-source") return "Paper source 节点用于把 project-level claim 追溯回具体 paper dossier。";
+  if (node.kind === "translation-link") return "TranslationLink records how a paper-side graph enters the project graph.";
+  if (node.kind === "delta") return "Delta records proposed deltas or historical changes from papers, experiments, or discussion.";
+  if (node.kind === "paper-source") return "Paper source nodes trace project-level claims back to paper dossiers.";
   const role = node.payload?.metadata?.role || node.payload?.status || node.subtitle;
-  return role ? `${displayStudioNodeId(node.id)} 是 ${role}。` : `${displayStudioNodeId(node.id)} 是 project graph 的 ${graphKindDisplay(node.kind)} 节点。`;
+  return role ? `${displayStudioNodeId(node.id)} is ${role}。` : `${displayStudioNodeId(node.id)} is a project graph ${graphKindDisplay(node.kind)} node.`;
 }
 
 function graphSupportItems(model, nodeId) {
@@ -2251,13 +2318,13 @@ function renderPaperContributionFallback(graph) {
   if (!graph) {
     return `
       <div class="paper-drilldown-empty">
-        点击 claim 的 paper source，查看 Paper Argument -> Project Impact。
+        Select a claim paper source to inspect Paper Argument -> Project Impact.
       </div>
     `;
   }
   return `
     <div class="paper-drilldown-empty">
-      正在准备 ${escapeHtml(graph.title || graph.paper || "paper graph")} 的 paper contribution。
+      Preparing ${escapeHtml(graph.title || graph.paper || "paper graph")} paper contribution.
     </div>
   `;
 }
@@ -2269,7 +2336,7 @@ function renderPaperTranslationRows(translations) {
       <span>${escapeHtml((item.paper_nodes || []).join(", "))} -> ${escapeHtml((item.project_nodes || []).join(", "))}</span>
       <em>${escapeHtml(graphRelationLabel(item.relation))}</em>
     </article>
-  `).join("") || `<div class="empty-state">未抽取 translation。</div>`;
+  `).join("") || `<div class="empty-state">No translations extracted.</div>`;
 }
 
 function renderPaperDeltaRows(deltas) {
@@ -2279,7 +2346,7 @@ function renderPaperDeltaRows(deltas) {
       <span>${escapeHtml((item.source_paper_nodes || []).join(", "))} => ${escapeHtml((item.affected || []).join(", "))}</span>
       <em>${escapeHtml(item.status || "delta")}</em>
     </article>
-  `).join("") || `<div class="empty-state">暂无 proposed delta。</div>`;
+  `).join("") || `<div class="empty-state">No proposed deltas.</div>`;
 }
 
 function renderPaperMiniLane(kind, nodes) {
@@ -2303,7 +2370,7 @@ function renderPaperMiniLane(kind, nodes) {
           <strong>${escapeHtml(node.id)}</strong>
           <span>${escapeHtml(truncateText(node.label, 110))}</span>
         </article>
-      `).join("") || `<p>无</p>`}
+      `).join("") || `<p>None</p>`}
     </div>
   `;
 }
@@ -2640,7 +2707,7 @@ async function openPaperGraphDrilldown(path) {
   const graphPath = normalizePaperDossierPath(path);
   if (!graphPath) return;
   const panel = document.getElementById("paper-drilldown");
-  if (panel) panel.innerHTML = `<div class="paper-drilldown-empty">正在加载 ${escapeHtml(graphPath)}...</div>`;
+  if (panel) panel.innerHTML = `<div class="paper-drilldown-empty">Loading ${escapeHtml(graphPath)}...</div>`;
   const graph = await loadPaperGraphFromApi(graphPath);
   state.activePaperGraphPath = graphPath;
   document.querySelectorAll("[data-paper-graph-path]").forEach((item) => {
@@ -2664,22 +2731,22 @@ function wirePaperGraphButtons() {
 function projectStatusLine(project, round) {
   const gate = project.card?.gate_progress || {};
   const waiting = Number(gate.candidate || 0) + Number(gate.reading || 0);
-  if (!round) return "暂无搜索记录";
-  return `${waiting} 篇待处理 · ${Number(gate.summarized || 0)} 篇已总结`;
+  if (!round) return "No search record";
+  return `${waiting} pending · ${Number(gate.summarized || 0)} summarized`;
 }
 
 function searchStatusTitle(project, round) {
-  if (!round) return "尚未开始搜索";
+  if (!round) return "Search not started";
   const gate = project.card?.gate_progress || {};
   const waiting = Number(gate.candidate || 0) + Number(gate.reading || 0);
-  return waiting ? `${waiting} 篇论文处于待处理状态` : "当前没有待处理论文";
+  return waiting ? `${waiting} papers are pending` : "No pending papers";
 }
 
 function searchStatusSummary(project, round) {
-  if (!round) return "项目还没有搜索记录。下一步应先运行 paper discovery。";
+  if (!round) return "Project has no search record yet. Next step should be paper discovery.";
   const gate = project.card?.gate_progress || {};
   const total = Object.values(gate).reduce((sum, value) => sum + Number(value || 0), 0);
-  return `论文库已收录 ${total || round.paper_count || 0} 篇相关论文。Dashboard 仅展示状态、深读 memo 和 provenance；决策由 agent chat / CLI 处理。`;
+  return `Papers contains ${total || round.paper_count || 0} relevant papers. Dashboard shows status, deep-read memos, and provenance only; decisions stay in agent chat or CLI.`;
 }
 
 function paperRank(paper) {
@@ -2691,31 +2758,31 @@ function paperRank(paper) {
 }
 
 function renderPaperSummaryRows(items, projectId, roundName = "") {
-  if (!items.length) return `<div class="empty-state">未找到论文。</div>`;
+  if (!items.length) return `<div class="empty-state">Paper not found.</div>`;
   return `
     <div class="table-scroll">
       <table class="paper-summary-table project-core-table">
         <thead>
           <tr>
-            <th>论文</th>
-            <th>压缩判断</th>
-            <th>状态</th>
-            <th>打开</th>
+            <th>Paper</th>
+            <th>Compressed Judgment</th>
+            <th>Status</th>
+            <th>Open</th>
           </tr>
         </thead>
         <tbody>
           ${items.map((paper) => {
             const key = paperKey(paper) || candidateId(paper);
-            const href = `./paper.html?project=${escapeAttr(projectId)}&paper=${escapeAttr(key)}${roundName ? `&round=${escapeAttr(roundName)}` : ""}`;
+            const href = paperUrl(projectId, key, roundName);
             return `
-              <tr class="clickable-row" data-row-href="${href}" tabindex="0" role="link" aria-label="打开论文 ${escapeAttr(paper.title || "未命名")}">
+              <tr class="clickable-row" data-row-href="${href}" tabindex="0" role="link" aria-label="OpenPaper ${escapeAttr(paper.title || "Untitled")}">
                 <td>
-                  <strong>${escapeHtml(paper.title || "未命名")}</strong>
+                  <strong>${escapeHtml(paper.title || "Untitled")}</strong>
                   <span>${escapeHtml(paperPublicationLine(paper))}</span>
                 </td>
-                <td class="evidence-cell">${escapeHtml(paper.one_line || paper.why_relevant || "暂无压缩摘要。")}</td>
+                <td class="evidence-cell">${escapeHtml(paper.one_line || paper.why_relevant || "No compressed summary yet.")}</td>
                 <td>${statusPill(paper.review_status || "candidate")}</td>
-                <td><a class="detail-link" href="${href}">详情</a></td>
+                <td><a class="detail-link" href="${href}">Details</a></td>
               </tr>
             `;
           }).join("")}
@@ -2728,30 +2795,30 @@ function renderPaperSummaryRows(items, projectId, roundName = "") {
 function renderProjectPapersPage() {
   const project = projectById();
   if (!project) {
-    renderEmpty("未找到项目。");
+    renderEmpty("Project not found.");
     return;
   }
   renderProjectNav(project);
   const papers = allPapersForProject(project.id);
   const filters = paperFiltersFromParams();
   const visiblePapers = applyPaperFilters(papers, filters);
-  setHeader("论文库", "论文库", `${displayProjectTitle(project)} · ${visiblePapers.length}/${papers.length} 篇论文`);
+  setHeader("Papers", "Papers", `${displayProjectTitle(project)} · ${visiblePapers.length}/${papers.length} papers`);
   el.content.innerHTML = `
     <section class="paper-library-shell">
       <form class="paper-library-filters" data-paper-filter-form>
         <label for="paper-search-filter">
-          <span>搜索</span>
-          <input id="paper-search-filter" name="q" value="${escapeAttr(filters.q)}" placeholder="标题、摘要、项目判断" />
+          <span>Search</span>
+          <input id="paper-search-filter" name="q" value="${escapeAttr(filters.q)}" placeholder="Title, summary, project judgment" />
         </label>
         <label for="paper-status-filter">
-          <span>当前状态</span>
+          <span>Current Status</span>
           ${renderPaperFilterSelect("paper-status-filter", "status", filters.status, paperStatusOptions(papers), PAPER_STATE_LABELS)}
         </label>
         <label for="paper-read-filter">
-          <span>阅读</span>
+          <span>Reading</span>
           ${renderPaperFilterSelect("paper-read-filter", "filter", filters.filter, paperReadFilterOptions(papers), PAPER_READ_FILTER_LABELS)}
         </label>
-        <button type="submit">筛选</button>
+        <button type="submit">Filter</button>
       </form>
       ${renderPaperLibraryRows(visiblePapers, project.id)}
     </section>
@@ -2825,15 +2892,15 @@ function isDeepReadPaper(paper) {
 }
 
 function renderPaperLibraryRows(items, projectId) {
-  if (!items.length) return `<div class="empty-state">当前筛选下没有论文。</div>`;
+  if (!items.length) return `<div class="empty-state">No papers match the current filter.</div>`;
   return `
     <div class="table-scroll paper-library-scroll">
       <table class="paper-library-table paper-review-table">
         <thead>
           <tr>
-            <th>论文</th>
-            <th>压缩判断</th>
-            <th>当前状态</th>
+            <th>Paper</th>
+            <th>Compressed Judgment</th>
+            <th>Current Status</th>
           </tr>
         </thead>
         <tbody>
@@ -2842,13 +2909,13 @@ function renderPaperLibraryRows(items, projectId) {
             const state = paperCurrentState(paper);
             const href = paperUrl(projectId, key, paper.round || paper.literature_round || "");
             return `
-              <tr class="clickable-row" data-row-href="${escapeAttr(href)}" tabindex="0" role="link" aria-label="打开论文 ${escapeAttr(paper.title || "未命名")}">
+              <tr class="clickable-row" data-row-href="${escapeAttr(href)}" tabindex="0" role="link" aria-label="OpenPaper ${escapeAttr(paper.title || "Untitled")}">
                 <td>
-                  <strong>${escapeHtml(paper.title || "未命名")}</strong>
+                  <strong>${escapeHtml(paper.title || "Untitled")}</strong>
                   <span>${escapeHtml(paperPublicationLine(paper))}</span>
                 </td>
                 <td class="evidence-cell">
-                  <p>${escapeHtml(paper.one_line || paper.why_relevant || "暂无压缩摘要。")}</p>
+                  <p>${escapeHtml(paper.one_line || paper.why_relevant || "No compressed summary yet.")}</p>
                 </td>
                 <td class="state-cell"><span class="paper-state paper-state-${escapeAttr(state.key)}">${escapeHtml(state.label)}</span></td>
               </tr>
@@ -2861,7 +2928,7 @@ function renderPaperLibraryRows(items, projectId) {
 }
 
 function paperPublicationLine(paper) {
-  const year = paper?.year || "年份未知";
+  const year = paper?.year || "Year unknown";
   const venue = String(paper?.venue || "").trim() || "arXiv";
   return `${year} · ${venue}`;
 }
@@ -2869,7 +2936,7 @@ function paperPublicationLine(paper) {
 function renderPaperFilterSelect(id, name, currentValue, options, labels) {
   return `
     <select id="${escapeAttr(id)}" name="${escapeAttr(name)}">
-      <option value="">全部</option>
+      <option value="">All</option>
       ${options.map((value) => `
         <option value="${escapeAttr(value)}"${normalizeToken(currentValue) === normalizeToken(value) ? " selected" : ""}>${escapeHtml(labels[normalizeToken(value)] || value)}</option>
       `).join("")}
@@ -2897,7 +2964,11 @@ function wirePaperFilters() {
         const value = String(formData.get(key) || "").trim();
         if (value) next.set(key, value);
       });
-      window.location.href = `./papers.html?${next.toString()}`;
+      window.location.href = papersUrl(state.projectId, {
+        q: next.get("q") || "",
+        status: next.get("status") || "",
+        filter: next.get("filter") || "",
+      });
     };
     form.addEventListener("submit", submitFilters);
     form.querySelectorAll("select").forEach((select) => {
@@ -2931,7 +3002,7 @@ function renderRoundReviewPage() {
   const project = projectById();
   const round = roundByName();
   if (!project || !round) {
-    renderEmpty("未找到轮次。");
+    renderEmpty("Round not found.");
     return;
   }
   renderProjectNav(project);
@@ -2940,24 +3011,24 @@ function renderRoundReviewPage() {
   if (!candidates.some((candidate) => paperKey(candidate) === state.focusedCandidateKey)) {
     state.focusedCandidateKey = paperKey(candidates[0] || {}) || "";
   }
-  setHeader("轮次审阅", round.name, `${displayProjectTitle(project)} · ${candidates.length} 篇候选论文。Dashboard 为 Read-only viewer。`);
+  setHeader("Round Review", round.name, `${displayProjectTitle(project)} · ${candidates.length} candidate papers. Dashboard is a read-only viewer.`);
   el.content.innerHTML = `
     <section class="round-review-grid">
       <div class="review-main">
         <div class="section-head">
           <div>
             <p class="eyebrow">Read-only</p>
-            <h2>搜索结果</h2>
+            <h2>Search Results</h2>
           </div>
-          <span>${candidates.length} 篇论文</span>
+          <span>${candidates.length} papers</span>
         </div>
         <div class="table-scroll round-review-scroll">
         <table class="paper-review-table round-review-table">
           <thead>
             <tr>
-              <th>论文</th>
-              <th>压缩判断</th>
-              <th>状态</th>
+              <th>Paper</th>
+              <th>Compressed Judgment</th>
+              <th>Status</th>
               <th>Agent</th>
             </tr>
           </thead>
@@ -2978,17 +3049,17 @@ function renderRoundReviewPage() {
 function renderCandidateReviewRow(candidate, projectId, roundName) {
   const key = paperKey(candidate) || candidate.zotero_key || candidateId(candidate);
   const focused = key === state.focusedCandidateKey;
-  const href = `./paper.html?project=${escapeAttr(projectId)}&paper=${escapeAttr(key)}&round=${escapeAttr(roundName)}`;
+  const href = paperUrl(projectId, key, roundName);
   return `
     <tr class="review-row ${focused ? "is-focused" : ""}" data-candidate-id="${escapeAttr(candidateId(candidate))}" data-focus-key="${escapeAttr(key)}" data-row-href="${href}" tabindex="0" aria-selected="${focused ? "true" : "false"}">
       <td>
-        <strong><a href="${href}">${escapeHtml(candidate.title || "未命名")}</a></strong>
+        <strong><a href="${href}">${escapeHtml(candidate.title || "Untitled")}</a></strong>
         <span>${escapeHtml(paperPublicationLine(candidate))}</span>
         <span class="paper-provenance-line provenance-code">zotero ${escapeHtml(candidate.zotero || candidate.zotero_key || "none")} · round ${escapeHtml(roundName || candidate.round || "unknown")} · memo ${escapeHtml(candidate.memo_path || "none")}</span>
       </td>
       <td class="evidence-cell">
-        <p>${escapeHtml(candidate.one_line || "暂无压缩摘要。")}</p>
-        <small>${escapeHtml(candidate.why_relevant || "暂无相关性备注。")}</small>
+        <p>${escapeHtml(candidate.one_line || "No compressed summary yet.")}</p>
+        <small>${escapeHtml(candidate.why_relevant || "No relevance note yet.")}</small>
       </td>
       <td>${statusPill(candidate.review_status || "candidate")}</td>
       <td>
@@ -3001,24 +3072,24 @@ function renderCandidateReviewRow(candidate, projectId, roundName) {
 function renderFocusedCandidatePanel(candidates, projectId, roundName) {
   const candidate = candidates.find((item) => paperKey(item) === state.focusedCandidateKey) || candidates[0] || null;
   if (!candidate) {
-    return `<section class="focus-preview"><p class="eyebrow">当前论文</p><p>未选择论文。</p></section>`;
+    return `<section class="focus-preview"><p class="eyebrow">Current Paper</p><p>No paper selected.</p></section>`;
   }
   const key = paperKey(candidate) || candidate.zotero_key || candidateId(candidate);
   return `
-    <section class="focus-preview issue-panel" aria-label="当前论文">
-      <p class="eyebrow">当前论文</p>
-      <h2>${escapeHtml(candidate.title || "未命名")}</h2>
-      <p class="focus-summary">${escapeHtml(candidate.one_line || "暂无压缩摘要。")}</p>
-      <p class="focus-relevance">${escapeHtml(candidate.why_relevant || "暂无相关性备注。")}</p>
+    <section class="focus-preview issue-panel" aria-label="Current Paper">
+      <p class="eyebrow">Current Paper</p>
+      <h2>${escapeHtml(candidate.title || "Untitled")}</h2>
+      <p class="focus-summary">${escapeHtml(candidate.one_line || "No compressed summary yet.")}</p>
+      <p class="focus-relevance">${escapeHtml(candidate.why_relevant || "No relevance note yet.")}</p>
       <p class="paper-provenance-line provenance-code">zotero ${escapeHtml(candidate.zotero || candidate.zotero_key || "none")} · round ${escapeHtml(roundName || candidate.round || "unknown")} · memo ${escapeHtml(candidate.memo_path || "none")}</p>
       <dl class="focus-facts">
-        <div><dt>状态</dt><dd>${statusPill(candidate.review_status || "candidate")}</dd></div>
+        <div><dt>Status</dt><dd>${statusPill(candidate.review_status || "candidate")}</dd></div>
         <div><dt>Zotero</dt><dd class="provenance-code">${escapeHtml(candidate.zotero || candidate.zotero_key || "none")}</dd></div>
         <div><dt>Round</dt><dd class="provenance-code">${escapeHtml(roundName || candidate.round || "unknown")}</dd></div>
         <div><dt>Memo</dt><dd class="provenance-code">${escapeHtml(candidate.memo_path || "none")}</dd></div>
       </dl>
       ${renderAgentCommandHint(`review paper ${key}`)}
-      <a class="secondary-action detail-link" href="./paper.html?project=${escapeAttr(projectId)}&paper=${escapeAttr(key)}&round=${escapeAttr(roundName)}">打开详细 memo</a>
+      <a class="secondary-action detail-link" href="${escapeAttr(paperUrl(projectId, key, roundName))}">Open detailed memo</a>
     </section>
   `;
 }
@@ -3026,18 +3097,18 @@ function renderFocusedCandidatePanel(candidates, projectId, roundName) {
 async function renderPaperDetailPage() {
   const project = projectById();
   if (!project) {
-    renderEmpty("未找到项目。");
+    renderEmpty("Project not found.");
     return;
   }
   renderProjectNav(project);
   const paper = resolveCurrentPaper(project.id);
   if (!paper) {
-    renderEmpty("未找到论文。");
+    renderEmpty("Paper not found.");
     return;
   }
   const roundName = state.roundId || paper.literature_round || "";
   setPaperDetailHeader(project, paper);
-  el.content.innerHTML = renderPaperDetailShell(paper, project.id, roundName, "正在加载详细 memo...");
+  el.content.innerHTML = renderPaperDetailShell(paper, project.id, roundName, "Loading detailed memo...");
   const memoPath = paper.path || paper.memo_path || "";
   if (memoPath) {
     const memo = await fetchMemoContent(memoPath);
@@ -3061,34 +3132,34 @@ function renderPaperDetailShell(paper, projectId, roundName, memoPlaceholder) {
   const key = paperKey(paper) || candidateId(paper);
   return `
     <section class="paper-decision-shell">
-      <section class="paper-readonly-strip" aria-label="论文状态">
+      <section class="paper-readonly-strip" aria-label="PaperStatus">
         ${renderPaperReadOnlyStatusPanel(paper)}
         ${renderAgentCommandHint(`review paper ${key}`)}
       </section>
       <section class="paper-detail-flow">
         <article class="paper-brief project-fit-panel">
-          <p class="eyebrow">项目匹配简报</p>
+          <p class="eyebrow">Project Fit Brief</p>
           <div class="fit-summary-grid">
             <section>
-              <h3>为什么这篇重要</h3>
-              <p>${escapeHtml(paper.why_relevant || "暂无项目相关性备注。")}</p>
+              <h3>Why this matters</h3>
+              <p>${escapeHtml(paper.why_relevant || "No project relevance note yet.")}</p>
             </section>
             <section>
-              <h3>应该学什么</h3>
-              <ul>${(paper.key_claims || []).map((item) => `<li>${escapeHtml(item)}</li>`).join("") || "<li>尚未抽取主张。</li>"}</ul>
+              <h3>What to learn</h3>
+              <ul>${(paper.key_claims || []).map((item) => `<li>${escapeHtml(item)}</li>`).join("") || "<li>No claims extracted yet.</li>"}</ul>
             </section>
             <section>
-              <h3>不要过度学习什么</h3>
-              <ul>${(paper.limitations || []).map((item) => `<li>${escapeHtml(item)}</li>`).join("") || "<li>尚未列出限制。</li>"}</ul>
+              <h3>What not to overlearn</h3>
+              <ul>${(paper.limitations || []).map((item) => `<li>${escapeHtml(item)}</li>`).join("") || "<li>No limitations listed yet.</li>"}</ul>
             </section>
           </div>
         </article>
         <article class="visual-panel">
-          <p class="eyebrow">可视化理解</p>
+          <p class="eyebrow">Visual Understanding</p>
           <div id="insight-map">${renderPaperInsightMap(paper, [])}</div>
         </article>
         <article class="memo-panel deep-read-panel">
-          <p class="eyebrow">核心贡献</p>
+          <p class="eyebrow">Core Contribution</p>
           <div id="memo-content" class="memo-document structured-memo">${escapeHtml(memoPlaceholder)}</div>
         </article>
       </section>
@@ -3118,12 +3189,12 @@ function renderPaperReadOnlyStatusPanel(paper) {
 function renderProvenanceDisclosure(paper, roundName) {
   return `
     <details class="provenance-disclosure">
-      <summary>元数据与来源</summary>
+      <summary>Metadata and Sources</summary>
       <dl class="source-list">
-        <div><dt>Zotero</dt><dd>${escapeHtml(paper.zotero || paper.zotero_key || "无")}</dd></div>
-        <div><dt>Memo</dt><dd>${escapeHtml(paper.path || paper.memo_path || "无")}</dd></div>
-        <div><dt>PDF</dt><dd>${escapeHtml(paper.pdf_status || "未知")}</dd></div>
-        <div><dt>轮次</dt><dd>${escapeHtml(roundName || "unknown")}</dd></div>
+        <div><dt>Zotero</dt><dd>${escapeHtml(paper.zotero || paper.zotero_key || "None")}</dd></div>
+        <div><dt>Memo</dt><dd>${escapeHtml(paper.path || paper.memo_path || "None")}</dd></div>
+        <div><dt>PDF</dt><dd>${escapeHtml(paper.pdf_status || "Unknown")}</dd></div>
+        <div><dt>Rounds</dt><dd>${escapeHtml(roundName || "unknown")}</dd></div>
       </dl>
     </details>
   `;
@@ -3140,14 +3211,14 @@ function renderPaperInsightMap(paper, sections = []) {
     `;
   }
   const nodes = [
-    ["论文问题", sectionExcerpt(sections, ["Problem Setting", "Core Contribution"]) || paper.one_line || paper.why_relevant],
-    ["方法视角", sectionExcerpt(sections, ["Method", "Method mechanism"]) || "方法细节在深读 memo 中。"],
-    ["证据", sectionExcerpt(sections, ["Evidence", "Experiment logic"]) || firstListItem(paper.key_claims) || "尚未抽取证据。"],
-    ["证据边界", sectionExcerpt(sections, ["Limitations", "What not to learn"]) || firstListItem(paper.limitations) || "尚未抽取限制。"],
-    ["项目后果", sectionExcerpt(sections, ["Why It Matters", "Project Role Assessment", "Position for the target project"]) || paper.why_relevant || "尚未抽取项目后果。"],
+    ["Paper Question", sectionExcerpt(sections, ["Problem Setting", "Core Contribution"]) || paper.one_line || paper.why_relevant],
+    ["Method View", sectionExcerpt(sections, ["Method", "Method mechanism"]) || "Method details are in the deep-read memo."],
+    ["Evidence", sectionExcerpt(sections, ["Evidence", "Experiment logic"]) || firstListItem(paper.key_claims) || "No evidence extracted yet."],
+    ["Evidence Boundary", sectionExcerpt(sections, ["Limitations", "What not to learn"]) || firstListItem(paper.limitations) || "No limitations extracted yet."],
+    ["Project Consequence", sectionExcerpt(sections, ["Why It Matters", "Project Role Assessment", "Position for the target project"]) || paper.why_relevant || "No project consequence extracted yet."],
   ];
   return `
-    <div class="argument-map" aria-label="论文论证图">
+    <div class="argument-map" aria-label="PaperArgument Map">
       ${nodes.map(([label, text], index) => `
         <section class="insight-node">
           <span>${index + 1}</span>
@@ -3166,7 +3237,7 @@ function paperVisualizationAsset(paper) {
     return {
       src: "./assets/paper-visualizations/chen2023-beyond-surface-statistics.png",
       alt: "Generated technical diagram of denoising activations, linear probes, saliency, relative depth, activation intervention, and generation changes.",
-      caption: "API 生成图：denoising activations -> saliency/depth probes -> activation intervention -> generation changes。",
+      caption: "API-generated graph：denoising activations -> saliency/depth probes -> activation intervention -> generation changes。",
     };
   }
   return null;
@@ -3198,7 +3269,7 @@ function parseMemoSections(markdown) {
 
 function renderStructuredMemo(sections, paper, projectId) {
   if (!sections.length) {
-    return renderMemoDocument(paper.one_line || "详细 memo 不可用。");
+    return renderMemoDocument(paper.one_line || "Detailed memo unavailable.");
   }
   const preferred = [
     "Core Contribution",
@@ -3258,7 +3329,7 @@ function truncateText(text, limit) {
 async function fetchMemoContent(path) {
   const response = await fetch(`/api/wiki-page?path=${encodeURIComponent(path)}`);
   if (!response.ok) {
-    return { path, content: "Memo 内容不可用。" };
+    return { path, content: "Memo content unavailable." };
   }
   return response.json();
 }
@@ -3339,21 +3410,21 @@ function stripFrontmatter(markdown) {
 function renderDeepReadsPage() {
   const project = projectById();
   if (!project) {
-    renderEmpty("未找到项目。");
+    renderEmpty("Project not found.");
     return;
   }
   renderProjectNav(project);
   const libraryHref = papersUrl(project.id, { filter: "deep-read" });
-  setHeader("论文库", "深读已合并到论文库", `${displayProjectTitle(project)} · Dashboard 只保留一个论文入口。`);
+  setHeader("Papers", "Deep Reads Moved to Papers", `${displayProjectTitle(project)} · Dashboard keeps one paper entry point.`);
   el.content.innerHTML = `
     <section class="section-block deep-read-merged-shell">
       <div class="section-head">
         <div>
-          <p class="eyebrow">兼容入口</p>
-          <h2>深读已合并到论文库</h2>
-          <p class="section-note">Dashboard 只保留一个论文入口。深读 memo、paper detail、状态和 provenance 都在论文库查看。</p>
+          <p class="eyebrow">Compatibility Entry</p>
+          <h2>Deep Reads Moved to Papers</h2>
+          <p class="section-note">Dashboard keeps one paper entry point.Deep-read memos, paper detail, status, and provenance are all in Papers.</p>
         </div>
-        <a class="primary-action review-action" href="${escapeAttr(libraryHref)}">打开论文库</a>
+        <a class="primary-action review-action" href="${escapeAttr(libraryHref)}">OpenPapers</a>
       </div>
     </section>
   `;
@@ -3407,7 +3478,7 @@ function renderLineageAtlasFallback(map) {
 function renderLineagePage() {
   const project = projectById();
   if (!project) {
-    renderEmpty("未找到项目。");
+    renderEmpty("Project not found.");
     return;
   }
   renderProjectNav(project);
@@ -3415,7 +3486,7 @@ function renderLineagePage() {
   const roundParam = params().get("round") || "";
   const selectedMap = maps.find((map) => normalizeToken(map.round) === normalizeToken(roundParam)) || maps[0] || null;
   setHeader(
-    "技术路线",
+    "Technical Lineage",
     selectedMap?.title || "Related Work Lineage",
     `${displayProjectTitle(project)} · paper-only related-work map`
   );
@@ -3425,12 +3496,12 @@ function renderLineagePage() {
         <div class="section-head">
           <div>
             <p class="eyebrow">Read-only Artifact</p>
-            <h2>暂无 related-work-lineage.json</h2>
-            <p class="section-note">技术路线页只展示 workspace lineage artifact，不写 Project Understanding Graph。</p>
+            <h2>No related-work-lineage.json</h2>
+            <p class="section-note">Technical Lineage displays workspace lineage artifacts only and does not write the Project Understanding Graph.</p>
           </div>
-          <a href="${escapeAttr(projectUrl(project.id))}">返回项目</a>
+          <a href="${escapeAttr(projectUrl(project.id))}">Back to Project</a>
         </div>
-        <div class="empty-state">当前项目还没有 related work lineage map。</div>
+        <div class="empty-state">No related work lineage map for this project yet.</div>
       </section>
     `;
     return;
@@ -3581,8 +3652,8 @@ function renderLineageGraph(map) {
       <div class="section-head">
         <div>
           <p class="eyebrow">Lineage Graph</p>
-          <h2>论文节点图</h2>
-          <p class="section-note">横向按时间展开，泳道是技术路线；细线是同路线时间序列，金色曲线是 explicit cross-route edge。</p>
+          <h2>Paper Node Graph</h2>
+          <p class="section-note">Horizontal position follows time; lanes are technical routes; thin lines are same-route sequences; gold curves are explicit cross-route edges.</p>
         </div>
       </div>
       <div class="lineage-graph-scroll">
@@ -3667,7 +3738,7 @@ function renderLineageEdgeList(map) {
       <div class="section-head">
         <div>
           <p class="eyebrow">Explicit Cross-route Relationships</p>
-          <h2>非顺序边</h2>
+          <h2>Non-sequential Edges</h2>
         </div>
       </div>
       ${edges.length ? edges.map((edge) => {
@@ -3727,87 +3798,233 @@ function renderLineagePaperTable(map) {
   `;
 }
 
-async function renderExperimentProposalsPage() {
+async function renderExperimentsPage() {
   const project = projectById();
   if (!project) {
-    renderEmpty("未找到项目。");
+    renderEmpty("Project not found.");
     return;
   }
   renderProjectNav(project);
   setHeader(
-    "实验建议",
-    "Experiment Proposals",
-    `${displayProjectTitle(project)} · planned / pending / not yet graph evidence。`
+    "Experiments",
+    "Experiments",
+    `${displayProjectTitle(project)} · planned design and completed evidence`
   );
   el.content.innerHTML = `
-    <section class="section-block experiment-proposal-shell">
-      <div class="section-head">
-        <div>
-          <p class="eyebrow">Planning Artifact</p>
-          <h2>planned / pending / not yet graph evidence</h2>
-          <p class="section-note">Dashboard does not write graph evidence. Artifact markdown 是展示来源；实验完成后仍需 D* delta + human gate accept 才能进入 Project Understanding Graph。</p>
-        </div>
-        <a href="${escapeAttr(projectUrl(project.id))}">返回项目</a>
-      </div>
-      <div id="experiment-proposal-list" class="experiment-proposal-grid">
-        <div class="empty-state">正在加载 experiment proposals...</div>
+    <section class="section-block experiment-page-content" aria-label="Project experiments">
+      <div id="experiments-model-root" class="experiment-page-section">
+        <div class="empty-state">Loading experiments...</div>
       </div>
     </section>
   `;
-  const model = await loadExperimentProposalsFromApi(project.id);
-  const list = document.getElementById("experiment-proposal-list");
-  if (!list) return;
-  const proposals = Array.isArray(model?.proposals) ? model.proposals : [];
-  list.innerHTML = proposals.length
-    ? proposals.map((proposal) => renderExperimentProposalCard(proposal)).join("")
-    : `<div class="empty-state">${escapeHtml(model?.empty_message || "No experiment proposals yet.")}</div>`;
+  const model = await loadExperimentsFromApi(project.id);
+  const root = document.getElementById("experiments-model-root");
+  if (root) root.innerHTML = renderExperimentsModel(model);
 }
 
-function renderExperimentProposalCard(proposal) {
-  const score = proposal?.evidence_value_score || {};
-  const testability = proposal?.claim_testability || {};
+function renderExperimentsModel(model) {
+  const experiments = Array.isArray(model?.experiments) ? model.experiments : [];
+  const runs = Array.isArray(model?.runs) ? model.runs : [];
+  const nextMoves = Array.isArray(model?.next_moves) ? model.next_moves : [];
+  if (!experiments.length && !runs.length && !nextMoves.length) {
+    return `
+      <div class="empty-state">${escapeHtml(model?.empty_message || "No experiments recorded yet.")}</div>
+      ${renderLegacyExperimentNote(model)}
+    `;
+  }
   return `
-    <article class="experiment-proposal-card">
-      <div class="experiment-proposal-head">
+    <section class="experiment-page-section">
+      <div class="section-head">
         <div>
-          <p class="eyebrow">target claim</p>
-          <h2><span>${escapeHtml(proposal?.target_claim || "unknown")}</span> ${escapeHtml(proposal?.title || "Untitled proposal")}</h2>
+          <p class="eyebrow">Read Model</p>
+          <h2>Experiment Evidence Summary</h2>
         </div>
-        <dl class="experiment-proposal-status">
-          <div><dt>status</dt><dd>${escapeHtml(proposal?.status || "candidate")}</dd></div>
-          <div><dt>human_review</dt><dd>${escapeHtml(proposal?.human_review || "pending")}</dd></div>
-        </dl>
       </div>
-      <p class="experiment-state-note">planned / pending / not yet graph evidence</p>
-      <dl class="experiment-proposal-facts">
-        <div><dt>claim_testability</dt><dd>${escapeHtml(testability.status || "unknown")}</dd></div>
-        <div><dt>recommendation</dt><dd>${escapeHtml(testability.recommendation || "unknown")}</dd></div>
-        <div><dt>experiment_type</dt><dd>${escapeHtml(proposal?.experiment_type || "unknown")}</dd></div>
-        <div><dt>evidence_value_score</dt><dd>${escapeHtml(score.score ?? "unknown")}${score.level ? ` · ${escapeHtml(score.level)}` : ""}</dd></div>
-      </dl>
-      ${renderExperimentProposalSection("target claim text", proposal?.target_claim_text)}
-      ${renderExperimentProposalSection("blocking limitations", proposal?.blocking_limitations)}
-      ${renderExperimentProposalSection("minimal viable experiment", proposal?.minimal_viable_experiment)}
-      ${renderExperimentProposalSection("dataset / benchmark", proposal?.dataset_benchmark)}
-      ${renderExperimentProposalSection("metric", proposal?.metric)}
-      ${renderExperimentProposalSection("expected graph update", proposal?.expected_graph_update)}
-      <footer class="experiment-proposal-path">
-        <span>artifact path</span>
-        <code>${escapeHtml(proposal?.artifact_path || "unknown")}</code>
-      </footer>
+      ${renderExperimentSummary(model)}
+    </section>
+    <section class="experiment-page-section">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Designs</p>
+          <h2>Active Experiment Designs</h2>
+        </div>
+      </div>
+      <div class="experiment-card-grid">
+        ${experiments.length ? experiments.map((experiment) => renderExperimentDesignCard(experiment)).join("") : `<div class="empty-state">No active experiment designs.</div>`}
+      </div>
+    </section>
+    <section class="experiment-page-section">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Evidence</p>
+          <h2>Results / Evidence</h2>
+        </div>
+      </div>
+      <div class="experiment-card-grid">
+        ${runs.length ? runs.map((run) => renderExperimentRunCard(run)).join("") : `<div class="empty-state">No experiment results recorded.</div>`}
+      </div>
+    </section>
+    <section class="experiment-page-section">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Next</p>
+          <h2>Next Experiment Moves</h2>
+        </div>
+      </div>
+      <div class="experiment-card-grid">
+        ${nextMoves.length ? nextMoves.map((move) => renderExperimentNextMove(move)).join("") : `<div class="empty-state">No next experiment moves recorded.</div>`}
+      </div>
+    </section>
+    ${renderLegacyExperimentNote(model)}
+  `;
+}
+
+function renderExperimentSummary(model) {
+  const summary = model?.summary || {};
+  return `
+    <div class="experiment-summary-row">
+      ${renderExperimentField("total experiments", summary.total_experiments ?? 0)}
+      ${renderExperimentField("planned", summary.planned ?? 0)}
+      ${renderExperimentField("ready", summary.ready ?? 0)}
+      ${renderExperimentField("running", summary.running ?? 0)}
+      ${renderExperimentField("completed runs", summary.completed_runs ?? 0)}
+      ${renderExperimentField("local results", summary.local_result_runs ?? 0)}
+      ${renderExperimentField("imported evidence", summary.imported_evidence_runs ?? 0)}
+      ${renderExperimentField("strongest current evidence", summary.strongest_current_evidence || "None recorded.")}
+      ${renderExperimentField("highest priority unresolved", summary.highest_priority_unresolved || "None recorded.")}
+    </div>
+  `;
+}
+
+function renderExperimentDesignCard(experiment) {
+  return `
+    <article class="experiment-card">
+      <div class="experiment-card-head">
+        <div>
+          <p class="eyebrow">${escapeHtml(experiment?.id || "experiment")}</p>
+          <h3>${escapeHtml(experiment?.title || "Untitled experiment")}</h3>
+        </div>
+        ${statusPill(experiment?.status || "planned")}
+      </div>
+      ${renderExperimentField("question", experiment?.question)}
+      ${renderExperimentField("hypothesis", experiment?.hypothesis)}
+      ${renderExperimentList("linked claims", experiment?.linked_claims)}
+      ${renderExperimentList("linked gaps", experiment?.linked_gaps)}
+      ${renderExperimentField("benchmark", experiment?.benchmark)}
+      ${renderExperimentField("dataset", experiment?.dataset)}
+      ${renderExperimentList("models", experiment?.models)}
+      ${renderExperimentList("baselines", experiment?.baselines)}
+      ${renderExperimentList("metrics", experiment?.metrics)}
+      ${renderExperimentList("protocol", experiment?.protocol)}
+      ${renderExperimentField("expected evidence", experiment?.expected_evidence)}
+      ${renderExperimentList("risks", experiment?.risks)}
+      ${renderExperimentField("next action", experiment?.next_action)}
     </article>
   `;
 }
 
-function renderExperimentProposalSection(label, value) {
-  const content = Array.isArray(value)
-    ? (value.length ? `<ul>${value.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>` : "<p>None listed.</p>")
-    : `<p>${escapeHtml(value || "None listed.")}</p>`;
+function renderExperimentRunCard(run) {
+  const evidenceType = normalizeToken(run?.evidence_type);
+  const importedClass = evidenceType === "imported_paper_evidence" ? " is-imported" : "";
   return `
-    <section class="experiment-proposal-section">
-      <h3>${escapeHtml(label)}</h3>
-      ${content}
+    <article class="experiment-card">
+      <div class="experiment-card-head">
+        <div>
+          <p class="eyebrow">${escapeHtml(run?.id || "run")}</p>
+          <h3>${escapeHtml(run?.summary || "Experiment result")}</h3>
+        </div>
+        ${statusPill(run?.status || "unknown")}
+      </div>
+      <p class="experiment-evidence-type${importedClass}">${escapeHtml(experimentEvidenceTypeLabel(evidenceType))}</p>
+      ${renderExperimentField("experiment", run?.experiment_id)}
+      ${renderExperimentField("completed", run?.completed_at)}
+      ${renderExperimentList("metrics", run?.metrics)}
+      ${renderExperimentList("artifacts", run?.artifacts)}
+      ${renderExperimentField("interpretation", run?.interpretation)}
+      ${renderExperimentList("claim impacts", run?.claim_impacts)}
+      ${renderExperimentList("weaknesses", run?.weaknesses)}
+    </article>
+  `;
+}
+
+function experimentEvidenceTypeLabel(value) {
+  const labels = {
+    imported_paper_evidence: "Imported paper evidence",
+    local_experiment_result: "Local experiment result",
+    external_result: "External result",
+    replication_result: "Replication result",
+  };
+  return labels[normalizeToken(value)] || "Experiment evidence";
+}
+
+function renderExperimentNextMove(move) {
+  return `
+    <article class="next-move-card">
+      <div class="experiment-card-head">
+        <div>
+          <p class="eyebrow">${escapeHtml(move?.type || "next move")}</p>
+          <h3>${escapeHtml(move?.linked_experiment || move?.linked_claim || "Next Experiment Moves")}</h3>
+        </div>
+      </div>
+      ${renderExperimentField("rationale", move?.rationale)}
+      ${renderExperimentField("suggested prompt", move?.suggested_prompt)}
+      ${renderExperimentField("linked experiment", move?.linked_experiment)}
+      ${renderExperimentField("linked claim", move?.linked_claim)}
+    </article>
+  `;
+}
+
+function renderExperimentField(label, value) {
+  const text = Array.isArray(value) || (value && typeof value === "object")
+    ? JSON.stringify(value, null, 2)
+    : String(value ?? "").trim();
+  return `
+    <section class="experiment-field">
+      <h4>${escapeHtml(label)}</h4>
+      <p>${escapeHtml(text || "None recorded.")}</p>
     </section>
+  `;
+}
+
+function renderExperimentList(label, value) {
+  const values = Array.isArray(value) ? value : [];
+  const items = values.map((item) => formatExperimentListItem(label, item)).filter(Boolean);
+  return `
+    <section class="experiment-field">
+      <h4>${escapeHtml(label)}</h4>
+      ${items.length ? `<ul>${items.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>` : "<p>None recorded.</p>"}
+    </section>
+  `;
+}
+
+function formatExperimentListItem(label, item) {
+  if (!item || typeof item !== "object") return String(item ?? "").trim();
+  const normalizedLabel = normalizeToken(label);
+  if (normalizedLabel === "metrics") {
+    return [item.name, item.value].filter(Boolean).join(": ");
+  }
+  if (normalizedLabel === "artifacts") {
+    const title = item.label || item.type || "artifact";
+    return [title, item.path_or_url].filter(Boolean).join(": ");
+  }
+  if (normalizedLabel === "claim_impacts") {
+    const impact = [item.impact, item.strength].filter(Boolean).join(" / ");
+    return [item.claim, impact].filter(Boolean).join(": ");
+  }
+  return Object.entries(item)
+    .filter(([, value]) => value !== undefined && value !== null && value !== "")
+    .map(([key, value]) => `${key}: ${value}`)
+    .join("; ");
+}
+
+function renderLegacyExperimentNote(model) {
+  const legacy = model?.legacy_proposals || {};
+  if (!legacy.found && !legacy.count) return "";
+  return `
+    <aside class="legacy-experiment-note">
+      <strong>Legacy experiment proposals</strong>
+      <span>${escapeHtml(legacy.count ?? 0)} legacy artifact${Number(legacy.count) === 1 ? "" : "s"} remain at ${escapeHtml(legacy.path || "project experiment-proposals directory")}.</span>
+    </aside>
   `;
 }
 
@@ -3842,7 +4059,7 @@ async function renderPage() {
   state.roundId = params().get("round") || latestRound(state.projectId)?.name || "";
   state.paperId = params().get("paper") || "";
   if (state.data.schema_version !== "research-browser-v2") {
-    renderEmpty("Dashboard index 已过期。请重建 .dashboard/index.json。");
+    renderEmpty("Dashboard index is stale. Rebuild .dashboard/index.json.");
     return;
   }
   if (state.page === "projects") renderProjectsIndex();
@@ -3852,7 +4069,7 @@ async function renderPage() {
   else if (state.page === "paper") await renderPaperDetailPage();
   else if (state.page === "deep-reads") renderDeepReadsPage();
   else if (state.page === "lineage") renderLineagePage();
-  else if (state.page === "experiment-proposals") await renderExperimentProposalsPage();
+  else if (state.page === "experiments") await renderExperimentsPage();
   else renderProjectsIndex();
 }
 
@@ -3863,8 +4080,8 @@ async function boot() {
     await renderPage();
   } catch (error) {
     mountThemeToggle();
-    setHeader("错误", "研究浏览器加载失败", "");
-    renderEmpty(error.message || "未知错误。");
+    setHeader("Error", "Research Browser failed to load", "");
+    renderEmpty(error.message || "UnknownError。");
   }
 }
 

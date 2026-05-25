@@ -27,6 +27,8 @@ Research Pilot is an agent-operated research memory plugin. It gives your AI age
 
 This repo is the public plugin source. The installer keeps a local plugin checkout under `~/.research-pilot/repo` and exposes Research Pilot through installed agent skills and helper tools. Your visible research files live in the private workspace created when you ask the agent to initialize Research Pilot.
 
+Initialized Research-Pilot workspaces contain one `research-pilot.db` at the workspace root. That file is the workspace-local research dataset: projects are rows in `projects`, and sources, understanding nodes, experiments, literature records, updates, and audit events are partitioned by `project_id`. The dashboard remains read-only and consumes API read models from that dataset. Legacy Markdown/JSONL/JSON artifacts remain import/export/report inputs during migration.
+
 The goal is not another notes app. The goal is a research agent that knows your project well enough to tell what is missing, read new papers in context, propose updates, and stop for human approval before changing project understanding.
 
 > **Research Pilot does not replace Zotero, your judgment, or your research taste. It gives the agent a durable memory structure so every paper and decision can update the project instead of vanishing into chat history.**
@@ -114,7 +116,9 @@ The agent creates the workspace, collects minimum project context, and stops at 
 
 Your research data lives in that workspace, not in the hidden plugin checkout.
 
-Fresh workspaces include a deletable `DemoVisualAffordance` demo project; pass `--no-demo` to the init helper for an empty workspace.
+Fresh workspaces include `DemoVisualAffordance` by default; pass `--no-demo` to the init helper for an empty workspace. Initialization creates `research-pilot.db` in the workspace and imports the demo project into that DB. Dashboard read models such as `.dashboard/`, `wiki/graphs/graph.db`, and graph snapshots are rebuilt locally.
+
+The public repo includes an example initialized workspace at `examples/workspaces`. Use it to inspect the default dashboard behavior; its root `research-pilot.db` contains `DemoVisualAffordance` as one project.
 
 ### 3. Continue inside your workspace
 
@@ -232,8 +236,9 @@ Agent chat = primary interface
 Zotero = paper metadata, PDFs, collections, tags
 Markdown = long-term agent-readable memory
 Program context = taste and north-star background, not evidence or decisions
-Graph events = append-only project-understanding truth
-Generated DB/reports/dashboard = rebuildable read models
+Graph events = advanced append-only project-understanding history
+research-pilot.db = workspace-local dataset, one DB per workspace, many projects by project_id
+Generated reports/dashboard/indexes = rebuildable read models
 ```
 
 The hidden plugin checkout is the tool factory. Your private workspace is the research site.
@@ -360,8 +365,8 @@ python3 tools/project_experiment_cli.py suggest --repo ~/Research/MyResearchWiki
 Preview, register, and accept a graph delta:
 
 ```bash
-python3 tools/graph_delta_cli.py dry-run --repo ~/Research/MyResearchWiki --project DemoProject --delta examples/demo/deltas/refine-demo-claim.json --json
-python3 tools/graph_delta_cli.py register --repo ~/Research/MyResearchWiki --project DemoProject --delta examples/demo/deltas/refine-demo-claim.json --json
+python3 tools/graph_delta_cli.py dry-run --repo ~/Research/MyResearchWiki --project DemoProject --delta examples/archive/legacy-demo-fixtures/demo/deltas/refine-demo-claim.json --json
+python3 tools/graph_delta_cli.py register --repo ~/Research/MyResearchWiki --project DemoProject --delta examples/archive/legacy-demo-fixtures/demo/deltas/refine-demo-claim.json --json
 python3 tools/graph_delta_cli.py decide --repo ~/Research/MyResearchWiki --project DemoProject --id D1 --decision accept --json
 ```
 

@@ -7,6 +7,10 @@ argument-hint: "[workspace_path]"
 
 Initialize Research Pilot for a private research workspace. This is an agent workflow document, not a guaranteed Codex slash command registration.
 
+Status: **chat-first shim**. Keep this command document as an installable
+fallback route. The core product surface is agent chat plus local workspace
+dataset plus read-only dashboard, not a slash-command UI.
+
 ## Arguments
 
 - `workspace_path`: optional path for the private research workspace.

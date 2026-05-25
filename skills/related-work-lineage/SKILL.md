@@ -171,6 +171,8 @@ Baseline-paper field surveys must include:
 - `positioning_note` explaining where the baseline paper sits in field history.
 
 Max 20 papers per artifact. If the field needs more, split rounds by field position, adjacent problem setting, time window, or another derived taxonomy axis.
+If a map would exceed that cap, ask the user to narrow or split maps before expanding scope.
+Always exclude low-signal follow-ups that only restate the same method or benchmark position without changing the field structure.
 
 ## Commands
 

@@ -6,6 +6,10 @@ argument-hint: "<project> <gap-id>"
 
 # Project Gap Discovery
 
+Status: **transition**. Keep for graph-derived evidence discovery. Do not expose
+as a core first-run workflow; future source/literature discovery should absorb
+this path.
+
 This skill owns the user-facing path:
 
 ```text

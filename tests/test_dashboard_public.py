@@ -1,4 +1,6 @@
 import json
+import inspect
+import shutil
 import tempfile
 import unittest
 from pathlib import Path
@@ -8,10 +10,30 @@ from urllib.parse import quote
 from tools.build_dashboard_index import build_index
 from tools.build_graph_db import main as build_graph_db_main
 from tools.build_graph_snapshot import main as build_snapshot_main
-from tools.research_browser_server import handle_paper_graph_request, handle_project_graph_maintenance_request
+from tools.experiment_store import build_project_experiments
+from tools.research_browser_server import (
+    ResearchBrowserHandler,
+    ensure_dashboard_index,
+    handle_experiments_request,
+    handle_paper_graph_request,
+    handle_project_graph_maintenance_request,
+    handle_project_understanding_request,
+)
+
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
 class DashboardPublicTest(unittest.TestCase):
+    def test_dashboard_static_responses_disable_browser_cache(self):
+        source = inspect.getsource(ResearchBrowserHandler.end_headers)
+
+        self.assertIn('request_path.startswith("/dashboard/")', source)
+        self.assertIn('request_path.startswith("/api/")', source)
+        self.assertIn('"Cache-Control", "no-store, no-cache, must-revalidate"', source)
+        self.assertIn('"Pragma", "no-cache"', source)
+        self.assertIn('"Expires", "0"', source)
+
     def test_build_index_exposes_related_work_lineage_maps(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -218,7 +240,7 @@ class DashboardPublicTest(unittest.TestCase):
             root = Path(tmp)
             event_path = root / "wiki" / "graphs" / "events" / "projects" / "DemoProject.jsonl"
             event_path.parent.mkdir(parents=True)
-            event_path.write_text(Path("examples/demo/events/demo-project.jsonl").read_text(encoding="utf-8"), encoding="utf-8")
+            event_path.write_text(Path("examples/archive/legacy-demo-fixtures/demo/events/demo-project.jsonl").read_text(encoding="utf-8"), encoding="utf-8")
             build_snapshot_main(["--repo", str(root), "--project", "DemoProject", "--generated-at", "2026-05-11T00:01:00Z"])
 
             index = build_index(root)
@@ -356,12 +378,29 @@ class DashboardPublicTest(unittest.TestCase):
 
         self.assertEqual(index["jobs"][0]["id"], "job-home")
 
+    def test_server_ensures_missing_dashboard_index(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            project = root / "wiki" / "projects" / "DemoProject"
+            project.mkdir(parents=True)
+            (project / "overview.md").write_text(
+                "---\ntitle: Demo Project\ntype: project-overview\n---\n# Demo Project\n",
+                encoding="utf-8",
+            )
+            index_path = root / ".dashboard" / "index.json"
+
+            ensured = ensure_dashboard_index(root)
+            payload = json.loads(index_path.read_text(encoding="utf-8"))
+
+        self.assertEqual(ensured, index_path)
+        self.assertEqual(payload["projects"][0]["id"], "DemoProject")
+
     def test_project_graph_maintenance_api_serves_read_model(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             event_path = root / "wiki" / "graphs" / "events" / "projects" / "DemoProject.jsonl"
             event_path.parent.mkdir(parents=True)
-            event_path.write_text(Path("examples/demo/events/demo-project.jsonl").read_text(encoding="utf-8"), encoding="utf-8")
+            event_path.write_text(Path("examples/archive/legacy-demo-fixtures/demo/events/demo-project.jsonl").read_text(encoding="utf-8"), encoding="utf-8")
             build_graph_db_main(["--repo", str(root), "--project", "DemoProject"])
 
             status, payload = handle_project_graph_maintenance_request(root, "/api/project-graph-maintenance?project=DemoProject")
@@ -374,6 +413,154 @@ class DashboardPublicTest(unittest.TestCase):
         self.assertEqual([delta["id"] for delta in model["review_queue"]["deltas"]], ["D0"])
         self.assertEqual(model["claim_paths"][0]["claim"]["id"], "C0")
         self.assertEqual(model["claim_paths"][0]["supporting_links"][0]["premises"][0]["id"], "E0")
+
+    def test_project_understanding_api_serves_projection(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            events = root / "wiki" / "understanding" / "events" / "DemoProject.jsonl"
+            events.parent.mkdir(parents=True)
+            events.write_text(
+                json.dumps(
+                    {
+                        "schema_version": "understanding-update-v1",
+                        "update_id": "UU-demo",
+                        "project_id": "DemoProject",
+                        "created_at": "2026-05-23T00:00:00Z",
+                        "actor": "agent",
+                        "task": {
+                            "kind": "read_source",
+                            "summary": "Read demo source and update project understanding.",
+                        },
+                        "source_refs": ["wiki/projects/DemoProject/papers/demo-paper/index.md"],
+                        "new_sources": [
+                            {
+                                "source_id": "S-demo",
+                                "type": "markdown_note",
+                                "title": "Demo Paper",
+                                "status": "read",
+                                "locator": "wiki/projects/DemoProject/papers/demo-paper/index.md",
+                                "relevance": "Supports the demo claim.",
+                            }
+                        ],
+                        "changed_claims": [
+                            {
+                                "claim_id": "C-demo",
+                                "text": "Demo claim is source-backed but weak.",
+                                "status": "weak",
+                                "supporting_sources": ["S-demo"],
+                                "weakness": "Evidence is illustrative.",
+                            }
+                        ],
+                        "new_gaps": [
+                            {
+                                "gap_id": "G-demo",
+                                "type": "missing evidence",
+                                "text": "Need direct evidence beyond the demo note.",
+                                "related_claims": ["C-demo"],
+                            }
+                        ],
+                        "recent_change_summary": "Qualified the demo claim and added an evidence gap.",
+                        "next_moves": [
+                            {
+                                "move_id": "N-demo",
+                                "type": "search",
+                                "text": "Search for stronger evidence.",
+                                "rationale": "Current support is weak.",
+                                "suggested_prompt": "Find stronger evidence for the demo claim.",
+                            }
+                        ],
+                        "confidence": "source-backed",
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            status, payload = handle_project_understanding_request(root, "/api/project-understanding?project=DemoProject")
+            model = json.loads(payload.decode("utf-8"))
+
+        self.assertEqual(status, 200)
+        self.assertEqual(model["schema_version"], "project-understanding-v1")
+        self.assertEqual(model["project_id"], "DemoProject")
+        self.assertEqual(model["recent_changes"][0]["summary"], "Qualified the demo claim and added an evidence gap.")
+        self.assertEqual(model["next_moves"][0]["suggested_prompt"], "Find stronger evidence for the demo claim.")
+
+    def test_project_understanding_api_rejects_nested_project_id(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            status, payload = handle_project_understanding_request(Path(tmp), "/api/project-understanding?project=../DemoProject")
+            model = json.loads(payload.decode("utf-8"))
+
+        self.assertEqual(status, 404)
+        self.assertEqual(model["error"], "Not Found")
+
+    def test_project_experiments_api_serves_designs_and_runs(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            experiments_path = root / "wiki" / "projects" / "DemoProject" / "experiments" / "experiments.json"
+            experiments_path.parent.mkdir(parents=True)
+            experiments_path.write_text(
+                json.dumps(
+                    {
+                        "schema_version": "experiments-v1",
+                        "summary": {
+                            "total_experiments": 1,
+                            "planned": 1,
+                            "completed_runs": 1,
+                            "strongest_current_evidence": "Imported evidence supports demo claim.",
+                            "highest_priority_unresolved": "Run local reproduction.",
+                        },
+                        "experiments": [
+                            {
+                                "id": "EXP-demo",
+                                "title": "Demo Experiment",
+                                "status": "planned",
+                            }
+                        ],
+                        "runs": [
+                            {
+                                "id": "RUN-demo",
+                                "experiment_id": "EXP-demo",
+                                "status": "completed",
+                                "evidence_type": "imported_paper_evidence",
+                            }
+                        ],
+                        "next_moves": [
+                            {
+                                "id": "NEXT-demo",
+                                "text": "Import more paper evidence.",
+                            }
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            direct_model = build_project_experiments(root, "DemoProject")
+            status, payload = handle_experiments_request(root, "/api/experiments?project=DemoProject")
+            model = json.loads(payload.decode("utf-8"))
+
+        self.assertEqual(direct_model["schema_version"], "experiments-v1")
+        self.assertEqual(status, 200)
+        self.assertEqual(model["schema_version"], "experiments-v1")
+        self.assertEqual(model["project_id"], "DemoProject")
+        self.assertEqual(model["summary"]["total_experiments"], 1)
+        self.assertEqual(model["summary"]["planned"], 1)
+        self.assertEqual(model["summary"]["completed_runs"], 1)
+        self.assertEqual(model["summary"]["imported_paper_evidence_runs"], 1)
+        self.assertEqual(model["summary"]["imported_evidence_runs"], 1)
+        self.assertEqual(model["summary"]["local_result_runs"], 0)
+        self.assertEqual(model["summary"]["strongest_current_evidence"], "Imported evidence supports demo claim.")
+        self.assertEqual(model["summary"]["highest_priority_unresolved"], "Run local reproduction.")
+        self.assertEqual(model["runs"][0]["evidence_type"], "imported_paper_evidence")
+        self.assertFalse(model["mutating"])
+
+    def test_project_experiments_api_rejects_nested_project_id(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            status, payload = handle_experiments_request(Path(tmp), "/api/experiments?project=../DemoProject")
+            model = json.loads(payload.decode("utf-8"))
+
+        self.assertEqual(status, 404)
+        self.assertEqual(model["error"], "Not Found")
 
     def test_paper_graph_api_derives_contribution_from_project_snapshot(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -499,6 +686,26 @@ class DashboardPublicTest(unittest.TestCase):
         self.assertEqual(model["translations"][0]["paper_nodes"], ["P-C0"])
         self.assertEqual(model["translations"][0]["project_nodes"], ["C0"])
         self.assertEqual(model["deltas"][0]["id"], "D1")
+
+    def test_paper_graph_api_prefers_dataset_paper_understanding(self):
+        from tools.research_dataset import initialize_dataset
+        from tools.research_dataset_import import import_demo_visual_affordance
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "workspace"
+            shutil.copytree(REPO_ROOT / "examples" / "workspaces", root)
+            initialize_dataset(root)
+            import_demo_visual_affordance(root, reset=True)
+            rel_paper = "wiki/projects/DemoVisualAffordance/papers/do2017-affordancenet/index.md"
+
+            status, payload = handle_paper_graph_request(root, f"/api/paper-graph?path={quote(rel_paper)}")
+            model = json.loads(payload.decode("utf-8"))
+
+        self.assertEqual(status, 200)
+        self.assertEqual(model["source"], "research-pilot.db")
+        self.assertEqual(model["source_boundary"], "paper_understanding_from_research_dataset")
+        self.assertEqual({node["kind"] for node in model["nodes"]}, {"question", "claim", "evidence", "warrant", "limitation"})
+        self.assertEqual(model["paper_links"][0]["target"], "P-C1")
 
     def test_project_card_prefers_overview_display_title_over_query_pack(self):
         with tempfile.TemporaryDirectory() as tmp:

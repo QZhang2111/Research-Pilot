@@ -14,7 +14,7 @@ class GraphDeltaLoopTest(unittest.TestCase):
         root = Path(temp_dir.name)
         event_path = root / "wiki" / "graphs" / "events" / "projects" / "DemoProject.jsonl"
         event_path.parent.mkdir(parents=True)
-        event_path.write_text(Path("examples/demo/events/demo-project.jsonl").read_text(encoding="utf-8"), encoding="utf-8")
+        event_path.write_text(Path("examples/archive/legacy-demo-fixtures/demo/events/demo-project.jsonl").read_text(encoding="utf-8"), encoding="utf-8")
         build_db_main(["--repo", str(root), "--project", "DemoProject"])
         return temp_dir, root
 
@@ -156,7 +156,7 @@ class GraphDeltaLoopTest(unittest.TestCase):
     def test_register_and_accept_delta_updates_graph_state(self):
         temp_dir, root = self.make_workspace()
         self.addCleanup(temp_dir.cleanup)
-        delta = load_delta_file(Path("examples/demo/deltas/refine-demo-claim.json"))
+        delta = load_delta_file(Path("examples/archive/legacy-demo-fixtures/demo/deltas/refine-demo-claim.json"))
 
         dry_run = dry_run_graph_delta(root, "DemoProject", delta)
         registration = register_graph_delta(root, "DemoProject", delta, actor="agent")
@@ -177,7 +177,7 @@ class GraphDeltaLoopTest(unittest.TestCase):
     def test_reject_delta_records_decision_without_content_update(self):
         temp_dir, root = self.make_workspace()
         self.addCleanup(temp_dir.cleanup)
-        delta = json.loads(Path("examples/demo/deltas/refine-demo-claim.json").read_text(encoding="utf-8"))
+        delta = json.loads(Path("examples/archive/legacy-demo-fixtures/demo/deltas/refine-demo-claim.json").read_text(encoding="utf-8"))
         delta["local_id"] = "D2"
         delta["delta_id"] = "project:DemoProject:D2"
 

@@ -5,11 +5,12 @@ from __future__ import annotations
 
 import argparse
 import json
+import sqlite3
 import sys
 from http import HTTPStatus
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any, Callable, Dict, List, Tuple
 from urllib.parse import parse_qs, unquote, urlsplit
 
 THIS_DIR = Path(__file__).resolve().parent
@@ -18,8 +19,16 @@ if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
 from tools.build_dashboard_index import build_index, extract_section, read_markdown, relpath
+from tools.experiment_store import build_project_experiments
 from tools.graph_delta_api import decide_graph_delta, dry_run_graph_delta
 from tools.graph_store import build_snapshot_from_event_files, graph_event_paths, load_project_graph_maintenance_from_db
+from tools.research_dataset_read_models import (
+    build_experiments_model,
+    build_paper_graph_model as build_dataset_paper_graph_model,
+    build_project_graph_model,
+    project_exists_in_dataset,
+)
+from tools.understanding_store import build_project_understanding
 
 
 DEFAULT_INDEX_PATH = ".dashboard/index.json"
@@ -34,6 +43,13 @@ def rebuild_dashboard_index(root: Path) -> None:
     output = root / DEFAULT_INDEX_PATH
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(build_index(root), ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
+def ensure_dashboard_index(root: Path) -> Path:
+    output = root / DEFAULT_INDEX_PATH
+    if not output.exists():
+        rebuild_dashboard_index(root)
+    return output
 
 
 def valid_project_id(project_id: str) -> bool:
@@ -288,6 +304,22 @@ def snapshot_graph_for_project(root: Path, project_id: str) -> Dict[str, Any] | 
         temp_path.unlink(missing_ok=True)
 
 
+def db_model_for_project(
+    root: Path,
+    project_id: str,
+    builder: Callable[[Path, str], Dict[str, Any]],
+) -> Dict[str, Any] | None:
+    if not project_exists_in_dataset(root, project_id):
+        return None
+    try:
+        model = builder(root, project_id)
+    except (ValueError, sqlite3.Error, json.JSONDecodeError):
+        return None
+    if not isinstance(model, dict):
+        return None
+    return model
+
+
 def handle_wiki_page_request(root: Path, request_path: str) -> Tuple[int, bytes]:
     requested = parse_qs(urlsplit(request_path).query).get("path", [""])[0]
     target = resolve_project_markdown_path(root.resolve(), requested)
@@ -300,6 +332,9 @@ def handle_project_graph_request(root: Path, request_path: str) -> Tuple[int, by
     project_id = parse_qs(urlsplit(request_path).query).get("project", [""])[0].strip()
     if not valid_project_id(project_id):
         return json_response({"error": "Not Found"}, HTTPStatus.NOT_FOUND)
+    db_graph = db_model_for_project(root.resolve(), project_id, build_project_graph_model)
+    if db_graph is not None:
+        return json_response(db_graph)
     graph = snapshot_graph_for_project(root, project_id)
     if graph is None:
         return json_response({"error": "Not Found"}, HTTPStatus.NOT_FOUND)
@@ -311,6 +346,12 @@ def handle_paper_graph_request(root: Path, request_path: str) -> Tuple[int, byte
     target = resolve_paper_dossier_path(root.resolve(), requested)
     if target is None:
         return json_response({"error": "Not Found"}, HTTPStatus.NOT_FOUND)
+    try:
+        graph = build_dataset_paper_graph_model(root.resolve(), target)
+    except (ValueError, sqlite3.Error, json.JSONDecodeError):
+        graph = None
+    if graph is not None:
+        return json_response(graph)
     graph = build_paper_graph_model(root.resolve(), target)
     if graph is None:
         return json_response({"error": "Not Found"}, HTTPStatus.NOT_FOUND)
@@ -327,19 +368,51 @@ def handle_project_graph_maintenance_request(root: Path, request_path: str) -> T
     return json_response(model)
 
 
+def handle_project_understanding_request(root: Path, request_path: str) -> Tuple[int, bytes]:
+    project_id = parse_qs(urlsplit(request_path).query).get("project", [""])[0].strip()
+    if not valid_project_id(project_id):
+        return json_response({"error": "Not Found"}, HTTPStatus.NOT_FOUND)
+    try:
+        model = build_project_understanding(root.resolve(), project_id)
+    except (ValueError, json.JSONDecodeError) as exc:
+        return json_response({"error": f"Invalid project understanding: {exc}"}, HTTPStatus.BAD_REQUEST)
+    return json_response(model)
+
+
+def handle_experiments_request(root: Path, request_path: str) -> Tuple[int, bytes]:
+    project_id = parse_qs(urlsplit(request_path).query).get("project", [""])[0].strip()
+    if not valid_project_id(project_id):
+        return json_response({"error": "Not Found"}, HTTPStatus.NOT_FOUND)
+    db_model = db_model_for_project(root.resolve(), project_id, build_experiments_model)
+    if db_model is not None:
+        return json_response(db_model)
+    try:
+        model = build_project_experiments(root.resolve(), project_id)
+    except (ValueError, json.JSONDecodeError) as exc:
+        return json_response({"error": f"Invalid project experiments: {exc}"}, HTTPStatus.BAD_REQUEST)
+    return json_response(model)
+
+
 def handle_experiment_proposals_request(root: Path, request_path: str) -> Tuple[int, bytes]:
     project_id = parse_qs(urlsplit(request_path).query).get("project", [""])[0].strip()
     if not valid_project_id(project_id):
         return json_response({"error": "Not Found"}, HTTPStatus.NOT_FOUND)
+    experiments_model = db_model_for_project(root.resolve(), project_id, build_experiments_model)
+    if experiments_model is None:
+        try:
+            experiments_model = build_project_experiments(root.resolve(), project_id)
+        except (ValueError, json.JSONDecodeError) as exc:
+            return json_response({"error": f"Invalid project experiments: {exc}"}, HTTPStatus.BAD_REQUEST)
     return json_response(
         {
             "schema_version": "experiment-proposals-v1",
             "project": project_id,
-            "state_note": "planned / pending / not yet graph evidence",
-            "source_boundary": "dashboard is a read model and does not own graph truth",
+            "state_note": "Legacy proposal endpoint. Use /api/experiments for planned designs and result evidence.",
+            "source_boundary": "dashboard is a read-only projection of project experiment records",
             "mutating": False,
-            "empty_message": "No experiment proposals yet.",
+            "empty_message": experiments_model.get("empty_message", "No experiments recorded yet."),
             "proposals": [],
+            "experiments_model": experiments_model,
         }
     )
 
@@ -364,6 +437,18 @@ def handle_graph_delta_request(root: Path, request_path: str, body: bytes) -> Tu
 
 
 class ResearchBrowserHandler(SimpleHTTPRequestHandler):
+    def end_headers(self) -> None:
+        request_path = urlsplit(self.path).path
+        if (
+            request_path.startswith("/dashboard/")
+            or request_path.startswith("/api/")
+            or request_path == "/.dashboard/index.json"
+        ):
+            self.send_header("Cache-Control", "no-store, no-cache, must-revalidate")
+            self.send_header("Pragma", "no-cache")
+            self.send_header("Expires", "0")
+        super().end_headers()
+
     def do_GET(self) -> None:
         root = Path(self.directory)
         request_api_path = urlsplit(self.path).path
@@ -372,12 +457,20 @@ class ResearchBrowserHandler(SimpleHTTPRequestHandler):
             self.send_header("Location", "/dashboard/index.html")
             self.end_headers()
             return
+        if request_api_path == "/.dashboard/index.json":
+            ensure_dashboard_index(root)
+            super().do_GET()
+            return
         if request_api_path == "/api/wiki-page":
             status, payload = handle_wiki_page_request(root, self.path)
         elif request_api_path == "/api/project-graph":
             status, payload = handle_project_graph_request(root, self.path)
         elif request_api_path == "/api/project-graph-maintenance":
             status, payload = handle_project_graph_maintenance_request(root, self.path)
+        elif request_api_path == "/api/project-understanding":
+            status, payload = handle_project_understanding_request(root, self.path)
+        elif request_api_path == "/api/experiments":
+            status, payload = handle_experiments_request(root, self.path)
         elif request_api_path == "/api/experiment-proposals":
             status, payload = handle_experiment_proposals_request(root, self.path)
         elif request_api_path == "/api/paper-graph":

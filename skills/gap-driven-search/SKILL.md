@@ -6,6 +6,10 @@ argument-hint: "<project> <gap-id>"
 
 # Gap-Driven Search
 
+Status: **transition**. Keep for graph-derived evidence discovery. Do not expose
+as a core first-run workflow; future source/literature discovery should absorb
+this path.
+
 Build a search contract from a graph gap:
 
 ```bash

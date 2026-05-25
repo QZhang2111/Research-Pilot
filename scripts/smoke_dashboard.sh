@@ -10,7 +10,7 @@ cd "$repo_root"
 rm -rf "$tmp_workspace"
 python3 tools/research_pilot_init.py "$tmp_workspace" --no-git --no-demo >/tmp/research-pilot-dashboard-init.log
 mkdir -p "$tmp_workspace/wiki/graphs/events/projects"
-cp examples/demo/events/demo-project.jsonl "$tmp_workspace/wiki/graphs/events/projects/DemoProject.jsonl"
+cp examples/archive/legacy-demo-fixtures/demo/events/demo-project.jsonl "$tmp_workspace/wiki/graphs/events/projects/DemoProject.jsonl"
 
 python3 tools/build_graph_snapshot.py --repo "$tmp_workspace" --project DemoProject >/tmp/research-pilot-dashboard-snapshot.log
 python3 tools/build_graph_db.py --repo "$tmp_workspace" --project DemoProject >/tmp/research-pilot-dashboard-db.log
@@ -30,14 +30,24 @@ PY
 python3 tools/research_browser_server.py --repo "$tmp_workspace" --host 127.0.0.1 --port "$port" >/tmp/research-pilot-dashboard-server.log 2>&1 &
 server_pid=$!
 trap 'kill "$server_pid" >/dev/null 2>&1 || true' EXIT
-sleep 0.8
 
-curl -fsS "http://127.0.0.1:${port}/dashboard/index.html" >/tmp/research-pilot-dashboard-page.html
+for _ in $(seq 1 50); do
+  if curl -fsS "http://127.0.0.1:${port}/dashboard/index.html" >/tmp/research-pilot-dashboard-page.html; then
+    break
+  fi
+  sleep 0.1
+done
+
+if [ ! -s /tmp/research-pilot-dashboard-page.html ]; then
+  cat /tmp/research-pilot-dashboard-server.log >&2 || true
+  exit 1
+fi
+
 curl -fsS "http://127.0.0.1:${port}/.dashboard/index.json" >/tmp/research-pilot-dashboard-index-response.json
 curl -fsS "http://127.0.0.1:${port}/api/project-graph?project=DemoProject" >/tmp/research-pilot-dashboard-project-graph.json
 curl -fsS "http://127.0.0.1:${port}/api/project-graph-maintenance?project=DemoProject" >/tmp/research-pilot-dashboard-project-maintenance.json
 
-rg -n "研究浏览器|项目论文审阅" /tmp/research-pilot-dashboard-page.html >/dev/null
+rg -n "Research Browser|Project Paper Review" /tmp/research-pilot-dashboard-page.html >/dev/null
 rg -n '"projects"|"project_graphs"' /tmp/research-pilot-dashboard-index-response.json >/dev/null
 rg -n '"project": "DemoProject"' /tmp/research-pilot-dashboard-project-graph.json >/dev/null
 rg -n '"schema_version": "graph-maintenance-v1"|"open_deltas"' /tmp/research-pilot-dashboard-project-maintenance.json >/dev/null

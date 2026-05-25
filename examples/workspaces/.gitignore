@@ -1,0 +1,12 @@
+# Research Pilot private/generated data
+.env
+.env.local
+.research-pilot/config.toml
+.research-pilot/generated/
+.dashboard/
+wiki/graphs/graph.db
+wiki/graphs/snapshots/
+raw/papers/
+raw/**/*.pdf
+*.pdf
+output/

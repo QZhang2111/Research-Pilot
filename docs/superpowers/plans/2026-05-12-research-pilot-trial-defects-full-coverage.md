@@ -490,7 +490,7 @@ class ProjectShellCliTest(unittest.TestCase):
 
             result = create_project_shell(
                 root,
-                project_id="AAAI2027Affordance",
+                project_id="EXAMPLE_VENUEAffordance",
                 display_title="AAAI 2027 Affordance Estimation",
                 target_venue="AAAI 2027",
                 maturity_stage="project_shell",
@@ -501,9 +501,9 @@ class ProjectShellCliTest(unittest.TestCase):
                 overwrite=False,
             )
 
-            overview = root / "wiki" / "projects" / "AAAI2027Affordance" / "overview.md"
-            query_pack = root / "wiki" / "projects" / "AAAI2027Affordance" / "project-query-pack.md"
-            graph_events = root / "wiki" / "graphs" / "events" / "projects" / "AAAI2027Affordance.jsonl"
+            overview = root / "wiki" / "projects" / "EXAMPLE_VENUEAffordance" / "overview.md"
+            query_pack = root / "wiki" / "projects" / "EXAMPLE_VENUEAffordance" / "project-query-pack.md"
+            graph_events = root / "wiki" / "graphs" / "events" / "projects" / "EXAMPLE_VENUEAffordance.jsonl"
 
         self.assertTrue(result["created"])
         self.assertTrue(overview.exists())

@@ -1,0 +1,1135 @@
+{
+  "schema_version": "related-work-lineage-v1",
+  "project": "DemoVisualAffordance",
+  "round": "demo-affordance-lineage",
+  "title": "Visual Affordance Field Lineage from VFM Probing Baseline",
+  "topic_name": "Visual Affordance Grounding",
+  "status": "approved",
+  "source_boundary": "related_work_lineage_only_not_graph_truth",
+  "max_papers": 20,
+  "created": "2026-05-15",
+  "updated": "2026-05-15",
+  "approval_note": "User approved the field-structure lane classification on 2026-05-15; paper and edge review_status values remain candidate unless separately reviewed.",
+  "context_read": {
+    "read_paths": [
+      "wiki/projects/DemoVisualAffordance/overview.md",
+      "wiki/projects/DemoVisualAffordance/project-query-pack.md",
+      "wiki/projects/DemoVisualAffordance/papers/",
+      "templates/workspace/wiki/_system/workflows/related-work-lineage.md",
+      "skills/related-work-lineage/SKILL.md"
+    ],
+    "missing_paths": [
+      "wiki/projects/DemoVisualAffordance/literature-rounds/ existed only after artifact creation",
+      "wiki/_system/workflows/related-work-lineage.md was absent in demo workspace; repo template workflow was read instead"
+    ]
+  },
+  "route_narrowing": {
+    "input_mode": "baseline_papers",
+    "user_direction": "Map visual affordance literature from dataset-grounded labels toward open-vocabulary grounding, part geometry, and foundation-model priors.",
+    "selected_anchor_papers": [
+      "https://arxiv.org/abs/2602.20501"
+    ],
+    "candidate_routes": []
+  },
+  "baseline_paper_field_scope": {
+    "primary_problem": "Localize object regions or parts that support a requested action, especially when action/object labels, viewpoints, or categories differ from the training setting.",
+    "input_output": "Inputs are RGB images, object-centric crops, language/action prompts, support examples, 3D point clouds, or frozen visual foundation model activations. Outputs are affordance masks, keypoints, part/region labels, point-wise affordance scores, or diagnostic maps.",
+    "benchmarks_or_datasets": [
+      "IIT-AFF",
+      "UMD",
+      "PAD",
+      "PADv2",
+      "AGD20K",
+      "3D AffordanceNet",
+      "PIAD",
+      "PIADv2"
+    ],
+    "evaluation_setting": "Affordance localization and segmentation are measured with pixel, part, or point-level overlap and ranking metrics, plus cross-category, one-shot, zero-shot, and prompt-conditioned transfer settings where available.",
+    "survey_boundary": "Paper-only map for visual affordance grounding, open-text affordance reasoning, 3D/spatial affordance grounding, and foundation-model evidence used to explain or transfer affordance predictions.",
+    "exclusion_rules": [
+      "Exclude pure grasp-planning or robot-control papers unless visual affordance grounding is an explicit evaluated output.",
+      "Exclude general VLM/VFM papers unless they are used as dense correspondence, perception prior, or affordance evidence for this field.",
+      "Exclude dataset-only listings without an accompanying paper.",
+      "Do not treat baseline internal components, losses, or fusion stages as routes."
+    ],
+    "derived_taxonomy": [
+      {
+        "axis": "target setting and output object",
+        "values": [
+          "2D object/part affordance masks",
+          "language-conditioned affordance maps",
+          "3D point/part affordance grounding",
+          "VFM affordance audits"
+        ],
+        "derived_from": "Baseline task framing plus project questions about benchmarks, open vocabulary, part geometry, and foundation-model priors."
+      },
+      {
+        "axis": "benchmark community",
+        "values": [
+          "IIT-AFF and UMD object affordance segmentation",
+          "PAD/PADv2 one-shot affordance detection",
+          "AGD20K exocentric grounding",
+          "3D AffordanceNet and PIAD point-cloud grounding"
+        ],
+        "derived_from": "Datasets named across affordance grounding papers and project query pack."
+      },
+      {
+        "axis": "generalization pressure",
+        "values": [
+          "known-category supervised labels",
+          "one-shot support examples",
+          "open-text or instruction-conditioned labels",
+          "zero-shot frozen-model evidence"
+        ],
+        "derived_from": "Baseline contrast against label-bound training and neighboring one-shot/open-text papers."
+      },
+      {
+        "axis": "evidence source",
+        "values": [
+          "segmentation supervision",
+          "human-object interaction cues",
+          "language-model knowledge",
+          "3D geometry",
+          "self-supervised visual priors"
+        ],
+        "derived_from": "Field papers differ by what evidence grounds the action-to-region mapping."
+      },
+      {
+        "axis": "failure mode or gap",
+        "values": [
+          "category transfer",
+          "part granularity",
+          "viewpoint and spatial consistency",
+          "semantic-action mismatch",
+          "label scarcity"
+        ],
+        "derived_from": "Limitations in dataset-grounded and open-setting affordance papers."
+      }
+    ],
+    "field_structure": {
+      "lane_axis": {
+        "name": "task setting and output object",
+        "why_this_axis_defines_field_structure": "The field is naturally organized by what the paper asks the model to localize and under which observation setting: 2D object parts, language-conditioned regions, 3D spatial affordances, or frozen-model diagnostic evidence. This remains meaningful if the baseline paper is removed.",
+        "selected_lanes": [
+          "rgb_object_part_grounding",
+          "open_text_affordance_grounding",
+          "spatial_3d_affordance_grounding",
+          "vfm_affordance_auditing"
+        ]
+      },
+      "non_lane_axes": [
+        {
+          "axis": "benchmark community",
+          "encoding": "record as benchmarks_or_datasets and paper source_evidence, not route lanes"
+        },
+        {
+          "axis": "generalization pressure",
+          "encoding": "record in method_setting and trends because one lane can contain supervised, one-shot, and zero-shot variants"
+        },
+        {
+          "axis": "evidence source",
+          "encoding": "record in method_setting; using it as lane axis would drift toward baseline method components"
+        },
+        {
+          "axis": "failure mode or gap",
+          "encoding": "record in notable_forks and major_trends"
+        }
+      ]
+    }
+  },
+  "axis_candidates": [
+    {
+      "axis": "task setting and output object",
+      "lanes": [
+        "rgb_object_part_grounding",
+        "open_text_affordance_grounding",
+        "spatial_3d_affordance_grounding",
+        "vfm_affordance_auditing"
+      ],
+      "source": [
+        "baseline field scope",
+        "project overview",
+        "exploratory searches"
+      ],
+      "why_field_native": "Affordance papers split by the thing being grounded: 2D part masks, text/action-conditioned maps, 3D point regions, or model-evidence maps.",
+      "risk": "Some papers combine language and geometry, so route assignment can hide hybrid systems.",
+      "tests": {
+        "baseline_removal": "Still organizes AffordanceNet, AGD20K, OOAL, 3D AffordanceNet, DINOv2, and DINOv3 without the baseline.",
+        "neighbor_paper": "Existing demo dossiers fit without forcing method internals into lanes.",
+        "project_intent": "Matches dataset assumptions, part geometry, open vocabulary, and foundation-model probes.",
+        "non_component": "Routes are target/evaluation settings, not DINO layers, Flux priors, losses, or modules."
+      },
+      "decision": "selected",
+      "reason": "Best field-level axis for a baseline-paper survey around visual affordance grounding."
+    },
+    {
+      "axis": "benchmark community",
+      "lanes": [
+        "IIT-AFF/UMD",
+        "PAD/PADv2",
+        "AGD20K",
+        "3D AffordanceNet/PIAD"
+      ],
+      "source": [
+        "benchmark names in papers",
+        "project query pack"
+      ],
+      "why_field_native": "Benchmarks structure empirical comparison tables.",
+      "risk": "Benchmark lanes overfit dataset availability and split closely related task formulations.",
+      "tests": {
+        "baseline_removal": "Works for many older papers but weak for VFM and language papers that evaluate across multiple datasets.",
+        "neighbor_paper": "Fits dataset papers; weaker for Perception Encoder and DINOv3.",
+        "project_intent": "Captures assumptions but underplays open-text and prior evidence.",
+        "non_component": "Benchmark names are not method components."
+      },
+      "decision": "rejected",
+      "reason": "Useful metadata, weaker as primary lineage axis."
+    },
+    {
+      "axis": "generalization pressure",
+      "lanes": [
+        "supervised known categories",
+        "one-shot transfer",
+        "open-text transfer",
+        "zero-shot frozen-model evidence"
+      ],
+      "source": [
+        "baseline paper",
+        "OOAL",
+        "PADv2",
+        "AffordanceLLM"
+      ],
+      "why_field_native": "Affordance literature often argues about transfer beyond closed labels.",
+      "risk": "Names resemble fixed search templates and can collapse task setting into supervision taxonomy.",
+      "tests": {
+        "baseline_removal": "Works but makes older segmentation and 3D papers harder to place.",
+        "neighbor_paper": "Fits OOAL and OSAD; less natural for 3D AffordanceNet.",
+        "project_intent": "Relevant to open-vocabulary question.",
+        "non_component": "Not a baseline component, but can be too generic."
+      },
+      "decision": "rejected",
+      "reason": "Recorded as method_setting rather than route axis."
+    },
+    {
+      "axis": "evidence source",
+      "lanes": [
+        "pixel labels",
+        "human-object interaction",
+        "language knowledge",
+        "3D geometry",
+        "self-supervised visual priors"
+      ],
+      "source": [
+        "exploratory search",
+        "baseline contrastive framing"
+      ],
+      "why_field_native": "Papers do differ by evidence source.",
+      "risk": "Too close to method ingredients; can invite component lineage around backbones and cues.",
+      "tests": {
+        "baseline_removal": "Works for many papers but becomes method-centric quickly.",
+        "neighbor_paper": "Fits papers but duplicates method_setting.",
+        "project_intent": "Covers foundation-model priors.",
+        "non_component": "Borderline; evidence sources can become method internals."
+      },
+      "decision": "rejected",
+      "reason": "Demoted to non-lane axis to satisfy baseline-paper field-scope rule."
+    },
+    {
+      "axis": "application or deployment context",
+      "lanes": [
+        "robot manipulation",
+        "human-object interaction understanding",
+        "scene assistance",
+        "foundation-model diagnostics"
+      ],
+      "source": [
+        "visual affordance survey",
+        "project overview"
+      ],
+      "why_field_native": "Affordance work historically spans robotics and visual understanding.",
+      "risk": "Too coarse for this demo because the project asks about grounding assumptions rather than deployment.",
+      "tests": {
+        "baseline_removal": "Meaningful historically but weak for benchmark lineage.",
+        "neighbor_paper": "Some papers cross contexts.",
+        "project_intent": "Less aligned than task/output setting.",
+        "non_component": "Application context is not a component."
+      },
+      "decision": "rejected",
+      "reason": "Good background axis, not best for this project map."
+    }
+  ],
+  "search_log": [
+    {
+      "query_type": "field_scope_problem_benchmark",
+      "query": "visual affordance grounding dataset AGD20K exocentric images arxiv",
+      "derived_from": "target setting and output object; benchmark community",
+      "purpose": "Find image-based affordance grounding and AGD20K anchors."
+    },
+    {
+      "query_type": "survey_calibration",
+      "query": "visual affordance grounding dataset part interaction labels survey",
+      "derived_from": "field scope and related-work category calibration",
+      "purpose": "Check broad affordance survey positioning."
+    },
+    {
+      "query_type": "language_conditioned_branch",
+      "query": "open vocabulary affordance grounding foundation model arxiv",
+      "derived_from": "generalization pressure; open-text affordance grounding lane",
+      "purpose": "Find language/instruction-conditioned affordance papers."
+    },
+    {
+      "query_type": "object_part_segmentation_branch",
+      "query": "AffordanceNet end-to-end deep learning object affordance detection ICRA 2018",
+      "derived_from": "2D object/part affordance masks",
+      "purpose": "Anchor classic supervised object affordance segmentation."
+    },
+    {
+      "query_type": "one_shot_transfer_branch",
+      "query": "One-Shot Object Affordance Detection in the Wild arxiv PADv2",
+      "derived_from": "generalization pressure and PAD/PADv2 benchmark community",
+      "purpose": "Find early one-shot affordance detection lineage."
+    },
+    {
+      "query_type": "spatial_3d_branch",
+      "query": "3D AffordanceNet benchmark point cloud affordance grounding arxiv",
+      "derived_from": "3D point/part affordance grounding",
+      "purpose": "Find point-cloud affordance benchmark papers."
+    },
+    {
+      "query_type": "spatial_3d_language_branch",
+      "query": "GREAT Geometry-Intention Collaborative Inference open vocabulary 3D object affordance grounding arxiv",
+      "derived_from": "3D spatial grounding and language-conditioned branch overlap",
+      "purpose": "Find hybrid 3D plus text affordance papers."
+    },
+    {
+      "query_type": "vfm_prior_branch",
+      "query": "Deep ViT Features as Dense Visual Descriptors arxiv 2022 Amir",
+      "derived_from": "self-supervised visual priors",
+      "purpose": "Anchor dense part correspondence used as visual prior evidence."
+    },
+    {
+      "query_type": "vfm_recent_calibration",
+      "query": "DINOv3 arxiv dense features 2025 visual descriptors",
+      "derived_from": "foundation-model prior branch and latest calibration",
+      "purpose": "Check recent dense visual foundation model anchors."
+    },
+    {
+      "query_type": "baseline_metadata_check",
+      "query": "Probing and Bridging Geometry-Interaction Cues affordance DINO Flux arxiv 2602.20501",
+      "derived_from": "baseline paper field-scope detector",
+      "purpose": "Verify baseline identity, release date, and stated task."
+    }
+  ],
+  "routes": [
+    {
+      "id": "rgb_object_part_grounding",
+      "label": "RGB Object-Part Grounding",
+      "description": "Papers that predict affordance regions, parts, keypoints, or masks from RGB object/scene images with dataset-defined affordance labels.",
+      "review_status": "approved"
+    },
+    {
+      "id": "open_text_affordance_grounding",
+      "label": "Text-Conditioned Affordance Grounding",
+      "description": "Papers that use action names, instructions, large language models, or support examples to move beyond a closed affordance label set.",
+      "review_status": "approved"
+    },
+    {
+      "id": "spatial_3d_affordance_grounding",
+      "label": "3D Spatial Affordance Grounding",
+      "description": "Papers that ground affordances on point clouds, 3D object parts, or geometry-aware object representations.",
+      "review_status": "approved"
+    },
+    {
+      "id": "vfm_affordance_auditing",
+      "label": "VFM Affordance Auditing",
+      "description": "Papers that test whether frozen visual foundation models carry part, geometry, or action-relevant cues that can support affordance grounding.",
+      "review_status": "approved"
+    }
+  ],
+  "papers": [
+    {
+      "id": "hassanin2018-visual-affordance-survey",
+      "kind": "paper",
+      "title": "Visual Affordance and Function Understanding: A Survey",
+      "year": 2018,
+      "month": "07",
+      "identity": {
+        "authors": "Hassanin et al.",
+        "arxiv_id": "1807.06775",
+        "venue": "ACM Computing Surveys"
+      },
+      "source_url": "https://arxiv.org/abs/1807.06775",
+      "source_evidence": "Survey paper frames visual affordance and function understanding across object, scene, and action settings, making it a calibration node for field boundaries.",
+      "route": "rgb_object_part_grounding",
+      "roles": [
+        "survey",
+        "field-boundary"
+      ],
+      "summary": "Broad survey that names affordance detection, object function, and interaction understanding as connected visual recognition problems.",
+      "field_position": "Field-boundary survey before open-text and VFM-era affordance grounding became central.",
+      "method_setting": "Literature survey over visual affordance and function understanding.",
+      "artifact_type": "survey",
+      "review_status": "candidate"
+    },
+    {
+      "id": "nguyen2016-affordance-cnn",
+      "kind": "paper",
+      "title": "Detecting Object Affordances with Convolutional Neural Networks",
+      "year": 2016,
+      "month": "02",
+      "identity": {
+        "authors": "Nguyen, Kanoulas, Caldwell, Tsagarakis",
+        "doi": "10.1109/IROS.2016.7759429",
+        "venue": "IROS 2016"
+      },
+      "source_url": "https://sites.google.com/site/affordancecnn/",
+      "source_evidence": "Paper applies CNNs to object affordance detection and evaluates on RGB-D object affordance data, anchoring early deep visual affordance detection.",
+      "route": "rgb_object_part_grounding",
+      "roles": [
+        "early-deep-learning",
+        "rgbd-affordance"
+      ],
+      "summary": "Early CNN approach to object affordance detection from visual input, before large-scale affordance grounding benchmarks.",
+      "field_position": "Closed-set visual affordance detection from object images.",
+      "method_setting": "Supervised CNN-based affordance detection.",
+      "artifact_type": "method",
+      "review_status": "candidate"
+    },
+    {
+      "id": "do2017-affordancenet",
+      "kind": "paper",
+      "title": "AffordanceNet: An End-to-End Deep Learning Approach for Object Affordance Detection",
+      "year": 2017,
+      "month": "09",
+      "identity": {
+        "authors": "Do, Nguyen, Reid, Caldwell, Tsagarakis",
+        "arxiv_id": "1709.07326",
+        "venue": "ICRA 2018"
+      },
+      "source_url": "https://arxiv.org/abs/1709.07326",
+      "source_evidence": "Introduces AffordanceNet for simultaneous object detection and affordance segmentation, a standard anchor for part-level visual affordance masks.",
+      "route": "rgb_object_part_grounding",
+      "roles": [
+        "object-detection",
+        "affordance-segmentation"
+      ],
+      "summary": "Turns affordance prediction into object detection plus pixel-level affordance mask estimation.",
+      "field_position": "Dataset-grounded object-part affordance segmentation.",
+      "method_setting": "Fully supervised RGB affordance segmentation.",
+      "artifact_type": "method",
+      "review_status": "candidate"
+    },
+    {
+      "id": "zhai2021-osad-pad-v2",
+      "kind": "paper",
+      "title": "One-Shot Object Affordance Detection in the Wild",
+      "year": 2021,
+      "month": "08",
+      "identity": {
+        "authors": "Zhai et al.",
+        "arxiv_id": "2108.03658",
+        "venue": "CVPR 2022"
+      },
+      "source_url": "https://arxiv.org/abs/2108.03658",
+      "source_evidence": "Paper introduces one-shot object affordance detection in the wild and PADv2, shifting evaluation toward support-example transfer.",
+      "route": "rgb_object_part_grounding",
+      "roles": [
+        "one-shot",
+        "benchmark"
+      ],
+      "summary": "Extends affordance detection from closed labels toward support-image transfer in natural scenes.",
+      "field_position": "Bridge between supervised object affordance segmentation and open/unseen affordance settings.",
+      "method_setting": "One-shot affordance detection with support examples.",
+      "artifact_type": "task-and-benchmark",
+      "review_status": "candidate"
+    },
+    {
+      "id": "luo2022-agd20k",
+      "kind": "paper",
+      "title": "Learning Affordance Grounding from Exocentric Images",
+      "year": 2022,
+      "month": "03",
+      "identity": {
+        "authors": "Luo et al.",
+        "arxiv_id": "2203.09905",
+        "venue": "CVPR 2022"
+      },
+      "source_url": "https://arxiv.org/abs/2203.09905",
+      "source_evidence": "Introduces AGD20K and affordance grounding from exocentric images, making the human-object interaction signal central to dataset-grounded visual affordance localization.",
+      "route": "rgb_object_part_grounding",
+      "roles": [
+        "dataset",
+        "exocentric-grounding"
+      ],
+      "summary": "Defines a large exocentric affordance grounding dataset and task where interaction examples supervise object-region predictions.",
+      "field_position": "Large-scale 2D affordance grounding benchmark centered on exocentric interaction evidence.",
+      "method_setting": "Supervised/exocentric visual affordance grounding.",
+      "artifact_type": "dataset-and-method",
+      "review_status": "candidate"
+    },
+    {
+      "id": "li2023-locate",
+      "kind": "paper",
+      "title": "LOCATE: Localize and Transfer Object Parts for Weakly Supervised Affordance Grounding",
+      "year": 2023,
+      "month": "03",
+      "identity": {
+        "authors": "Li et al.",
+        "arxiv_id": "2303.09665",
+        "venue": "CVPR 2023"
+      },
+      "source_url": "https://arxiv.org/abs/2303.09665",
+      "source_evidence": "Paper frames weakly supervised affordance grounding as localizing and transferring object parts, aligning with the project question about part-level priors.",
+      "route": "rgb_object_part_grounding",
+      "roles": [
+        "part-transfer",
+        "weak-supervision"
+      ],
+      "summary": "Uses part localization and transfer to reduce direct pixel-level affordance supervision.",
+      "field_position": "2D affordance grounding with part-level transfer pressure.",
+      "method_setting": "Weakly supervised part localization and transfer.",
+      "artifact_type": "method",
+      "review_status": "candidate"
+    },
+    {
+      "id": "li2024-ooal",
+      "kind": "paper",
+      "title": "One-Shot Open Affordance Learning with Foundation Models",
+      "year": 2023,
+      "month": "11",
+      "identity": {
+        "authors": "Li et al.",
+        "arxiv_id": "2311.17776",
+        "venue": "CVPR 2024"
+      },
+      "source_url": "https://arxiv.org/abs/2311.17776",
+      "source_evidence": "Paper studies one-shot open affordance learning with foundation models, directly linking support examples, open action labels, and visual affordance maps.",
+      "route": "open_text_affordance_grounding",
+      "roles": [
+        "one-shot",
+        "foundation-model"
+      ],
+      "summary": "Moves affordance learning toward open labels and limited examples by using foundation-model knowledge.",
+      "field_position": "Open affordance transfer from support examples and foundation-model priors.",
+      "method_setting": "One-shot open affordance learning.",
+      "artifact_type": "method",
+      "review_status": "candidate"
+    },
+    {
+      "id": "qian2024-affordancellm",
+      "kind": "paper",
+      "title": "AffordanceLLM: Grounding Affordance from Vision Language Models",
+      "year": 2024,
+      "month": "01",
+      "identity": {
+        "authors": "Qian et al.",
+        "arxiv_id": "2401.06341",
+        "venue": "arXiv"
+      },
+      "source_url": "https://arxiv.org/abs/2401.06341",
+      "source_evidence": "Paper grounds affordance using vision-language models, representing the language-knowledge branch of open affordance reasoning.",
+      "route": "open_text_affordance_grounding",
+      "roles": [
+        "vlm",
+        "language-grounding"
+      ],
+      "summary": "Uses VLM/LLM knowledge to connect textual affordance concepts with visual regions.",
+      "field_position": "Language-guided affordance grounding beyond fixed dataset labels.",
+      "method_setting": "Vision-language model based affordance reasoning.",
+      "artifact_type": "method",
+      "review_status": "candidate"
+    },
+    {
+      "id": "jang2024-intra",
+      "kind": "paper",
+      "title": "INTRA: Interaction Relationship-aware Weakly Supervised Affordance Grounding",
+      "year": 2024,
+      "month": "09",
+      "identity": {
+        "authors": "Jang et al.",
+        "arxiv_id": "2409.06210",
+        "venue": "arXiv"
+      },
+      "source_url": "https://arxiv.org/abs/2409.06210",
+      "source_evidence": "Paper emphasizes interaction relationship-aware weak supervision for affordance grounding, linking human-object interaction cues to localization.",
+      "route": "open_text_affordance_grounding",
+      "roles": [
+        "interaction-relation",
+        "weak-supervision"
+      ],
+      "summary": "Uses interaction relationships to guide weakly supervised affordance grounding.",
+      "field_position": "Interaction-aware bridge between exocentric grounding and open instruction settings.",
+      "method_setting": "Weakly supervised affordance grounding with interaction relations.",
+      "artifact_type": "method",
+      "review_status": "candidate"
+    },
+    {
+      "id": "deng2021-3d-affordancenet",
+      "kind": "paper",
+      "title": "3D AffordanceNet: A Benchmark for Visual Object Affordance Understanding",
+      "year": 2021,
+      "month": "03",
+      "identity": {
+        "authors": "Deng et al.",
+        "arxiv_id": "2103.16397",
+        "venue": "CVPR 2021"
+      },
+      "source_url": "https://arxiv.org/abs/2103.16397",
+      "source_evidence": "Introduces a 3D object affordance benchmark with point-wise labels, shifting affordance grounding from image masks to spatial object parts.",
+      "route": "spatial_3d_affordance_grounding",
+      "roles": [
+        "3d-benchmark",
+        "point-wise-grounding"
+      ],
+      "summary": "Defines point-cloud affordance prediction as a benchmarked visual understanding task.",
+      "field_position": "3D spatial affordance benchmark and dataset anchor.",
+      "method_setting": "Supervised point-wise 3D affordance grounding.",
+      "artifact_type": "dataset-and-benchmark",
+      "review_status": "candidate"
+    },
+    {
+      "id": "yang2023-iagnet",
+      "kind": "paper",
+      "title": "Grounding 3D Object Affordance from 2D Interactions in Images",
+      "year": 2023,
+      "month": "03",
+      "identity": {
+        "authors": "Yang et al.",
+        "arxiv_id": "2303.10437",
+        "venue": "ICCV 2023"
+      },
+      "source_url": "https://arxiv.org/abs/2303.10437",
+      "source_evidence": "Paper grounds 3D object affordance from 2D interactions in images and introduces IAGNet, connecting exocentric interaction evidence with 3D affordance labels.",
+      "route": "spatial_3d_affordance_grounding",
+      "roles": [
+        "2d-to-3d-transfer",
+        "interaction-cues"
+      ],
+      "summary": "Transfers interaction evidence from 2D images into 3D affordance grounding.",
+      "field_position": "Cross-setting bridge between exocentric 2D interactions and 3D point-level affordance.",
+      "method_setting": "2D interaction guided 3D affordance grounding.",
+      "artifact_type": "method",
+      "review_status": "candidate"
+    },
+    {
+      "id": "shao2024-great",
+      "kind": "paper",
+      "title": "GREAT: Geometry-Intention Collaborative Inference for Open-Vocabulary 3D Object Affordance Grounding",
+      "year": 2024,
+      "month": "11",
+      "identity": {
+        "authors": "Shao et al.",
+        "arxiv_id": "2411.19626",
+        "venue": "arXiv"
+      },
+      "source_url": "https://arxiv.org/abs/2411.19626",
+      "source_evidence": "Paper explicitly targets open-vocabulary 3D object affordance grounding with geometry-intention inference, joining text-conditioned and 3D affordance branches.",
+      "route": "spatial_3d_affordance_grounding",
+      "roles": [
+        "open-text-3d",
+        "geometry-intention"
+      ],
+      "summary": "Extends 3D affordance grounding toward open text intent and geometry-aware inference.",
+      "field_position": "Hybrid of open-text affordance grounding and 3D spatial affordance.",
+      "method_setting": "Open-text 3D affordance grounding.",
+      "artifact_type": "method",
+      "review_status": "candidate"
+    },
+    {
+      "id": "gou2026-part-aware-ov3d",
+      "kind": "paper",
+      "title": "Part-Aware Open-Vocabulary 3D Affordance Grounding via Prototypical Semantic and Geometric Alignment",
+      "year": 2026,
+      "month": "03",
+      "identity": {
+        "authors": "Gou et al.",
+        "arxiv_id": "2603.17647",
+        "venue": "arXiv"
+      },
+      "source_url": "https://arxiv.org/abs/2603.17647",
+      "source_evidence": "Paper targets language-driven, part-aware open-vocabulary 3D affordance grounding with prototypical semantic and geometric alignment, making it a recent hybrid spatial/open branch.",
+      "route": "spatial_3d_affordance_grounding",
+      "roles": [
+        "part-aware",
+        "recent-3d-open"
+      ],
+      "summary": "Recent 3D affordance work that combines part structure, open vocabulary, and interaction priors.",
+      "field_position": "Recent convergence point for part-aware 3D and open affordance grounding.",
+      "method_setting": "Part-aware open-text 3D affordance grounding.",
+      "artifact_type": "method",
+      "review_status": "candidate"
+    },
+    {
+      "id": "amir2021-dense-vit-descriptors",
+      "kind": "paper",
+      "title": "Deep ViT Features as Dense Visual Descriptors",
+      "year": 2021,
+      "month": "12",
+      "identity": {
+        "authors": "Amir et al.",
+        "arxiv_id": "2112.05814",
+        "venue": "ECCVW 2022"
+      },
+      "source_url": "https://arxiv.org/abs/2112.05814",
+      "source_evidence": "Shows deep ViT activations can serve as dense visual descriptors for semantic correspondence, a key prior for part-level affordance transfer.",
+      "route": "vfm_affordance_auditing",
+      "roles": [
+        "dense-correspondence",
+        "visual-prior"
+      ],
+      "summary": "Demonstrates dense semantic correspondence from frozen transformer activations.",
+      "field_position": "VFM-adjacent prior for part correspondence used by later affordance grounding work.",
+      "method_setting": "Frozen ViT dense correspondence analysis.",
+      "artifact_type": "foundation-model-evidence",
+      "review_status": "candidate"
+    },
+    {
+      "id": "oquab2023-dinov2",
+      "kind": "paper",
+      "title": "DINOv2: Learning Robust Visual Features without Supervision",
+      "year": 2023,
+      "month": "04",
+      "identity": {
+        "authors": "Oquab et al.",
+        "arxiv_id": "2304.07193",
+        "venue": "TMLR 2024"
+      },
+      "source_url": "https://arxiv.org/abs/2304.07193",
+      "source_evidence": "DINOv2 provides robust self-supervised visual representations that became common dense priors for downstream localization and correspondence tasks.",
+      "route": "vfm_affordance_auditing",
+      "roles": [
+        "self-supervised-vision",
+        "dense-prior"
+      ],
+      "summary": "Large-scale self-supervised visual model used as a general visual prior for dense downstream tasks.",
+      "field_position": "Foundation-model prior used by affordance papers to reduce task-specific labels.",
+      "method_setting": "Self-supervised visual foundation model.",
+      "artifact_type": "foundation-model",
+      "review_status": "candidate"
+    },
+    {
+      "id": "bolya2025-perception-encoder",
+      "kind": "paper",
+      "title": "Perception Encoder: The Best Visual Embeddings Are Not at the Output of the Network",
+      "year": 2025,
+      "month": "04",
+      "identity": {
+        "authors": "Bolya et al.",
+        "arxiv_id": "2504.13181",
+        "venue": "arXiv"
+      },
+      "source_url": "https://arxiv.org/abs/2504.13181",
+      "source_evidence": "Paper studies where strong visual embeddings reside inside vision networks, relevant to choosing and auditing frozen visual priors for affordance localization.",
+      "route": "vfm_affordance_auditing",
+      "roles": [
+        "embedding-analysis",
+        "visual-prior"
+      ],
+      "summary": "Analyzes internal visual embeddings and strengthens the case for inspecting frozen model signals before task-specific training.",
+      "field_position": "General VFM evidence source for affordance-prior auditing.",
+      "method_setting": "Visual embedding analysis in perception models.",
+      "artifact_type": "foundation-model-evidence",
+      "review_status": "candidate"
+    },
+    {
+      "id": "simeoni2025-dinov3",
+      "kind": "paper",
+      "title": "DINOv3",
+      "year": 2025,
+      "month": "08",
+      "identity": {
+        "authors": "Simeoni et al.",
+        "arxiv_id": "2508.10104",
+        "venue": "arXiv"
+      },
+      "source_url": "https://arxiv.org/abs/2508.10104",
+      "source_evidence": "DINOv3 is a recent self-supervised vision model used as a dense visual prior in the baseline and nearby VFM affordance audit work.",
+      "route": "vfm_affordance_auditing",
+      "roles": [
+        "recent-vfm",
+        "dense-prior"
+      ],
+      "summary": "Recent self-supervised visual foundation model that updates the dense-prior side of affordance analysis.",
+      "field_position": "Latest VFM prior in the baseline's evidence stack.",
+      "method_setting": "Self-supervised visual foundation model.",
+      "artifact_type": "foundation-model",
+      "review_status": "candidate"
+    },
+    {
+      "id": "zhang2026-geometry-interaction-vfm",
+      "kind": "paper",
+      "title": "Probing and Bridging Geometry-Interaction Cues for Affordance Reasoning in Vision Foundation Models",
+      "year": 2026,
+      "month": "02",
+      "identity": {
+        "authors": "Zhang et al.",
+        "arxiv_id": "2602.20501",
+        "venue": "CVPR 2026"
+      },
+      "source_url": "https://arxiv.org/abs/2602.20501",
+      "source_evidence": "Baseline paper studies affordance reasoning in vision foundation models and explicitly analyzes geometry and interaction cues.",
+      "route": "vfm_affordance_auditing",
+      "roles": [
+        "baseline",
+        "zero-shot-vfm-audit"
+      ],
+      "summary": "Baseline for this map: uses VFM evidence to test and bridge geometry-interaction cues for affordance reasoning.",
+      "field_position": "Convergence of affordance grounding, part/geometry priors, interaction evidence, and VFM diagnostics.",
+      "method_setting": "Zero-shot affordance reasoning with frozen visual foundation model evidence.",
+      "artifact_type": "baseline-method",
+      "review_status": "candidate"
+    }
+  ],
+  "explicit_edges": [
+    {
+      "source": "nguyen2016-affordance-cnn",
+      "target": "do2017-affordancenet",
+      "relation": "influences",
+      "rationale": "AffordanceNet extends early CNN affordance detection into object detection plus affordance segmentation.",
+      "confidence": "medium",
+      "source_evidence": "Both papers address visual object affordance detection; AffordanceNet makes segmentation/object detection joint.",
+      "review_status": "candidate"
+    },
+    {
+      "source": "do2017-affordancenet",
+      "target": "zhai2021-osad-pad-v2",
+      "relation": "contrasts-with",
+      "rationale": "OSAD/PADv2 shifts the evaluation pressure from closed supervised affordance categories to one-shot transfer in the wild.",
+      "confidence": "medium",
+      "source_evidence": "AffordanceNet is supervised object affordance segmentation; OSAD introduces one-shot affordance detection.",
+      "review_status": "candidate"
+    },
+    {
+      "source": "zhai2021-osad-pad-v2",
+      "target": "li2024-ooal",
+      "relation": "influences",
+      "rationale": "OOAL inherits the transfer problem and moves it toward open affordance labels and foundation models.",
+      "confidence": "medium",
+      "source_evidence": "Both papers center one-shot/open affordance transfer rather than only closed-label segmentation.",
+      "review_status": "candidate"
+    },
+    {
+      "source": "luo2022-agd20k",
+      "target": "li2023-locate",
+      "relation": "influences",
+      "rationale": "LOCATE builds on affordance grounding pressure from exocentric datasets while emphasizing part localization and transfer.",
+      "confidence": "medium",
+      "source_evidence": "AGD20K anchors exocentric affordance grounding; LOCATE localizes and transfers object parts for weakly supervised affordance grounding.",
+      "review_status": "candidate"
+    },
+    {
+      "source": "luo2022-agd20k",
+      "target": "jang2024-intra",
+      "relation": "influences",
+      "rationale": "INTRA keeps human-object interaction relationships as affordance evidence while changing the weak-supervision mechanism.",
+      "confidence": "medium",
+      "source_evidence": "Both papers use interaction cues for affordance grounding from image evidence.",
+      "review_status": "candidate"
+    },
+    {
+      "source": "deng2021-3d-affordancenet",
+      "target": "yang2023-iagnet",
+      "relation": "extends-method",
+      "rationale": "IAGNet extends 3D affordance grounding by using 2D interaction evidence to infer point-level affordance.",
+      "confidence": "medium",
+      "source_evidence": "3D AffordanceNet defines point-wise 3D affordance benchmark; IAGNet grounds 3D affordance from 2D interactions.",
+      "review_status": "candidate"
+    },
+    {
+      "source": "yang2023-iagnet",
+      "target": "shao2024-great",
+      "relation": "branches-from",
+      "rationale": "GREAT branches toward open-text 3D affordance grounding while retaining geometry as central evidence.",
+      "confidence": "medium",
+      "source_evidence": "IAGNet focuses 2D-to-3D interaction transfer; GREAT targets open-text 3D object affordance grounding.",
+      "review_status": "candidate"
+    },
+    {
+      "source": "shao2024-great",
+      "target": "gou2026-part-aware-ov3d",
+      "relation": "influences",
+      "rationale": "Recent 3D open affordance papers move from geometry-intention inference toward part-aware open vocabulary grounding with interaction priors.",
+      "confidence": "low",
+      "source_evidence": "Both target open-vocabulary 3D object affordance grounding with geometry/interaction priors.",
+      "review_status": "candidate"
+    },
+    {
+      "source": "amir2021-dense-vit-descriptors",
+      "target": "oquab2023-dinov2",
+      "relation": "influences",
+      "rationale": "Dense ViT descriptors made frozen-transformer correspondence visible; DINOv2 scales self-supervised visual priors used for dense tasks.",
+      "confidence": "medium",
+      "source_evidence": "Both papers support the claim that frozen visual models carry spatial correspondence signals.",
+      "review_status": "candidate"
+    },
+    {
+      "source": "oquab2023-dinov2",
+      "target": "simeoni2025-dinov3",
+      "relation": "extends-method",
+      "rationale": "DINOv3 is a successor-style self-supervised visual foundation model lineage node after DINOv2.",
+      "confidence": "medium",
+      "source_evidence": "DINOv2 and DINOv3 are both self-supervised visual foundation model anchors.",
+      "review_status": "candidate"
+    },
+    {
+      "source": "oquab2023-dinov2",
+      "target": "zhang2026-geometry-interaction-vfm",
+      "relation": "influences",
+      "rationale": "The baseline sits in the line of using self-supervised visual models as dense priors for affordance grounding.",
+      "confidence": "medium",
+      "source_evidence": "Baseline paper studies affordance cues in vision foundation models; DINOv2 is a common dense visual prior.",
+      "review_status": "candidate"
+    },
+    {
+      "source": "simeoni2025-dinov3",
+      "target": "zhang2026-geometry-interaction-vfm",
+      "relation": "influences",
+      "rationale": "The baseline uses recent VFM evidence to inspect geometry and interaction cues for open affordance grounding.",
+      "confidence": "medium",
+      "source_evidence": "Baseline source metadata links to VFM-based geometry/interaction cue analysis; DINOv3 is included as recent dense VFM prior.",
+      "review_status": "candidate"
+    },
+    {
+      "source": "li2024-ooal",
+      "target": "zhang2026-geometry-interaction-vfm",
+      "relation": "influences",
+      "rationale": "OOAL frames open affordance learning with foundation models; the baseline narrows to VFM cue auditing and bridging.",
+      "confidence": "medium",
+      "source_evidence": "Both papers address open affordance learning/grounding with foundation models.",
+      "review_status": "candidate"
+    },
+    {
+      "source": "li2023-locate",
+      "target": "zhang2026-geometry-interaction-vfm",
+      "relation": "influences",
+      "rationale": "LOCATE's part transfer problem becomes part of the baseline's geometry-interaction cue framing.",
+      "confidence": "low",
+      "source_evidence": "LOCATE centers part localization; baseline centers geometry-interaction cues for affordance grounding.",
+      "review_status": "candidate"
+    },
+    {
+      "source": "qian2024-affordancellm",
+      "target": "zhang2026-geometry-interaction-vfm",
+      "relation": "contrasts-with",
+      "rationale": "AffordanceLLM emphasizes language/VLM reasoning, while the baseline tests visual foundation model geometry-interaction cues.",
+      "confidence": "medium",
+      "source_evidence": "Both address open affordance grounding, but choose different evidence sources.",
+      "review_status": "candidate"
+    }
+  ],
+  "survey_catalog": [
+    {
+      "period": "2016.02",
+      "paper": "nguyen2016-affordance-cnn",
+      "contribution": "Early CNN object affordance detection from visual input.",
+      "field_relevance": "Shows pre-benchmark deep affordance detection baseline."
+    },
+    {
+      "period": "2017.09",
+      "paper": "do2017-affordancenet",
+      "contribution": "Object detection plus affordance segmentation as an end-to-end task.",
+      "field_relevance": "Classic 2D part-mask affordance anchor."
+    },
+    {
+      "period": "2018.07",
+      "paper": "hassanin2018-visual-affordance-survey",
+      "contribution": "Survey-level field boundary across visual affordance and function understanding.",
+      "field_relevance": "Calibrates what belongs in the map."
+    },
+    {
+      "period": "2021.03",
+      "paper": "deng2021-3d-affordancenet",
+      "contribution": "Point-wise 3D affordance benchmark.",
+      "field_relevance": "Starts the spatial 3D lane."
+    },
+    {
+      "period": "2021.08",
+      "paper": "zhai2021-osad-pad-v2",
+      "contribution": "One-shot object affordance detection and PADv2.",
+      "field_relevance": "Introduces support-example transfer pressure."
+    },
+    {
+      "period": "2021.12",
+      "paper": "amir2021-dense-vit-descriptors",
+      "contribution": "Frozen ViT activations as dense correspondence descriptors.",
+      "field_relevance": "Visual prior for part transfer and VFM affordance auditing."
+    },
+    {
+      "period": "2022.03",
+      "paper": "luo2022-agd20k",
+      "contribution": "AGD20K and exocentric affordance grounding.",
+      "field_relevance": "Large-scale 2D grounding benchmark for action-object evidence."
+    },
+    {
+      "period": "2023.03",
+      "paper": "li2023-locate",
+      "contribution": "Part localization and transfer for weakly supervised affordance grounding.",
+      "field_relevance": "Connects part evidence to visual affordance transfer."
+    },
+    {
+      "period": "2023.03",
+      "paper": "yang2023-iagnet",
+      "contribution": "Grounds 3D affordance from 2D interactions.",
+      "field_relevance": "Bridges exocentric interaction cues and 3D geometry."
+    },
+    {
+      "period": "2023.04",
+      "paper": "oquab2023-dinov2",
+      "contribution": "Robust self-supervised visual model.",
+      "field_relevance": "Dense visual prior for later affordance maps."
+    },
+    {
+      "period": "2023.11",
+      "paper": "li2024-ooal",
+      "contribution": "One-shot open affordance learning with foundation models.",
+      "field_relevance": "Open affordance transfer branch."
+    },
+    {
+      "period": "2024.01",
+      "paper": "qian2024-affordancellm",
+      "contribution": "Vision-language model grounding of affordance.",
+      "field_relevance": "Language-guided affordance reasoning branch."
+    },
+    {
+      "period": "2024.09",
+      "paper": "jang2024-intra",
+      "contribution": "Interaction relationship-aware weakly supervised affordance grounding.",
+      "field_relevance": "Refines interaction evidence for image affordance grounding."
+    },
+    {
+      "period": "2024.11",
+      "paper": "shao2024-great",
+      "contribution": "Open-text 3D affordance grounding with geometry-intention inference.",
+      "field_relevance": "Hybrid open text and 3D spatial lane."
+    },
+    {
+      "period": "2025.04",
+      "paper": "bolya2025-perception-encoder",
+      "contribution": "Visual embedding analysis inside perception networks.",
+      "field_relevance": "General VFM audit support."
+    },
+    {
+      "period": "2025.08",
+      "paper": "simeoni2025-dinov3",
+      "contribution": "Recent self-supervised visual foundation model.",
+      "field_relevance": "Recent dense prior used around the baseline."
+    },
+    {
+      "period": "2026.02",
+      "paper": "zhang2026-geometry-interaction-vfm",
+      "contribution": "Probes and bridges geometry-interaction cues for affordance reasoning in VFMs.",
+      "field_relevance": "Baseline convergence node."
+    },
+    {
+      "period": "2026.03",
+      "paper": "gou2026-part-aware-ov3d",
+      "contribution": "Part-aware open-text 3D affordance grounding with interaction priors.",
+      "field_relevance": "Post-baseline adjacent hybrid branch."
+    }
+  ],
+  "timeline_tracks": [
+    {
+      "id": "rgb_object_part_grounding",
+      "label": "RGB Object-Part Grounding",
+      "periods": [
+        "2016-2018 supervised detection/segmentation",
+        "2021-2023 one-shot, exocentric, and part-transfer grounding",
+        "2024 interaction-aware weak supervision"
+      ]
+    },
+    {
+      "id": "open_text_affordance_grounding",
+      "label": "Text-Conditioned Affordance Grounding",
+      "periods": [
+        "2021 support-example transfer",
+        "2024 foundation-model and language-guided affordance reasoning"
+      ]
+    },
+    {
+      "id": "spatial_3d_affordance_grounding",
+      "label": "3D Spatial Affordance Grounding",
+      "periods": [
+        "2021 3D affordance benchmark",
+        "2023 2D interaction to 3D transfer",
+        "2024-2026 open-text and part-aware 3D grounding"
+      ]
+    },
+    {
+      "id": "vfm_affordance_auditing",
+      "label": "VFM Affordance Auditing",
+      "periods": [
+        "2021 dense ViT correspondence",
+        "2023-2025 stronger self-supervised and perception encoders",
+        "2026 affordance-specific VFM cue analysis"
+      ]
+    }
+  ],
+  "major_trends": [
+    {
+      "name": "From closed labels to transfer pressure",
+      "summary": "The line moves from supervised affordance masks toward one-shot, weakly supervised, and open-text settings.",
+      "evidence_papers": [
+        "do2017-affordancenet",
+        "zhai2021-osad-pad-v2",
+        "li2024-ooal",
+        "zhang2026-geometry-interaction-vfm"
+      ]
+    },
+    {
+      "name": "Part and geometry become central evidence",
+      "summary": "Part localization and 3D point-level grounding turn affordance from label recognition into spatial/actionable region prediction.",
+      "evidence_papers": [
+        "li2023-locate",
+        "deng2021-3d-affordancenet",
+        "yang2023-iagnet",
+        "gou2026-part-aware-ov3d"
+      ]
+    },
+    {
+      "name": "Human-object interaction cues bridge image and action",
+      "summary": "Exocentric and interaction-aware papers use observed interactions to identify the object regions that afford actions.",
+      "evidence_papers": [
+        "luo2022-agd20k",
+        "jang2024-intra",
+        "yang2023-iagnet"
+      ]
+    },
+    {
+      "name": "Frozen visual models become objects of study",
+      "summary": "Dense correspondence and self-supervised VFMs are no longer only backbones; papers test whether they already encode useful part and geometry cues.",
+      "evidence_papers": [
+        "amir2021-dense-vit-descriptors",
+        "oquab2023-dinov2",
+        "bolya2025-perception-encoder",
+        "zhang2026-geometry-interaction-vfm"
+      ]
+    }
+  ],
+  "notable_forks": [
+    {
+      "name": "Dataset-grounded masks vs open-text affordance grounding",
+      "sides": [
+        "AffordanceNet/AGD20K style fixed labels",
+        "OOAL/AffordanceLLM/baseline style open labels"
+      ],
+      "summary": "The fork changes the core failure mode from mask quality under known labels to semantic-action transfer under new labels."
+    },
+    {
+      "name": "2D interaction evidence vs 3D spatial grounding",
+      "sides": [
+        "exocentric image evidence",
+        "point-cloud and part-level geometry"
+      ],
+      "summary": "IAGNet and later 3D open-text papers try to bridge interaction cues and spatial object structure."
+    },
+    {
+      "name": "Language knowledge vs visual prior evidence",
+      "sides": [
+        "VLM/LLM affordance reasoning",
+        "frozen VFM cue auditing"
+      ],
+      "summary": "AffordanceLLM and the 2026 baseline address similar open affordance questions but stress different evidence sources."
+    }
+  ],
+  "positioning_note": "The baseline paper, Probing and Bridging Geometry-Interaction Cues for Affordance Reasoning in Vision Foundation Models, sits as a convergence node rather than a starting point. Earlier work defines object-part affordance masks, exocentric grounding benchmarks, one-shot/open transfer, 3D spatial affordance labels, and dense VFM priors. The baseline asks whether modern visual foundation models already carry the geometry and interaction cues needed for affordance reasoning, then bridges those cues for the task. It should be read as a field-scope detector for affordance grounding plus VFM evidence, not as a prompt to make DINO/Flux/loss components the lineage routes."
+}

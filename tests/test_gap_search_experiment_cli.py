@@ -14,7 +14,7 @@ def demo_workspace() -> tempfile.TemporaryDirectory:
     events_dir = root / "wiki" / "graphs" / "events" / "projects"
     events_dir.mkdir(parents=True)
     (events_dir / "DemoProject.jsonl").write_text(
-        Path("examples/demo/events/demo-project.jsonl").read_text(encoding="utf-8"),
+        Path("examples/archive/legacy-demo-fixtures/demo/events/demo-project.jsonl").read_text(encoding="utf-8"),
         encoding="utf-8",
     )
     build_db_main(["--repo", str(root), "--project", "DemoProject"])

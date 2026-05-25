@@ -339,7 +339,7 @@ class UnderstandingStoreTest(unittest.TestCase):
     def test_demo_understanding_update_example_is_valid(self):
         import json
 
-        path = Path("examples/demo/understanding/demo-understanding-update.json")
+        path = Path("examples/archive/legacy-demo-fixtures/demo/understanding/demo-understanding-update.json")
         update = json.loads(path.read_text(encoding="utf-8"))
         result = validate_understanding_update(update)
 
