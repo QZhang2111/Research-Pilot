@@ -10,7 +10,7 @@ from tools.build_project_graph_report import build_project_graph_report, write_p
 def demo_events() -> list[dict]:
     return [
         json.loads(line)
-        for line in Path("examples/demo/events/demo-project.jsonl").read_text(encoding="utf-8").splitlines()
+        for line in Path("examples/archive/legacy-demo-fixtures/demo/events/demo-project.jsonl").read_text(encoding="utf-8").splitlines()
         if line.strip()
     ]
 

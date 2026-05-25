@@ -4,10 +4,18 @@
 from __future__ import annotations
 
 import argparse
+from contextlib import closing
 import shutil
 import subprocess
 import sys
 from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from tools.research_dataset import connect_dataset, initialize_dataset
+from tools.research_dataset_import import import_demo_visual_affordance
 
 
 WORKSPACE_GITIGNORE = """# Research Pilot private/generated data
@@ -26,7 +34,7 @@ output/
 
 
 def repo_root() -> Path:
-    return Path(__file__).resolve().parents[1]
+    return ROOT
 
 
 def copy_template_tree(template_root: Path, target_root: Path, overwrite: bool) -> bool:
@@ -52,8 +60,17 @@ def copy_template_tree(template_root: Path, target_root: Path, overwrite: bool) 
 
 
 def copy_demo_workspace(repo: Path, target_root: Path, overwrite: bool) -> bool:
-    demo_root = repo / "examples" / "workspaces" / "demo-visual-affordance"
+    demo_root = repo / "examples" / "archive" / "seed-workspaces" / "demo-visual-affordance"
     return copy_template_tree(demo_root, target_root, overwrite)
+
+
+def project_exists_in_workspace_db(target_root: Path, project_id: str) -> bool:
+    try:
+        with closing(connect_dataset(target_root)) as connection:
+            row = connection.execute("SELECT 1 FROM projects WHERE project_id = ?", (project_id,)).fetchone()
+    except Exception:
+        return False
+    return row is not None
 
 
 def ensure_gitignore(target_root: Path) -> None:
@@ -110,19 +127,22 @@ def main(argv: list[str]) -> int:
 
     target_root.mkdir(parents=True, exist_ok=True)
     copy_template_tree(template_root, target_root, args.overwrite)
+    initialize_dataset(target_root)
     demo_copied = False
+    demo_imported = False
     if not args.no_demo:
         demo_copied = copy_demo_workspace(repo, target_root, args.overwrite)
+        if args.overwrite or not project_exists_in_workspace_db(target_root, "DemoVisualAffordance"):
+            import_demo_visual_affordance(target_root, reset=args.overwrite)
+            demo_imported = True
     ensure_gitignore(target_root)
     maybe_git_init(target_root, args.no_git)
 
     print(f"Research Pilot workspace initialized: {target_root}")
-    if demo_copied:
-        print("Demo project installed: DemoVisualAffordance")
-        print(
-            "Delete it by removing wiki/projects/DemoVisualAffordance and "
-            "wiki/graphs/events/projects/DemoVisualAffordance.jsonl."
-        )
+    print("Workspace dataset initialized: research-pilot.db")
+    if demo_copied or demo_imported:
+        print("Demo project installed and imported: DemoVisualAffordance")
+        print("Start a fresh workspace with --no-demo if you do not want the demo dataset.")
     print("")
     print("Next steps:")
     print(f"  cd {target_root}")

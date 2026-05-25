@@ -42,6 +42,7 @@ class PluginCommandTests(unittest.TestCase):
         self.assertIn("# Research Pilot Dashboard Workflow", text)
         self.assertIn("Chat-First Operation", text)
         self.assertIn("research_browser_server.py", text)
+        self.assertIn("examples/workspaces", text)
         self.assertIn("plugin_health.py", text)
         self.assertIn("http://127.0.0.1:", text)
         self.assertIn("open \"$URL\"", text)
@@ -93,7 +94,7 @@ class PluginCommandTests(unittest.TestCase):
             self.assertTrue(workflow.exists())
             self.assertIn("must not append graph events", workflow.read_text(encoding="utf-8"))
 
-    def test_docs_explain_default_demo_project_and_deletion(self) -> None:
+    def test_docs_explain_default_demo_project_and_no_demo_option(self) -> None:
         install = (REPO / "docs" / "guides" / "install.md").read_text(encoding="utf-8")
         dashboard = (REPO / "docs" / "guides" / "dashboard.md").read_text(encoding="utf-8")
         workspace = (REPO / "docs" / "guides" / "workspace.md").read_text(encoding="utf-8")
@@ -101,8 +102,9 @@ class PluginCommandTests(unittest.TestCase):
         for text in [install, dashboard, workspace, readme]:
             self.assertIn("DemoVisualAffordance", text)
         self.assertIn("--no-demo", install)
-        self.assertIn("rm -rf wiki/projects/DemoVisualAffordance", workspace)
-        self.assertIn("wiki/graphs/events/projects/DemoVisualAffordance.jsonl", workspace)
+        self.assertIn("--no-demo", workspace)
+        self.assertIn("research-pilot.db", workspace)
+        self.assertIn("project_id", workspace)
 
 
 if __name__ == "__main__":

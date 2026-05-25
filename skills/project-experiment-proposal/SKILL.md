@@ -6,6 +6,10 @@ argument-hint: "<project> <claim-id>"
 
 # Project Experiment Proposal
 
+Status: **transition**. Keep for compatibility with existing graph-claim
+proposal workflows. New product work should model project experiment design and
+completed result evidence, not proposal-only artifacts.
+
 Experiment proposals are planning artifacts, not graph evidence.
 
 Generate an experiment proposal:

@@ -85,7 +85,7 @@ Expected:
 
 ```json
 {
-  "output": "/Users/qing/Research/Research-Pilot/examples/workspaces/demo-visual-affordance/wiki/projects/DemoVisualAffordance/literature-rounds/demo-affordance-lineage/related-work-lineage.md",
+  "output": "$REPO_ROOT/examples/workspaces/demo-visual-affordance/wiki/projects/DemoVisualAffordance/literature-rounds/demo-affordance-lineage/related-work-lineage.md",
   "valid": true
 }
 ```

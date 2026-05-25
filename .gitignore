@@ -2,6 +2,7 @@
 __pycache__/
 *.py[codz]
 *$py.class
+.DS_Store
 
 # C extensions
 *.so
@@ -231,6 +232,7 @@ output/
 
 # Local plugin installation checkouts and symlink scratch
 .research-pilot-install/
+.superpowers/
 
 # Dashboard dependencies
 dashboard/node_modules/

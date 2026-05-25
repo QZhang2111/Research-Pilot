@@ -9,7 +9,7 @@ cd "$repo_root"
 rm -rf "$tmp_workspace"
 python3 tools/research_pilot_init.py "$tmp_workspace" --no-git >/tmp/research-pilot-mvp-b-init.log
 mkdir -p "$tmp_workspace/wiki/graphs/events/projects"
-cp examples/demo/events/demo-project.jsonl "$tmp_workspace/wiki/graphs/events/projects/DemoProject.jsonl"
+cp examples/archive/legacy-demo-fixtures/demo/events/demo-project.jsonl "$tmp_workspace/wiki/graphs/events/projects/DemoProject.jsonl"
 
 python3 tools/graph_validate.py --repo "$tmp_workspace" --project DemoProject
 python3 tools/build_graph_snapshot.py --repo "$tmp_workspace" --project DemoProject --generated-at 2026-05-11T00:01:00Z

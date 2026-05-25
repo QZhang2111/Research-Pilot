@@ -1,0 +1,382 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://research-pilot.local/schema/graph-maintenance-v1",
+  "title": "Research Pilot Graph Maintenance Read Model v1",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "project",
+    "graph_id",
+    "source",
+    "path",
+    "updated",
+    "open_deltas",
+    "accepted_history",
+    "paper_contributions",
+    "review_queue",
+    "claim_paths"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "graph-maintenance-v1"
+    },
+    "project": {
+      "type": "string"
+    },
+    "graph_id": {
+      "type": "string"
+    },
+    "source": {
+      "const": "sqlite"
+    },
+    "path": {
+      "type": "string"
+    },
+    "updated": {
+      "type": "string"
+    },
+    "open_deltas": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/delta"
+      }
+    },
+    "accepted_history": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/delta"
+      }
+    },
+    "paper_contributions": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/paperContribution"
+      }
+    },
+    "review_queue": {
+      "type": "object",
+      "required": ["nodes", "links", "deltas"],
+      "properties": {
+        "nodes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/nodeCard"
+          }
+        },
+        "links": {
+          "type": "array"
+        },
+        "deltas": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/delta"
+          }
+        }
+      }
+    },
+    "claim_paths": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/claimPath"
+      }
+    }
+  },
+  "$defs": {
+    "deltaLifecycleStatus": {
+      "type": "string",
+      "enum": ["proposed", "accepted", "rejected", "parked", "revised"]
+    },
+    "evolutionType": {
+      "type": "string",
+      "enum": [
+        "add",
+        "refine",
+        "split",
+        "merge",
+        "promote",
+        "demote",
+        "reframe",
+        "decompose",
+        "retire",
+        "connect",
+        "bound",
+        "clarify",
+        "clarify_translation",
+        "strengthen",
+        "weaken",
+        ""
+      ]
+    },
+    "delta": {
+      "type": "object",
+      "required": [
+        "id",
+        "global_id",
+        "source_graph_id",
+        "source_dossier",
+        "operation",
+        "evolution_type",
+        "summary",
+        "source_paper_nodes",
+        "affected_nodes",
+        "affected_links",
+        "status",
+        "lifecycle_status",
+        "decision",
+        "human_review",
+        "created_at",
+        "decided_at"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "global_id": {
+          "type": "string"
+        },
+        "source_graph_id": {
+          "type": "string"
+        },
+        "source_dossier": {
+          "type": "string"
+        },
+        "operation": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "summary": {
+          "type": "string"
+        },
+        "evolution_type": {
+          "$ref": "#/$defs/evolutionType"
+        },
+        "rationale": {
+          "type": "string"
+        },
+        "before": {
+          "type": "object"
+        },
+        "after": {
+          "type": "object"
+        },
+        "caused_by": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "supersedes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "source_paper_nodes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "affected_nodes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "affected_links": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "status": {
+          "type": "string"
+        },
+        "lifecycle_status": {
+          "$ref": "#/$defs/deltaLifecycleStatus"
+        },
+        "decision": {
+          "type": "string",
+          "enum": ["pending", "accepted", "rejected", "parked", "revised"]
+        },
+        "human_review": {
+          "type": "string",
+          "enum": ["pending", "approved", "rejected"]
+        },
+        "created_at": {
+          "type": "string"
+        },
+        "decided_at": {
+          "type": "string"
+        }
+      }
+    },
+    "nodeCard": {
+      "type": "object",
+      "required": ["id", "global_id", "kind", "label", "status", "lifecycle_status", "confidence", "human_review"],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "global_id": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "subtitle": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "lifecycle_status": {
+          "type": "string"
+        },
+        "supersedes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "superseded_by": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "derived_from": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "confidence": {
+          "type": "string"
+        },
+        "human_review": {
+          "type": "string"
+        },
+        "bounds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "metadata": {
+          "type": "object"
+        }
+      }
+    },
+    "paperContribution": {
+      "type": "object",
+      "required": [
+        "source_dossier",
+        "source_graph_id",
+        "delta_count",
+        "open_count",
+        "accepted_count",
+        "rejected_count",
+        "affected",
+        "deltas"
+      ],
+      "properties": {
+        "source_dossier": {
+          "type": "string"
+        },
+        "source_graph_id": {
+          "type": "string"
+        },
+        "delta_count": {
+          "type": "integer"
+        },
+        "open_count": {
+          "type": "integer"
+        },
+        "accepted_count": {
+          "type": "integer"
+        },
+        "rejected_count": {
+          "type": "integer"
+        },
+        "affected": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "deltas": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "claimPath": {
+      "type": "object",
+      "required": [
+        "claim",
+        "supporting_links",
+        "challenging_links",
+        "qualifying_links",
+        "translation_links",
+        "direct_limitations",
+        "propagated_limitations",
+        "limitation_sources"
+      ],
+      "properties": {
+        "claim": {
+          "$ref": "#/$defs/nodeCard"
+        },
+        "supporting_links": {
+          "type": "array"
+        },
+        "challenging_links": {
+          "type": "array"
+        },
+        "qualifying_links": {
+          "type": "array"
+        },
+        "translation_links": {
+          "type": "array"
+        },
+        "direct_limitations": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/nodeCard"
+          }
+        },
+        "propagated_limitations": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/nodeCard"
+          }
+        },
+        "limitation_sources": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["limitation", "via"],
+            "properties": {
+              "limitation": {
+                "type": "string"
+              },
+              "via": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

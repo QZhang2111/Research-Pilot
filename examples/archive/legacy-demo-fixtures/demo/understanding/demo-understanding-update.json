@@ -1,0 +1,90 @@
+{
+  "actor": "agent",
+  "changed_claims": [
+    {
+      "challenging_sources": [],
+      "change": "qualified",
+      "claim_id": "C-demo-affordance-prior",
+      "status": "weak",
+      "supporting_sources": [
+        "S-demo-luo2022-agd20k"
+      ],
+      "text": "Affordance models may capture object-use priors, but current evidence does not prove causal interaction understanding.",
+      "weakness": "The support is indirect and benchmark-bound."
+    }
+  ],
+  "confidence": "agent-inferred",
+  "created_at": "2026-05-23T00:00:00Z",
+  "metadata": {
+    "example_only": true
+  },
+  "new_evidence": [
+    {
+      "evidence_id": "E-demo-agd20k-indirect",
+      "related_claims": [
+        "C-demo-affordance-prior"
+      ],
+      "source_refs": [
+        "S-demo-luo2022-agd20k"
+      ],
+      "text": "AGD20K-style affordance grounding supports affordance localization, but does not isolate causal interaction reasoning."
+    }
+  ],
+  "new_gaps": [
+    {
+      "gap_id": "G-demo-counterfactual-interaction",
+      "related_claims": [
+        "C-demo-affordance-prior"
+      ],
+      "related_sources": [
+        "S-demo-luo2022-agd20k"
+      ],
+      "text": "Need counterfactual tests that separate object co-occurrence from interaction understanding.",
+      "type": "missing evidence"
+    }
+  ],
+  "new_sources": [
+    {
+      "locator": "wiki/projects/DemoVisualAffordance/papers/luo2022-agd20k/index.md",
+      "related_claims": [
+        "C-demo-affordance-prior"
+      ],
+      "related_gaps": [
+        "G-demo-counterfactual-interaction"
+      ],
+      "relevance": "Useful for affordance grounding context, but indirect for causal interaction understanding.",
+      "source_id": "S-demo-luo2022-agd20k",
+      "status": "used",
+      "title": "Learning Affordance Grounding from Exocentric Images",
+      "type": "manual"
+    }
+  ],
+  "next_moves": [
+    {
+      "move_id": "N-demo-counterfactual-search",
+      "rationale": "The claim is weak because current evidence does not isolate interaction causality.",
+      "suggested_prompt": "Find papers that test affordance or interaction reasoning under counterfactual object-use settings.",
+      "text": "Search for counterfactual affordance or interaction-reasoning benchmarks.",
+      "type": "search"
+    }
+  ],
+  "project_id": "DemoVisualAffordance",
+  "recent_change_summary": "Qualified the affordance-prior claim as weak and added a counterfactual interaction evidence gap.",
+  "schema_version": "understanding-update-v1",
+  "source_refs": [
+    "wiki/projects/DemoVisualAffordance/papers/luo2022-agd20k/index.md"
+  ],
+  "status_changes": [
+    {
+      "reason": "Evidence supports affordance grounding but not causal interaction understanding.",
+      "status": "weak",
+      "target_id": "C-demo-affordance-prior",
+      "target_type": "claim"
+    }
+  ],
+  "task": {
+    "kind": "check_claim",
+    "summary": "Checked whether affordance grounding evidence supports interaction-understanding claims."
+  },
+  "update_id": "UU-demo-0001"
+}

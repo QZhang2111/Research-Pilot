@@ -7,6 +7,10 @@ argument-hint: "[workspace_path] [port]"
 
 Open the Research Pilot dashboard for a workspace. This is an agent workflow document, not a guaranteed Codex slash command registration.
 
+Status: **chat-first shim**. Keep this command document as an installable
+fallback route. The dashboard remains a read-only observer over workspace
+dataset/read models; command visibility is not required for normal use.
+
 ## Arguments
 
 - `workspace_path`: optional path to the private research workspace.
@@ -15,6 +19,7 @@ Open the Research Pilot dashboard for a workspace. This is an agent workflow doc
 If no workspace path is provided:
 
 - use the current directory if it is an initialized Research Pilot workspace;
+- if the current directory is the Research Pilot plugin repo, use `examples/workspaces` as the public example workspace;
 - otherwise ask for one concise workspace path.
 
 ## Plugin Root

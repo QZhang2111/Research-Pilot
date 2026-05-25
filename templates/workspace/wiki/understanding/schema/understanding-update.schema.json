@@ -1,0 +1,149 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://research-pilot.local/schema/understanding-update-v1",
+  "title": "Research Pilot Understanding Update v1",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "update_id",
+    "project_id",
+    "created_at",
+    "actor",
+    "task",
+    "source_refs",
+    "recent_change_summary",
+    "confidence"
+  ],
+  "properties": {
+    "schema_version": { "const": "understanding-update-v1" },
+    "update_id": { "type": "string", "minLength": 1 },
+    "project_id": { "type": "string", "minLength": 1 },
+    "created_at": { "type": "string", "minLength": 1 },
+    "actor": { "type": "string", "enum": ["agent", "human", "system"] },
+    "task": {
+      "type": "object",
+      "required": ["kind", "summary"],
+      "properties": {
+        "kind": { "$ref": "#/$defs/taskKind" },
+        "summary": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": true
+    },
+    "source_refs": { "type": "array", "items": { "type": "string" } },
+    "new_sources": { "type": "array", "items": { "$ref": "#/$defs/sourceRecord" } },
+    "changed_claims": { "type": "array", "items": { "$ref": "#/$defs/claimChange" } },
+    "new_evidence": { "type": "array", "items": { "$ref": "#/$defs/evidenceRecord" } },
+    "new_gaps": { "type": "array", "items": { "$ref": "#/$defs/gapRecord" } },
+    "status_changes": { "type": "array", "items": { "$ref": "#/$defs/statusChange" } },
+    "recent_change_summary": { "type": "string", "minLength": 1 },
+    "next_moves": { "type": "array", "items": { "$ref": "#/$defs/nextMove" } },
+    "confidence": { "$ref": "#/$defs/confidenceStatus" },
+    "metadata": { "type": "object" }
+  },
+  "$defs": {
+    "taskKind": {
+      "type": "string",
+      "enum": [
+        "read_source",
+        "skim_source",
+        "summarize_source",
+        "compare_sources",
+        "find_related_work",
+        "check_claim",
+        "review_experiment",
+        "discuss_direction",
+        "identify_gap",
+        "plan_next_work",
+        "draft_research_text",
+        "manual_note"
+      ]
+    },
+    "sourceType": {
+      "type": "string",
+      "enum": ["pdf", "url", "arxiv", "doi", "markdown_note", "experiment_result", "zotero_item", "manual"]
+    },
+    "sourceStatus": {
+      "type": "string",
+      "enum": ["seen", "skimmed", "read", "used"]
+    },
+    "confidenceStatus": {
+      "type": "string",
+      "enum": ["agent-inferred", "source-backed", "user-confirmed", "contested", "weak", "stale"]
+    },
+    "sourceRecord": {
+      "type": "object",
+      "required": ["source_id", "type", "title", "status"],
+      "properties": {
+        "source_id": { "type": "string", "minLength": 1 },
+        "type": { "$ref": "#/$defs/sourceType" },
+        "locator": { "type": "string" },
+        "title": { "type": "string", "minLength": 1 },
+        "status": { "$ref": "#/$defs/sourceStatus" },
+        "relevance": { "type": "string" },
+        "related_claims": { "type": "array", "items": { "type": "string" } },
+        "related_gaps": { "type": "array", "items": { "type": "string" } }
+      },
+      "additionalProperties": true
+    },
+    "claimChange": {
+      "type": "object",
+      "required": ["claim_id", "text"],
+      "properties": {
+        "claim_id": { "type": "string", "minLength": 1 },
+        "text": { "type": "string", "minLength": 1 },
+        "change": { "type": "string" },
+        "status": { "$ref": "#/$defs/confidenceStatus" },
+        "supporting_sources": { "type": "array", "items": { "type": "string" } },
+        "challenging_sources": { "type": "array", "items": { "type": "string" } },
+        "weakness": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "evidenceRecord": {
+      "type": "object",
+      "required": ["evidence_id", "text"],
+      "properties": {
+        "evidence_id": { "type": "string", "minLength": 1 },
+        "text": { "type": "string", "minLength": 1 },
+        "source_refs": { "type": "array", "items": { "type": "string" } },
+        "related_claims": { "type": "array", "items": { "type": "string" } }
+      },
+      "additionalProperties": true
+    },
+    "gapRecord": {
+      "type": "object",
+      "required": ["gap_id", "text"],
+      "properties": {
+        "gap_id": { "type": "string", "minLength": 1 },
+        "text": { "type": "string", "minLength": 1 },
+        "type": { "type": "string" },
+        "related_claims": { "type": "array", "items": { "type": "string" } },
+        "related_sources": { "type": "array", "items": { "type": "string" } }
+      },
+      "additionalProperties": true
+    },
+    "statusChange": {
+      "type": "object",
+      "required": ["target_id", "status"],
+      "properties": {
+        "target_id": { "type": "string", "minLength": 1 },
+        "target_type": { "type": "string" },
+        "status": { "$ref": "#/$defs/confidenceStatus" },
+        "reason": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "nextMove": {
+      "type": "object",
+      "required": ["move_id", "type", "text"],
+      "properties": {
+        "move_id": { "type": "string", "minLength": 1 },
+        "type": { "type": "string", "enum": ["read", "search", "compare", "test", "revise", "write", "clarify"] },
+        "text": { "type": "string", "minLength": 1 },
+        "rationale": { "type": "string" },
+        "suggested_prompt": { "type": "string" }
+      },
+      "additionalProperties": true
+    }
+  }
+}

@@ -74,7 +74,7 @@ The agent can also resolve `PLUGIN_ROOT` and run:
 python3 "$PLUGIN_ROOT/tools/research_pilot_init.py" "$WORKSPACE_PATH"
 ```
 
-By default, initialization installs the deletable `DemoVisualAffordance` project so the dashboard has visible data immediately.
+By default, initialization creates `research-pilot.db` in the workspace and imports the `DemoVisualAffordance` project so the dashboard has visible data immediately.
 
 Clean workspace fallback:
 

@@ -10,14 +10,14 @@ from tools.graph_query_cli import query_link, query_node, query_open, query_summ
 def demo_events() -> list[dict]:
     return [
         json.loads(line)
-        for line in Path("examples/demo/events/demo-project.jsonl").read_text(encoding="utf-8").splitlines()
+        for line in Path("examples/archive/legacy-demo-fixtures/demo/events/demo-project.jsonl").read_text(encoding="utf-8").splitlines()
         if line.strip()
     ]
 
 
 class GraphCoreTest(unittest.TestCase):
     def test_validate_demo_events(self):
-        result = validate_event_files([Path("examples/demo/events/demo-project.jsonl")])
+        result = validate_event_files([Path("examples/archive/legacy-demo-fixtures/demo/events/demo-project.jsonl")])
 
         self.assertTrue(result["valid"], result["errors"])
         self.assertEqual(result["event_count"], 4)

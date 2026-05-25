@@ -12,12 +12,23 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class RelatedWorkLineageDashboardTest(unittest.TestCase):
+    def test_dashboard_source_uses_english_copy(self):
+        dashboard_files = [
+            path
+            for path in (ROOT / "dashboard").rglob("*")
+            if path.suffix in {".css", ".html", ".js", ".jsx"}
+            and "node_modules" not in path.parts
+        ]
+        for path in dashboard_files:
+            text = path.read_text(encoding="utf-8")
+            self.assertNotRegex(text, r"[\u4e00-\u9fff]", str(path))
+
     def test_lineage_page_exists_with_page_marker(self):
         html = (ROOT / "dashboard" / "lineage.html").read_text(encoding="utf-8")
 
         self.assertIn('data-page="lineage"', html)
-        self.assertIn('href="./lineage-atlas.bundle.css"', html)
-        self.assertIn('src="./lineage-atlas.bundle.js"', html)
+        self.assertIn('href="./lineage-atlas.bundle.css?v=english-dashboard-20260523"', html)
+        self.assertIn('src="./lineage-atlas.bundle.js?v=english-dashboard-20260523"', html)
 
     def test_app_contains_lineage_page_hooks(self):
         app = (ROOT / "dashboard" / "app.js").read_text(encoding="utf-8")
@@ -35,10 +46,99 @@ class RelatedWorkLineageDashboardTest(unittest.TestCase):
         self.assertNotIn("renderLineagePaperTable(selectedMap)", app)
         self.assertIn('state.page === "lineage"', app)
 
+    def test_project_page_contains_understanding_update_surface(self):
+        app = (ROOT / "dashboard" / "app.js").read_text(encoding="utf-8")
+        project_html = (ROOT / "dashboard" / "project.html").read_text(encoding="utf-8")
+
+        self.assertIn("loadProjectUnderstandingFromApi", app)
+        self.assertIn("renderProjectUnderstandingPanel", app)
+        self.assertIn("/api/project-understanding", app)
+        self.assertIn("Recent Understanding", app)
+        self.assertIn("Next Moves", app)
+        self.assertIn("app.js?v=english-dashboard-20260523", project_html)
+        self.assertIn("project-graph.bundle.js?v=english-dashboard-20260523", project_html)
+
+    def test_dashboard_pages_cache_bust_static_assets(self):
+        for path in (ROOT / "dashboard").glob("*.html"):
+            html = path.read_text(encoding="utf-8")
+            self.assertNotIn('src="./app.js"', html, str(path))
+            self.assertNotIn('href="./styles.css"', html, str(path))
+            if "app.js" in html:
+                self.assertIn("app.js?v=english-dashboard-20260523", html, str(path))
+            if "styles.css" in html:
+                self.assertIn("styles.css?v=english-dashboard-20260523", html, str(path))
+            self.assertNotIn('href="./index.html"', html, str(path))
+            self.assertIn('href="./index.html?v=english-dashboard-20260523"', html, str(path))
+
+    def test_experiments_page_replaces_proposal_framing(self):
+        app = (ROOT / "dashboard" / "app.js").read_text(encoding="utf-8")
+        html = (ROOT / "dashboard" / "experiments.html").read_text(encoding="utf-8")
+        legacy_html = (ROOT / "dashboard" / "experiment-proposals.html").read_text(encoding="utf-8")
+
+        self.assertIn('data-page="experiments"', html)
+        self.assertIn("<title>Research Browser · Experiments</title>", html)
+        self.assertIn("function experimentsUrl(projectId)", app)
+        self.assertIn('current === "experiments"', app)
+        self.assertIn(">Experiments</a>", app)
+        self.assertIn("/api/experiments", app)
+        self.assertNotIn("Experiment Proposals</a>", app)
+        self.assertIn('data-page="experiments"', legacy_html)
+
+    def test_experiments_renderer_shows_designs_results_and_next_moves(self):
+        app = (ROOT / "dashboard" / "app.js").read_text(encoding="utf-8")
+
+        self.assertIn("async function loadExperimentsFromApi(projectId)", app)
+        self.assertIn("async function renderExperimentsPage()", app)
+        self.assertIn("function renderExperimentDesignCard(experiment)", app)
+        self.assertIn("function renderExperimentRunCard(run)", app)
+        self.assertIn("function formatExperimentListItem(label, item)", app)
+        self.assertIn("Experiment Evidence Summary", app)
+        self.assertIn("Active Experiment Designs", app)
+        self.assertIn("Results / Evidence", app)
+        self.assertIn("Next Experiment Moves", app)
+        self.assertIn("imported_paper_evidence", app)
+        self.assertIn("const model = await response.json();", app)
+        self.assertIn("model && typeof model === \"object\" ? model : emptyExperimentsModel(projectId)", app)
+        self.assertIn("!experiments.length && !runs.length && !nextMoves.length", app)
+        self.assertIn('class="experiment-evidence-type${importedClass}"', app)
+        self.assertIn('const importedClass = evidenceType === "imported_paper_evidence" ? " is-imported" : "";', app)
+        self.assertIn('return [item.name, item.value].filter(Boolean).join(": ");', app)
+        self.assertIn('return [title, item.path_or_url].filter(Boolean).join(": ");', app)
+        self.assertIn("Local experiment result", app)
+        self.assertNotIn("planned / pending / not yet graph evidence", app)
+
+    def test_dashboard_app_versions_page_urls(self):
+        app = (ROOT / "dashboard" / "app.js").read_text(encoding="utf-8")
+
+        self.assertIn('const DASHBOARD_PAGE_VERSION = "english-dashboard-20260523";', app)
+        self.assertIn('function dashboardPageUrl(pageName, params = {})', app)
+        self.assertIn('return `./${pageName}.html?${search.toString()}`;', app)
+        self.assertNotIn("`./project.html?project=", app)
+        self.assertNotIn("`./papers.html?", app)
+        self.assertNotIn("`./paper.html?project=", app)
+
+    def test_project_page_hides_old_workflow_panels(self):
+        app = (ROOT / "dashboard" / "app.js").read_text(encoding="utf-8")
+        project_start = app.index("async function renderProjectWorkspace()")
+        project_end = app.index("function hasProjectUnderstanding", project_start)
+        project_renderer = app[project_start:project_end]
+
+        self.assertNotIn("project-workspace-grid", project_renderer)
+        self.assertNotIn("Current Question", project_renderer)
+        self.assertNotIn("Search Status", project_renderer)
+        self.assertNotIn("renderHumanGatePanel", project_renderer)
+
     def test_dashboard_index_fetch_bypasses_browser_cache(self):
         app = (ROOT / "dashboard" / "app.js").read_text(encoding="utf-8")
 
         self.assertIn('fetch("/.dashboard/index.json", { cache: "no-store" })', app)
+
+    def test_query_params_are_parsed_defensively(self):
+        app = (ROOT / "dashboard" / "app.js").read_text(encoding="utf-8")
+
+        self.assertIn("function params(search = window.location.search)", app)
+        self.assertIn("catch (_error)", app)
+        self.assertIn("return new URLSearchParams()", app)
 
     def test_lineage_atlas_source_and_build_script_exist(self):
         package = json.loads((ROOT / "dashboard" / "package.json").read_text(encoding="utf-8"))

@@ -1,0 +1,19 @@
+[workspace]
+schema_version = "0.1"
+name = "Demo Visual Affordance Workspace"
+
+[paths]
+wiki = "wiki"
+graph_events = "wiki/graphs/events"
+graph_schema = "wiki/graphs/schema"
+generated = ".research-pilot/generated"
+
+[zotero]
+enabled = false
+
+[dashboard]
+enabled = true
+
+[project_lifecycle]
+default_maturity_stage = "project_shell"
+allow_project_shell_without_graph = true

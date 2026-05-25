@@ -385,7 +385,7 @@ function ClaimInspector({ claim, onOpenPaperGraph }) {
     return (
       <aside className="project-graph-inspector">
         <p className="eyebrow">Selected Claim Detail</p>
-        <h3>暂无 claim</h3>
+        <h3>No claim</h3>
       </aside>
     );
   }
@@ -393,23 +393,23 @@ function ClaimInspector({ claim, onOpenPaperGraph }) {
     <aside className="project-graph-inspector" aria-label="Selected claim Toulmin detail">
       <div className="project-graph-inspector-head">
         <p className="eyebrow">Selected Claim Detail</p>
-        <h3>{claim.id} 的 evidence / warrant / limitation</h3>
+        <h3>{claim.id} evidence / warrant / limitation</h3>
         <strong>{claim.label}</strong>
         <span>{claim.subtitle || "project claim"}</span>
       </div>
-      <InspectorLane title="Supporting Claims" items={claim.supportClaims} empty="暂无 supporting claim。" />
-      <InspectorLane title="Evidence / Grounds" items={claim.evidence} empty="暂无 evidence。" />
-      <InspectorLane title="Warrant / Bridge" items={claim.warrants} empty="暂无 explicit warrant。" />
-      <InspectorLane title="Limitations / Rebuttal" items={claim.limitations} empty="暂无 limitation。" />
+      <InspectorLane title="Supporting Claims" items={claim.supportClaims} empty="No supporting claim." />
+      <InspectorLane title="Evidence / Grounds" items={claim.evidence} empty="No evidence." />
+      <InspectorLane title="Warrant / Bridge" items={claim.warrants} empty="No explicit warrant." />
+      <InspectorLane title="Limitations / Rebuttal" items={claim.limitations} empty="No limitation." />
       <section className="project-graph-source-lane">
-        <p className="eyebrow">来自哪些 paper</p>
+        <p className="eyebrow">Source papers</p>
         <div>
           {(claim.sources || []).map((source) => (
             <button key={source.path || source.label} type="button" onClick={() => onOpenPaperGraph?.(source.path)}>
               {source.label}
             </button>
           ))}
-          {!claim.sources?.length ? <em>暂无 paper source。</em> : null}
+          {!claim.sources?.length ? <em>No paper source.</em> : null}
         </div>
       </section>
     </aside>
@@ -1020,8 +1020,8 @@ function PaperContributionApp({ graph }) {
       <div className="paper-contribution-panel is-empty">
         <div>
           <p className="eyebrow">Paper Contribution</p>
-          <h3>选择 paper source</h3>
-          <span>点击 claim detail 里的 paper，查看 Paper Argument -&gt; Project Impact。</span>
+          <h3>Select a paper source</h3>
+          <span>Select a paper in claim detail to inspect Paper Argument -&gt; Project Impact.</span>
         </div>
       </div>
     );
@@ -1072,7 +1072,7 @@ function PaperQuestionThread({ questions }) {
             <strong>{question.label}</strong>
           </article>
         ))}
-        {!questions?.length ? <em>未抽取 paper question。</em> : null}
+        {!questions?.length ? <em>No paper questions extracted.</em> : null}
       </div>
     </section>
   );
@@ -1095,7 +1095,7 @@ function PaperClaimList({ claims, selectedClaimId, onSelectClaim }) {
             <em>E{claim.evidence.length} W{claim.warrants.length} L{claim.limitations.length}</em>
           </button>
         ))}
-        {!claims?.length ? <em>未抽取 paper claim。</em> : null}
+        {!claims?.length ? <em>No paper claims extracted.</em> : null}
       </div>
     </aside>
   );
@@ -1106,7 +1106,7 @@ function PaperClaimDetail({ claim }) {
     return (
       <section className="paper-claim-detail-panel">
         <p className="eyebrow">Selected Paper Claim</p>
-        <h3>暂无 claim</h3>
+        <h3>No claim</h3>
       </section>
     );
   }
@@ -1118,10 +1118,10 @@ function PaperClaimDetail({ claim }) {
         {claim.subtitle ? <em>{claim.subtitle}</em> : null}
       </div>
       <div className="paper-claim-support-grid">
-        <PaperSupportLane title="Supporting Claims" tone="claim" items={claim.supportClaims} empty="无 supporting claim。" />
-        <PaperSupportLane title="Evidence / Grounds" tone="evidence" items={claim.evidence} empty="无 evidence。" />
-        <PaperSupportLane title="Warrant / Bridge" tone="warrant" items={claim.warrants} empty="无 warrant。" />
-        <PaperSupportLane title="Limitations / Boundary" tone="limitation" items={claim.limitations} empty="无 limitation。" />
+        <PaperSupportLane title="Supporting Claims" tone="claim" items={claim.supportClaims} empty="No supporting claim." />
+        <PaperSupportLane title="Evidence / Grounds" tone="evidence" items={claim.evidence} empty="No evidence." />
+        <PaperSupportLane title="Warrant / Bridge" tone="warrant" items={claim.warrants} empty="No warrant." />
+        <PaperSupportLane title="Limitations / Boundary" tone="limitation" items={claim.limitations} empty="No limitation." />
       </div>
     </section>
   );
@@ -1152,7 +1152,7 @@ function TranslationBridge({ translations, relevantTranslations }) {
       <div>
         <p className="eyebrow">Translation Bridge</p>
         <h3>Paper -&gt; Project</h3>
-        <span>{relevantTranslations.length ? "当前 claim 相关 bridge" : "全部 bridge"}</span>
+        <span>{relevantTranslations.length ? "Current claim bridges" : "All bridges"}</span>
       </div>
       <div className="translation-bridge-list">
         {(rows || []).map((item) => (
@@ -1163,7 +1163,7 @@ function TranslationBridge({ translations, relevantTranslations }) {
             {item.caveat ? <em>{item.caveat}</em> : null}
           </article>
         ))}
-        {!rows?.length ? <em>未抽取 translation bridge。</em> : null}
+        {!rows?.length ? <em>No translation bridge extracted.</em> : null}
       </div>
     </aside>
   );
@@ -1176,7 +1176,7 @@ function PaperImpactLedger({ deltas, relevantDeltas }) {
       <div>
         <p className="eyebrow">Delta / Human Gate</p>
         <h3>Project impact audit</h3>
-        <span>{relevantDeltas.length ? "当前 claim 相关 delta" : "全部 delta"}</span>
+        <span>{relevantDeltas.length ? "Current claim deltas" : "All deltas"}</span>
       </div>
       <div>
         {(rows || []).map((item) => (
@@ -1187,7 +1187,7 @@ function PaperImpactLedger({ deltas, relevantDeltas }) {
             {item.proposed_change ? <p>{item.proposed_change}</p> : null}
           </article>
         ))}
-        {!rows?.length ? <em>暂无 delta。</em> : null}
+        {!rows?.length ? <em>No delta.</em> : null}
       </div>
     </section>
   );

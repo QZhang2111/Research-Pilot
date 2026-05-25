@@ -9,7 +9,7 @@ cd "$repo_root"
 rm -rf "$tmp_workspace"
 python3 tools/research_pilot_init.py "$tmp_workspace" --no-git >/tmp/research-pilot-mvp-f-init.log
 mkdir -p "$tmp_workspace/wiki/graphs/events/projects"
-cp examples/demo/events/demo-project.jsonl "$tmp_workspace/wiki/graphs/events/projects/DemoProject.jsonl"
+cp examples/archive/legacy-demo-fixtures/demo/events/demo-project.jsonl "$tmp_workspace/wiki/graphs/events/projects/DemoProject.jsonl"
 python3 tools/build_graph_db.py --repo "$tmp_workspace" --project DemoProject >/tmp/research-pilot-mvp-f-db.log
 python3 tools/project_gap_cli.py detect --repo "$tmp_workspace" --project DemoProject --json >/tmp/research-pilot-mvp-f-gaps.json
 python3 tools/project_next_action_cli.py suggest --repo "$tmp_workspace" --project DemoProject --json >/tmp/research-pilot-mvp-f-next.json

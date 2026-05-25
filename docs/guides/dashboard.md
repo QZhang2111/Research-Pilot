@@ -7,6 +7,7 @@ It reads:
 - `.dashboard/index.json`;
 - graph snapshots;
 - `wiki/graphs/graph.db`;
+- project understanding updates from `wiki/understanding/events/<Project>.jsonl`;
 - related-work lineage artifacts under `wiki/projects/<Project>/literature-rounds/<Round>/related-work-lineage.json`;
 - project markdown.
 
@@ -15,6 +16,10 @@ Graph truth remains:
 ```text
 wiki/graphs/events/**/*.jsonl
 ```
+
+Project understanding updates are durable agent memory, but not graph truth. The project page renders them as read-only recent understanding and next moves.
+
+Generated read models remain disposable. If `.dashboard/index.json` is missing, the local server rebuilds it when the dashboard requests it.
 
 `lineage.html` shows paper-only related-work technical lanes. It is read-only and does not write PUG truth.
 
@@ -31,11 +36,21 @@ python3 tools/build_dashboard_index.py --repo "$WORKSPACE" --output .dashboard/i
 python3 tools/research_browser_server.py --repo "$WORKSPACE" --port 8765
 ```
 
+Public example workspace:
+
+```bash
+python3 tools/research_browser_server.py --repo examples/workspaces --port 8765
+```
+
+That example workspace has `research-pilot.db` at its root and includes `DemoVisualAffordance` as one project in the DB.
+
 ## Project Display Semantics
 
 Project cards prefer `overview.md` display metadata. `project-query-pack.md` title is only a fallback when `overview.md` is missing.
 
 Projects with `demo: true`, such as `DemoVisualAffordance`, display a `Demo` badge; this marks example data only.
+
+Example workspace source should not include `.dashboard/`, `wiki/graphs/graph.db`, or graph snapshots. Build or serve commands recreate those artifacts locally.
 
 Dashboard question labels distinguish:
 

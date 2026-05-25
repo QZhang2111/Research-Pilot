@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://research-pilot.local/schema/graph-snapshot-v1",
+  "title": "Research Pilot Graph Snapshot v1",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "graph_id",
+    "generated_at",
+    "nodes",
+    "links",
+    "deltas",
+    "event_count"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "graph-snapshot-v1"
+    },
+    "graph_id": {
+      "type": "string"
+    },
+    "generated_at": {
+      "type": "string"
+    },
+    "nodes": {
+      "type": "array"
+    },
+    "links": {
+      "type": "array"
+    },
+    "deltas": {
+      "type": "array"
+    },
+    "event_count": {
+      "type": "integer",
+      "minimum": 0
+    }
+  }
+}
