@@ -17,4 +17,4 @@ Plugin repo contains capabilities. User workspace contains private research memo
 
 Do not move private research content into the public plugin repo.
 
-Program context may guide agent interpretation, but it is not evidence, not graph truth, and not a decision engine. Project changes still need explicit user direction and normal project graph gates.
+Program context may guide agent interpretation, but it is not evidence, not graph truth, and not a decision engine. Normal project changes need explicit user direction plus project-memory / UnderstandingUpdate gates. Graph gates apply only when accepting strict-review graph truth changes.
