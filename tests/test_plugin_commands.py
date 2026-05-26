@@ -19,7 +19,8 @@ class PluginCommandTests(unittest.TestCase):
         self.assertIn("description:", text)
         self.assertIn("# Research Pilot Init Workflow", text)
         self.assertIn("research_pilot_init.py", text)
-        self.assertIn("Slash command visibility is not required", text)
+        self.assertIn("agent-internal compatibility runbook", text)
+        self.assertIn("natural-language intent", text)
         self.assertIn("research-pilot-first-run", text)
         self.assertNotIn("/Users/" + "qing", text)
         self.assertNotIn("Personal" + "ResearchWiki", text)
@@ -28,11 +29,14 @@ class PluginCommandTests(unittest.TestCase):
         text = (REPO / "README.md").read_text()
         quick_start = text.split("## 🚀 Quick Start", 1)[1].split("## 🧪 What You Can Ask", 1)[0]
 
-        self.assertIn("Use Research Pilot to initialize ~/Research/MyResearchWiki.", quick_start)
-        self.assertIn("chat-first", quick_start)
-        self.assertIn("do not register new top-level slash commands", quick_start)
-        self.assertRegex(quick_start, re.compile(r"Manual fallback:.*research-pilot-init", re.S))
-        self.assertNotIn("python3 tools/research_pilot_init.py", quick_start)
+        self.assertIn("Use Research Pilot to track this project.", quick_start)
+        self.assertIn("local workspace", quick_start.lower())
+        self.assertIn("research-pilot.db", quick_start)
+        self.assertNotIn("Use Research Pilot to initialize", quick_start)
+        self.assertNotIn("Manual fallback", quick_start)
+        self.assertNotIn("research-pilot-init", quick_start)
+        self.assertNotIn("human-gated graph update", quick_start)
+        self.assertNotIn("do not register new top-level slash commands", quick_start)
 
     def test_research_dashboard_command_exists(self) -> None:
         command = REPO / "commands" / "research-dashboard.md"
@@ -40,7 +44,8 @@ class PluginCommandTests(unittest.TestCase):
 
         self.assertIn("description:", text)
         self.assertIn("# Research Pilot Dashboard Workflow", text)
-        self.assertIn("Chat-First Operation", text)
+        self.assertIn("agent-internal compatibility runbook", text)
+        self.assertIn("natural-language intent", text)
         self.assertIn("research_browser_server.py", text)
         self.assertIn("examples/workspaces", text)
         self.assertIn("plugin_health.py", text)
@@ -53,8 +58,9 @@ class PluginCommandTests(unittest.TestCase):
         text = (REPO / "README.md").read_text()
         quick_start = text.split("## 🚀 Quick Start", 1)[1].split("## 🧪 What You Can Ask", 1)[0]
 
-        self.assertIn("Use Research Pilot to open the dashboard for ~/Research/MyResearchWiki.", quick_start)
-        self.assertIn("Slash command visibility is not required", quick_start)
+        self.assertIn("Open the Research Pilot dashboard.", quick_start)
+        self.assertIn("agent starts or reuses the local dashboard server", quick_start)
+        self.assertNotIn("Slash command visibility is not required", quick_start)
         self.assertNotIn("python3 ~/.research-pilot/repo/tools/build_dashboard_index.py", quick_start)
 
     def test_related_work_lineage_skill_and_workflow_exist(self) -> None:

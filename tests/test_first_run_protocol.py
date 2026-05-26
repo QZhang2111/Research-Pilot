@@ -12,11 +12,18 @@ class FirstRunProtocolTest(unittest.TestCase):
 
         self.assertTrue(skill.exists())
         self.assertTrue(workflow.exists())
-        self.assertIn("first project graph update", skill.read_text(encoding="utf-8"))
-        self.assertIn("human gate", workflow.read_text(encoding="utf-8"))
-        self.assertIn("project shell", skill.read_text(encoding="utf-8"))
-        self.assertIn("project shell", workflow.read_text(encoding="utf-8"))
-        self.assertIn("defer", workflow.read_text(encoding="utf-8").lower())
+        skill_text = skill.read_text(encoding="utf-8")
+        workflow_text = workflow.read_text(encoding="utf-8")
+        self.assertIn("research-pilot.db", skill_text)
+        self.assertIn("research-pilot.db", workflow_text)
+        self.assertIn("initial project brief", skill_text.lower())
+        self.assertIn("initial project brief", workflow_text.lower())
+        self.assertIn("UnderstandingUpdate", skill_text)
+        self.assertIn("UnderstandingUpdate", workflow_text)
+        self.assertIn("strict review", skill_text.lower())
+        self.assertIn("strict review", workflow_text.lower())
+        self.assertNotIn("first project graph update", skill_text)
+        self.assertNotIn("First graph update", workflow_text)
 
     def test_workspace_init_installs_first_run_workflow(self):
         with tempfile.TemporaryDirectory() as tmp:
