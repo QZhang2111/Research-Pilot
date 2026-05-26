@@ -487,8 +487,185 @@ def _build_understanding(root: Path, project_id: str, layer: str, focus_id: str,
     raise ValueError(f"unknown understanding layer: {layer}")
 
 
+def _literature_node_id(kind: str, raw_id: str) -> str:
+    return f"{kind}:{_slug(raw_id)}"
+
+
+def _literature_route_raw_id(route: dict[str, Any]) -> str:
+    metadata = route.get("metadata") or {}
+    return str(route.get("id") or route.get("lane_id") or metadata.get("id") or route.get("label") or "")
+
+
+def _literature_route_local_id(route: dict[str, Any]) -> str:
+    metadata = route.get("metadata") or {}
+    return str(metadata.get("id") or route.get("id") or route.get("lane_id") or "")
+
+
+def _literature_route_status(route: dict[str, Any]) -> str:
+    return str(route.get("status") or route.get("review_status") or "")
+
+
+def _literature_paper_source_id(paper: dict[str, Any]) -> str:
+    return str(paper.get("source_id") or paper.get("id") or paper.get("item_id") or paper.get("title") or "unknown")
+
+
+def _literature_paper_node_id(paper: dict[str, Any]) -> str:
+    return _source_graph_id(_literature_paper_source_id(paper))
+
+
+def _literature_paper_lookup(papers: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    lookup: dict[str, dict[str, Any]] = {}
+    for paper in papers:
+        for key in (paper.get("source_id"), paper.get("id"), paper.get("item_id"), paper.get("title")):
+            if key:
+                lookup[str(key)] = paper
+    return lookup
+
+
+def _literature_paper_node(paper: dict[str, Any], *, drill: bool = True) -> dict[str, Any]:
+    source_id = _literature_paper_source_id(paper)
+    graph_id = _source_graph_id(source_id)
+    return {
+        "id": graph_id,
+        "entity_type": "source",
+        "source_id": source_id,
+        "local_id": str(paper.get("id") or source_id),
+        "label": str(paper.get("title") or paper.get("label") or source_id)[:120],
+        "subtitle": str(paper.get("year") or paper.get("role") or "paper"),
+        "status": str(paper.get("status") or paper.get("review_status") or ""),
+        "confidence": "",
+        "drill": {"mode": "literature", "layer": "literature_paper_focus", "focus_id": graph_id} if drill else None,
+        "inspector": {"selected_id": graph_id},
+        "metadata": paper,
+    }
+
+
 def _build_literature(root: Path, project_id: str, layer: str, focus_id: str, selected_id: str) -> dict[str, Any]:
-    raise NotImplementedError
+    model = build_literature_model(root, project_id)
+    payload = _base_payload(project_id, "literature", layer, focus_id, selected_id)
+    routes = model.get("routes") or []
+    papers = model.get("papers") or []
+    edges = model.get("explicit_edges") or []
+    paper_by_key = _literature_paper_lookup(papers)
+
+    if layer == "literature_overview":
+        nodes = []
+        for route in routes:
+            route_id = _literature_route_raw_id(route)
+            graph_id = _literature_node_id("literature_lane", route_id)
+            nodes.append(
+                {
+                    "id": graph_id,
+                    "entity_type": "literature_lane",
+                    "db_id": route.get("lane_id") or route_id,
+                    "local_id": _literature_route_local_id(route),
+                    "label": str(route.get("label") or route_id)[:120],
+                    "subtitle": _literature_route_status(route) or "route",
+                    "status": _literature_route_status(route),
+                    "confidence": "",
+                    "drill": {"mode": "literature", "layer": "literature_route_focus", "focus_id": graph_id},
+                    "inspector": {"selected_id": graph_id},
+                    "metadata": route,
+                }
+            )
+        nodes.extend(_literature_paper_node(paper) for paper in papers)
+        payload["canvas"]["nodes"] = nodes
+        payload["canvas"]["edges"] = [
+            {
+                "id": f"literature_edge:{index}",
+                "source": _literature_paper_node_id(source_paper),
+                "target": _literature_paper_node_id(target_paper),
+                "relation": str(edge.get("relation") or "related"),
+                "label": str(edge.get("relation") or "related"),
+                "metadata": edge,
+            }
+            for index, edge in enumerate(edges)
+            for source_paper in [paper_by_key.get(str(edge.get("source") or edge.get("from_item_id") or ""))]
+            for target_paper in [paper_by_key.get(str(edge.get("target") or edge.get("to_item_id") or ""))]
+            if source_paper and target_paper
+        ]
+        payload["inspector"] = {
+            "kind": "overview",
+            "title": "Literature Routes",
+            "summary": "Paper-only lineage that supports but does not replace Project Understanding.",
+            "sections": [
+                {
+                    "title": "Routes",
+                    "kind": "route_list",
+                    "items": [
+                        {
+                            "id": _literature_node_id("literature_lane", _literature_route_raw_id(route)),
+                            "label": route.get("label") or _literature_route_local_id(route),
+                            "paper_count": sum(
+                                1
+                                for paper in papers
+                                if paper.get("lane_id") == route.get("id")
+                                or paper.get("route") == (route.get("metadata") or {}).get("id")
+                            ),
+                        }
+                        for route in routes
+                    ],
+                }
+            ],
+            "actions": [],
+        }
+        return payload
+
+    if layer == "literature_route_focus":
+        route_key = _strip_prefix(focus_id, "literature_lane:")
+        route = next((item for item in routes if _slug(_literature_route_raw_id(item)) == route_key), None)
+        if not route:
+            raise ValueError(f"unknown literature route: {focus_id}")
+        route_raw_id = _literature_route_raw_id(route)
+        route_local_id = _literature_route_local_id(route)
+        route_papers = [
+            paper
+            for paper in papers
+            if paper.get("lane_id") == route_raw_id or paper.get("route") == route_local_id or route_local_id in (paper.get("route_ids") or [])
+        ]
+        payload["focus_id"] = focus_id
+        payload["canvas"]["nodes"] = [
+            {
+                "id": focus_id,
+                "entity_type": "literature_lane",
+                "db_id": route.get("lane_id") or route_raw_id,
+                "local_id": route_local_id,
+                "label": str(route.get("label") or route_local_id or route_raw_id)[:120],
+                "subtitle": "route",
+                "status": _literature_route_status(route),
+                "confidence": "",
+                "drill": None,
+                "inspector": {"selected_id": focus_id},
+                "metadata": route,
+            },
+            *[_literature_paper_node(paper) for paper in route_papers],
+        ]
+        payload["inspector"] = {
+            "kind": "route_detail",
+            "title": route.get("label") or route_local_id or "Route",
+            "summary": route.get("summary") or route.get("description") or "",
+            "sections": [{"title": "Papers", "kind": "paper_list", "items": route_papers}],
+            "actions": [],
+        }
+        return payload
+
+    if layer == "literature_paper_focus":
+        source_key = _strip_prefix(focus_id, "source:")
+        paper = next((item for item in papers if _literature_paper_source_id(item) == source_key), None)
+        if not paper:
+            raise ValueError(f"unknown literature paper: {focus_id}")
+        payload["focus_id"] = focus_id
+        payload["canvas"]["nodes"] = [_literature_paper_node(paper, drill=False)]
+        payload["inspector"] = {
+            "kind": "paper_detail",
+            "title": paper.get("title") or source_key,
+            "summary": paper.get("summary") or paper.get("field_position") or "",
+            "sections": [{"title": "Source Metadata", "kind": "source_metadata", "items": [paper]}],
+            "actions": [{"label": "Open Paper Detail", "kind": "open_page", "target": {"page": "paper", "source_id": source_key}}],
+        }
+        return payload
+
+    raise ValueError(f"unknown literature layer: {layer}")
 
 
 def _build_experiments(root: Path, project_id: str, layer: str, focus_id: str, selected_id: str) -> dict[str, Any]:
