@@ -29,6 +29,7 @@ from tools.research_dataset_read_models import (
     project_exists_in_dataset,
 )
 from tools.understanding_store import build_project_understanding
+from tools.workspace_graph_read_models import build_workspace_graph_model
 
 
 DEFAULT_INDEX_PATH = ".dashboard/index.json"
@@ -393,6 +394,36 @@ def handle_experiments_request(root: Path, request_path: str) -> Tuple[int, byte
     return json_response(model)
 
 
+def handle_workspace_graph_request(root: Path, request_path: str) -> Tuple[int, bytes]:
+    query = parse_qs(urlsplit(request_path).query)
+    project_id = query.get("project", [""])[0].strip()
+    if not valid_project_id(project_id):
+        return json_response({"error": "Not Found"}, HTTPStatus.NOT_FOUND)
+    mode = query.get("mode", ["understanding"])[0].strip() or "understanding"
+    layer = query.get("layer", [""])[0].strip()
+    focus_id = query.get("focus_id", [""])[0].strip()
+    selected_id = query.get("selected_id", [""])[0].strip()
+    try:
+        model = build_workspace_graph_model(
+            root.resolve(),
+            project_id,
+            mode=mode,
+            layer=layer,
+            focus_id=focus_id,
+            selected_id=selected_id,
+        )
+    except (ValueError, sqlite3.Error, json.JSONDecodeError) as exc:
+        return json_response(
+            {
+                "error": "Invalid workspace graph request",
+                "message": str(exc),
+                "schema_version": "workspace-graph-error-v1",
+            },
+            HTTPStatus.BAD_REQUEST,
+        )
+    return json_response(model)
+
+
 def handle_experiment_proposals_request(root: Path, request_path: str) -> Tuple[int, bytes]:
     project_id = parse_qs(urlsplit(request_path).query).get("project", [""])[0].strip()
     if not valid_project_id(project_id):
@@ -463,6 +494,8 @@ class ResearchBrowserHandler(SimpleHTTPRequestHandler):
             return
         if request_api_path == "/api/wiki-page":
             status, payload = handle_wiki_page_request(root, self.path)
+        elif request_api_path == "/api/workspace-graph":
+            status, payload = handle_workspace_graph_request(root, self.path)
         elif request_api_path == "/api/project-graph":
             status, payload = handle_project_graph_request(root, self.path)
         elif request_api_path == "/api/project-graph-maintenance":

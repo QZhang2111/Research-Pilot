@@ -7,6 +7,7 @@ from pathlib import Path
 
 from tools.research_dataset import initialize_dataset
 from tools.research_dataset_import import import_demo_visual_affordance
+from tools.research_browser_server import handle_workspace_graph_request
 from tools.workspace_graph_read_models import build_workspace_graph_model
 
 
@@ -159,6 +160,29 @@ class WorkspaceGraphReadModelsTest(unittest.TestCase):
     def test_invalid_layer_raises_value_error(self):
         with self.assertRaises(ValueError):
             build_workspace_graph_model(self.root, PROJECT_ID, mode="experiments", layer="run_detail")
+
+    def test_workspace_graph_handler_returns_json(self):
+        status, payload = handle_workspace_graph_request(
+            self.root,
+            "/api/workspace-graph?project=DemoVisualAffordance&mode=experiments&layer=evaluation_overview",
+        )
+
+        self.assertEqual(HTTPStatus.OK, status)
+        data = json.loads(payload.decode("utf-8"))
+        self.assertEqual("workspace-graph-v1", data["schema_version"])
+        self.assertEqual("experiments", data["mode"])
+        self.assertEqual("evaluation_overview", data["layer"])
+
+    def test_workspace_graph_handler_rejects_invalid_layer(self):
+        status, payload = handle_workspace_graph_request(
+            self.root,
+            "/api/workspace-graph?project=DemoVisualAffordance&mode=experiments&layer=run_detail",
+        )
+
+        self.assertEqual(HTTPStatus.BAD_REQUEST, status)
+        data = json.loads(payload.decode("utf-8"))
+        self.assertEqual("workspace-graph-error-v1", data["schema_version"])
+        self.assertIn("unknown workspace graph layer", data["message"])
 
 
 if __name__ == "__main__":
