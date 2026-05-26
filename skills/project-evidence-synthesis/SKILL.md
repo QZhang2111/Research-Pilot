@@ -79,6 +79,7 @@ Use conservative labels:
 ## Evidence Pressure
 ## Project Understanding Update
 ## Optional Strict Review
+## Human Gate
 ## Next Natural Prompts
 ```
 

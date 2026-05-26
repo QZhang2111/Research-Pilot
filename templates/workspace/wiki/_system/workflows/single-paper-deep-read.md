@@ -30,6 +30,8 @@ Then fill the dossier with:
 - evidence and methods;
 - assumptions and limitations;
 - project relevance;
-- proposed graph delta JSON blocks when the paper changes project understanding.
+- normal project memory / UnderstandingUpdate summary when the paper changes project understanding.
+
+If project understanding changes, record normal project memory / UnderstandingUpdate. Use strict-review graph delta proposals only when requested or necessary.
 
 Strict-review graph deltas remain proposals until the human explicitly approves them.

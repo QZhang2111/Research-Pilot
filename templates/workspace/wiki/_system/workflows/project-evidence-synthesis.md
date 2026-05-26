@@ -88,16 +88,16 @@ What sources jointly support, challenge, or bound.
 Which Q/C should be refined, split, promoted, demoted, or retired.
 
 ## Project Understanding Update
-Normal update summary and affected project records.
+Normal memory / UnderstandingUpdate summary.
 
 ## Optional Strict Review
 D* proposal summary only when formal graph review is requested or necessary.
 
-## Human Decision Queue
-accept / reject / park / revise decisions needed.
+## Human Gate
+Approvals needed before strict graph accept, project-core/global-core status, direction changes, or confirmed experiment evidence.
 
-## Next Action Contract
-search / deep-read / experiment / no-op.
+## Next Natural Prompts
+Natural follow-up prompts for search, deep-read, experiment, or no-op.
 ```
 
 ## Delta Quality Bar
