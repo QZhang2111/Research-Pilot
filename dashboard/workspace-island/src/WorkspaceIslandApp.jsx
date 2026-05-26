@@ -192,6 +192,36 @@ const workspaceNodeTypes = {
   workspaceKnowledgeNode: WorkspaceKnowledgeNode,
 };
 
+function breadcrumbLabelForTarget(target) {
+  const raw = target?.selected_id || target?.focus_id || target?.layer || target?.mode || "Workspace";
+  const text = String(raw).replace(/^[^:]+:/, "").replace(/_/g, " ").trim();
+  return text || "Workspace";
+}
+
+function currentBreadcrumbTarget(model) {
+  const layer = model?.layer || "";
+  const focus_id = model?.focus_id || "";
+  const selected_id = model?.selected_id || "";
+  if (!layer && !focus_id && !selected_id) return null;
+  const target = {
+    label: "",
+    mode: model?.mode || "understanding",
+    layer,
+    focus_id,
+    selected_id: model?.selected_id || "",
+  };
+  target.label = breadcrumbLabelForTarget(target);
+  return target;
+}
+
+function sameBreadcrumbTarget(left, right) {
+  return Boolean(left && right)
+    && left.mode === right.mode
+    && left.layer === right.layer
+    && left.focus_id === right.focus_id
+    && left.selected_id === right.selected_id;
+}
+
 function normalizeBreadcrumb(model) {
   const crumbs = Array.isArray(model?.breadcrumb) ? model.breadcrumb : [];
   const normalized = crumbs
@@ -203,6 +233,10 @@ function normalizeBreadcrumb(model) {
       focus_id: crumb.focus_id || "",
       selected_id: crumb.selected_id || "",
     }));
+  const currentTarget = currentBreadcrumbTarget(model);
+  if (currentTarget && !sameBreadcrumbTarget(normalized[normalized.length - 1], currentTarget)) {
+    normalized.push(currentTarget);
+  }
   if (normalized.length) return normalized;
   return [{
     label: "Workspace",

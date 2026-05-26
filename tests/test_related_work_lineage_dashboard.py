@@ -228,6 +228,14 @@ class RelatedWorkLineageDashboardTest(unittest.TestCase):
         self.assertIn("fitViewOptions={{ padding: 0.1, maxZoom: 1.12 }}", source)
         self.assertIn("maskColor=\"var(--workspace-minimap-mask)\"", source)
 
+    def test_workspace_island_synthesizes_current_breadcrumb_layer(self):
+        source = (ROOT / "dashboard" / "workspace-island" / "src" / "WorkspaceIslandApp.jsx").read_text(encoding="utf-8")
+
+        self.assertIn("function currentBreadcrumbTarget", source)
+        self.assertIn("function sameBreadcrumbTarget", source)
+        self.assertIn("normalized.push(currentTarget)", source)
+        self.assertIn('selected_id: model?.selected_id || ""', source)
+
     def test_workspace_island_visual_style_guardrails(self):
         css = (ROOT / "dashboard" / "workspace-island" / "src" / "workspace-island.css").read_text(encoding="utf-8")
 
