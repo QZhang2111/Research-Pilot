@@ -1,6 +1,6 @@
 ---
 name: project-evidence-synthesis
-description: Use when a set of papers, dossiers, or graph records must be synthesized into project claims, evidence, limitations, warrants, project deltas, and next actions.
+description: Use when a set of sources, dossiers, graph records, or experiment notes must be synthesized into project understanding, evidence pressure, uncertainty, and optional strict-review graph proposals.
 argument-hint: "[workspace path] [project id] [paper ids or dossier paths]"
 ---
 
@@ -10,21 +10,16 @@ This skill turns multiple sources into project-level understanding. It is not a 
 
 ## Boundary
 
-Do not approve papers. Do not mark sources project-core/global-core. Do not mutate graph truth directly.
+Do not approve sources. Do not mark sources project-core/global-core. Do not mutate strict graph truth directly.
 
 Allowed:
 
-- compare papers;
+- compare sources;
 - extract agreement/conflict;
 - identify evidence pressure;
-- propose graph deltas;
-- recommend search, deep read, or experiment workflows.
-
-Required human gate for project graph changes:
-
-```text
-synthesis -> PD*/D* proposal -> dry-run -> human decision -> append-only graph event
-```
+- record normal project memory updates;
+- propose strict-review graph deltas only when needed;
+- recommend natural next prompts.
 
 ## Required Reads
 
@@ -82,20 +77,12 @@ Use conservative labels:
 ## Agreement and Conflict
 ## Claim/Evidence Table
 ## Evidence Pressure
-## Proposed Project Understanding Delta
-## Human Decision Queue
-## Next Action Contract
-```
-
-`Proposed Project Understanding Delta` must answer:
-
-```text
-What changes in project understanding?
-Which current Q/C/E/W/L/RL/TL records are affected?
-What new or updated D* should be registered?
-What should not be learned from this source set?
+## Project Understanding Update
+## Optional Strict Review
+## Human Gate
+## Next Natural Prompts
 ```
 
 ## Stop Point
 
-Stop before applying changes unless the human explicitly accepts a D* delta.
+Stop before applying strict-review graph changes unless the human explicitly accepts a D* delta.

@@ -1,325 +1,245 @@
 ---
 name: research-pilot
-description: Use when the user wants to initialize, inspect, or operate a Research Pilot workspace for agent-operated research memory.
-argument-hint: "[init <path>|inspect]"
+description: Use when the user wants an agent to track, inspect, or operate Research Pilot project memory through natural chat.
+argument-hint: "[natural language intent]"
 ---
 
 # Research Pilot
 
-Research Pilot is the primary router skill for agent-operated research memory.
+Research Pilot is the primary intent router for chat-first, agent-operated research memory.
 
-## Current Capabilities
+User-facing interface is chat. The user should not need to know command names, skill names, workflow files, server commands, graph deltas, or read-model mechanics.
 
-- Explain plugin vs workspace boundary.
-- Initialize a private research workspace.
-- Inspect whether the current directory looks like a Research Pilot workspace.
-- Guide first-run setup from plugin source or empty directory to a project shell, then a human-gated graph update when real graph-worthy input exists.
-- Validate project graph-event JSONL.
-- Build generated graph snapshots.
-- Build generated SQLite graph read models.
-- Query project graph nodes, links, deltas, open deltas, and summaries.
-- Detect structural project graph gaps.
-- Recommend next workflow action.
-- Preserve and update project understanding from human intent, evidence pressure, and direction changes.
-- Synthesize paper sets into project-level claim/evidence pressure and D* proposals.
-- Generate gap-driven search contracts and project-gap discovery leads.
-- Generate read-only experiment proposals for claims.
-- Dry-run graph deltas.
-- Register proposed graph deltas.
-- Apply human decisions to registered graph deltas.
-- Create and validate project-local paper dossiers.
-- Export paper-dossier graph delta JSON proposals.
-- Intake Zotero-first source identity, with manual source-reference capture for setup/dry-run cases.
-- Build and serve the Research Browser dashboard.
-- Create durable execution-state records for long search, deep-read, synthesis, and experiment-proposal jobs.
-- Build paper-only related-work lineage maps for project-scoped technical route understanding.
+## Product Model
 
-Dashboard is a required public component and a browser observer. It must not become graph truth.
-Durable job records are execution state only. They must not become graph truth.
-Program context is taste and north-star background only. It must not become evidence, graph truth, or an automatic decision source.
+```text
+user asks agent
+-> agent uses Research Pilot resources
+-> workspace-local research-pilot.db stores project data
+-> dashboard observes read models
+-> user keeps researching through chat
+```
 
-## Durable Research Jobs
+## Default Boundaries
 
-For long paper-search, deep-read, evidence-synthesis, or experiment-proposal work, create a durable record under `.research-pilot/jobs`. Job records track execution state only. They do not change graph truth. Any graph change from job output still requires D* dry-run, D* registration, and explicit human decision in the main agent/user conversation before acceptance.
+- `research-pilot.db` is the primary workspace dataset.
+- Dashboard is read-only observation.
+- Skills and tools are agent-operated resources.
+- UnderstandingUpdates / DB-backed project memory are normal update path.
+- Graph events and D* deltas are advanced strict review mode.
+- Zotero is an optional supported adapter, not a first-run requirement.
+- Program context is taste and north-star background only; it is not evidence, project truth, or an automatic decision source.
 
 ## Workspace Detection
 
 A directory is a Research Pilot workspace when it has:
 
 ```text
+research-pilot.db
 AGENTS.md
 wiki/index.md
 wiki/log.md
 .research-pilot/config.example.toml or .research-pilot/config.toml
 ```
 
-## Intent Routing
+Legacy workspaces may not yet have `research-pilot.db`; if workspace markers exist, inspect status before deciding whether initialization/import is needed.
 
-### Chat-First Intents
+## DB Write Route
 
-Treat these as equivalent initialization intents:
+For normal project memory writes, use the dataset writer:
+
+```python
+from pathlib import Path
+import sys
+
+PLUGIN_ROOT = Path("...").expanduser().resolve()
+WORKSPACE_PATH = Path("...").expanduser().resolve()
+sys.path.insert(0, str(PLUGIN_ROOT))
+
+from tools.research_dataset_writer import ProjectDatasetWriter
+
+result = ProjectDatasetWriter(WORKSPACE_PATH, actor="agent").write_project_update(packet)
+```
+
+Packet minimum:
+
+- required top-level: `project_id`, `activity_type`, `summary`
+- optional sections: `project`, `sources`, `understanding_nodes`, `understanding_links`, `experiments`, `experiment_runs`, `experiment_metrics`, `experiment_artifacts`, `literature_lanes`, `literature_items`, `literature_relations`, `project_positionings`, `entity_links`
+
+Required field examples:
+
+- source needs `source_id` at minimum; usually include title, type, locator, status, and depth.
+- understanding node needs `node_id`, `scope`, `node_type`, `text`.
+- understanding link needs `link_id`, `link_type`, `relation`, and `endpoints`.
+- every `understanding_links[]` item includes `endpoints: [...]`; each endpoint has `role` and `node_id`.
+- real reasoning/translation links should include meaningful endpoints.
+- experiment needs `experiment_id`, `title`.
+- run needs `run_id`, `experiment_id`, `origin_type`.
+- metric needs `metric_id`, `run_id`, `name`, `value_text`.
+
+## Intent Routes
+
+### start_or_track_project
+
+User examples:
 
 ```text
-research-init
-init research memory
-initialize Research Pilot
-create a Research Pilot workspace
-Use Research Pilot to initialize <path>
+Use Research Pilot to track this project.
+Start Research Pilot for this research idea.
+Track my project memory here.
 ```
 
-Treat these as equivalent dashboard intents:
+Agent behavior:
+
+1. Resolve workspace path only if needed.
+2. Initialize or inspect workspace with `tools/research_pilot_init.py` / `tools/research_pilot_status.py`.
+3. Create or select project.
+4. Record initial project brief or UnderstandingUpdate.
+5. Offer to open dashboard.
+6. Do not require D* review for first-run unless user asks for strict review.
+
+### inspect_workspace_or_project
+
+User examples:
 
 ```text
-research-dashboard
-open Research Pilot dashboard
-open research browser
-show dashboard
-Use Research Pilot to open the dashboard
+What does this project currently understand?
+Where does this workspace stand?
 ```
 
-If the user types `/research-init` or `/research-dashboard` literally, treat it as plain chat intent. Current local Codex plugins do not guarantee those slash commands appear in the host command registry.
+Agent behavior:
 
-### Initialize Workspace
+1. Run `tools/research_pilot_status.py --repo "$WORKSPACE_PATH" --json`.
+2. Prefer DB-backed read models where available.
+3. Summarize state in product terms: project, sources, understanding, literature, experiments, dashboard readiness.
+4. Avoid exposing read-model rebuild mechanics unless needed for diagnosis.
 
-When the user asks to initialize/create/set up a research workspace:
+### open_dashboard
 
-1. Resolve the requested path. If no path is provided, ask for one concise path.
-2. Resolve the plugin root by locating the installed `research-pilot` skill symlink and going two directories up to the Research Pilot repo checkout.
-3. Run:
-
-```bash
-python3 "$PLUGIN_ROOT/tools/research_pilot_init.py" "$WORKSPACE_PATH"
-```
-
-4. Report the workspace path and next steps.
-
-### First Run
-
-When the user asks to start from scratch, create the first project, initialize a new research memory, or is confused about repo/plugin/workspace boundaries:
-
-1. Use the `research-pilot-first-run` skill.
-2. If already inside a workspace, read:
+User examples:
 
 ```text
-$WORKSPACE_PATH/wiki/_system/workflows/first-run.md
+Open the Research Pilot dashboard.
+Show me the dashboard.
 ```
 
-3. Before suggesting next actions, run:
+Agent behavior:
 
-```bash
-python3 "$PLUGIN_ROOT/tools/research_pilot_status.py" --repo "$WORKSPACE_PATH" --json
-```
+1. Detect workspace; if current directory is plugin repo, use `examples/workspaces`.
+2. Reuse or start `tools/research_browser_server.py`.
+3. Wait until dashboard URL responds.
+4. Open browser or report URL.
+5. Keep boundary: dashboard is read-only.
 
-Summarize the returned stage in chat. Offer at most two next actions. Do not mutate graph truth during status inspection.
+### record_source
 
-4. Create or confirm a private workspace.
-5. Collect only minimum project intake: project id/name, one-sentence direction, first question/claim, Zotero now/later.
-6. If the user only has a venue, broad direction, or baseline-paper need, create a project shell first. Defer the first graph delta until the user provides a real question, claim, evidence pressure, paper synthesis, or experiment result.
-7. Route the first graph-level question or claim through D* dry-run and human gate.
-
-Do not start paper search or dashboard work before a first project question or claim exists.
-
-### Inspect Workspace
-
-When the user asks to inspect current Research Pilot status:
-
-Before suggesting next actions, run:
-
-```bash
-python3 "$PLUGIN_ROOT/tools/research_pilot_status.py" --repo "$WORKSPACE_PATH" --json
-```
-
-Summarize the returned stage in chat. Offer at most two next actions. Do not mutate graph truth during status inspection.
-
-### Validate Graph Events
-
-When the user asks to validate graph events:
-
-```bash
-python3 "$PLUGIN_ROOT/tools/graph_validate.py" --repo "$WORKSPACE_PATH" --project "$PROJECT_ID"
-```
-
-### Build Graph Read Models
-
-When the user asks to rebuild graph read models:
-
-```bash
-python3 "$PLUGIN_ROOT/tools/build_graph_snapshot.py" --repo "$WORKSPACE_PATH" --project "$PROJECT_ID"
-python3 "$PLUGIN_ROOT/tools/build_graph_db.py" --repo "$WORKSPACE_PATH" --project "$PROJECT_ID"
-```
-
-### Query Graph
-
-When the user asks to inspect current project graph state:
-
-```bash
-python3 "$PLUGIN_ROOT/tools/graph_query_cli.py" summary --repo "$WORKSPACE_PATH" --project "$PROJECT_ID" --json
-python3 "$PLUGIN_ROOT/tools/graph_query_cli.py" open --repo "$WORKSPACE_PATH" --project "$PROJECT_ID" --json
-```
-
-### Detect Graph Gaps
-
-When the user asks what evidence, warrant, answer, or translation is missing:
-
-```bash
-python3 "$PLUGIN_ROOT/tools/project_gap_cli.py" detect --repo "$WORKSPACE_PATH" --project "$PROJECT_ID" --json
-```
-
-Do not mutate graph state from a gap report. If the gap should change understanding, route through D*.
-
-### Recommend Next Action
-
-When the user asks what to do next:
-
-```bash
-python3 "$PLUGIN_ROOT/tools/project_next_action_cli.py" suggest --repo "$WORKSPACE_PATH" --project "$PROJECT_ID" --json
-```
-
-This router is read-only. It may recommend another workflow, but it must not run search, deep read, delta apply, Zotero writes, or experiments by itself.
-
-### Project Understanding Update
-
-When human input changes project direction, question framing, claim scope, evidence pressure, or boundaries:
-
-1. Read the workspace protocol:
+User examples:
 
 ```text
-$WORKSPACE_PATH/wiki/_system/workflows/project-understanding-update.md
+Track this PDF.
+Read this arXiv link.
+Use this DOI as a source.
+Add this note to the project.
 ```
 
-2. Read current project context and graph state.
-3. Classify the input as observation, intuition, question, claim, evidence pressure, limitation pressure, search need, experiment need, boundary, or decision.
-4. Preserve safe report/context changes in markdown.
-5. Route graph-level changes through D* dry-run, registration, and human decision.
+Agent behavior:
 
-Do not silently promote human discussion into graph truth.
+1. Accept PDF path, URL, arXiv, DOI, Markdown note, experiment result, manual reference, or Zotero item.
+2. Write packet through `ProjectDatasetWriter.write_project_update`.
+3. Use `activity_type: "source_record"` for source identity/status/relevance capture.
+4. Include `sources` with `source_id`; usually include `source_type`, `title`, `locator` or `url`/`doi`/`arxiv_id`, `reading_status`, and `reading_depth`.
+5. Add `understanding_nodes` only when the source changes project understanding.
+6. Use Zotero only when provided/configured or when user asks.
+7. If project understanding changes, include an UnderstandingUpdate-style `summary` and project-scoped nodes/links.
 
-### Project Evidence Synthesis
+### deep_read_source
 
-When a set of papers, dossiers, or experiment notes should affect project understanding:
-
-Create a durable job record in `.research-pilot/jobs` for long-running evidence-synthesis work.
-
-1. Read the workspace protocol:
+User examples:
 
 ```text
-$WORKSPACE_PATH/wiki/_system/workflows/project-evidence-synthesis.md
+Read this paper deeply in project context.
+Extract the claims and limitations that matter for this project.
 ```
 
-2. Compare sources against current Q/C/E/W/L state.
-3. Identify agreement, conflict, evidence pressure, and missing proof.
-4. Produce Project Understanding Delta proposals and a Human Decision Queue.
+Agent behavior:
 
-Do not approve sources or mutate graph truth without explicit human decision.
+1. Create or update source/paper note and DB source record.
+2. Separate source-level understanding from project-level understanding.
+3. Write packet through `ProjectDatasetWriter.write_project_update`.
+4. Use `activity_type: "deep_read"`.
+5. Include `sources` for the source, paper-scoped `understanding_nodes` for extracted claims/evidence/limitations, and project-scoped `understanding_nodes` or `understanding_links` for project impact.
+6. Include link `endpoints` when connecting nodes.
+7. Use D* only under strict review.
 
-### Related Work Lineage
+### update_project_understanding
 
-When the user asks for a related-work route map, technology development map, lineage map, baseline route map, or where the project fits in prior work, use the `related-work-lineage` skill.
+User examples:
 
-Do not use `project-evidence-synthesis` for this intent. Related-work lineage is paper-only route mapping, not project graph truth. It must not append graph events, create D*, approve sources, or mutate Zotero.
-
-If the user gives a broad direction instead of baseline papers, first narrow into candidate technical routes and anchor baseline papers. Ask the user to choose before creating the map.
-
-### Gap-Driven Search
-
-When the user asks to find papers for a graph gap:
-
-Create a durable job record in `.research-pilot/jobs` for long-running search work. The record tracks execution state only; it is not graph truth. Human gating still happens in the main agent/user conversation before any graph delta is accepted.
-
-```bash
-python3 "$PLUGIN_ROOT/tools/research_gap_discovery_cli.py" run --repo "$WORKSPACE_PATH" --project "$PROJECT_ID" --gap "$GAP_TARGET" --source memory --json
+```text
+This changes our hypothesis.
+Compare this with the current claim.
+Record this experiment result as project evidence.
 ```
 
-Use `--source arxiv`, `--source openreview`, or `--source all` only when the user expects external network search. Candidate leads are not Zotero approval and not graph truth.
+Agent behavior:
 
-### Experiment Proposal
+1. Classify the update.
+2. Write normal project memory update through `ProjectDatasetWriter.write_project_update`.
+3. Use `activity_type: "understanding_update"`.
+4. Include `understanding_nodes` for questions, claims, evidence, warrants, or limitations; include `understanding_links` with `endpoints` when recording relations.
+5. Preserve uncertainty/status with status, confidence, confirmation, and metadata fields.
+6. Use strict review for high-impact formal graph updates or when user asks.
 
-When the user asks what experiment could test a claim:
+### map_literature
 
-Create a durable job record in `.research-pilot/jobs` for long-running experiment-proposal work. The record tracks execution state only; it is not graph truth. Human gating still happens in the main agent/user conversation before any graph delta is accepted.
+User examples:
 
-```bash
-python3 "$PLUGIN_ROOT/tools/project_experiment_cli.py" suggest --repo "$WORKSPACE_PATH" --project "$PROJECT_ID" --target "$CLAIM_ID" --json
+```text
+Map related work around this project.
+Build a technical lineage around this baseline paper.
 ```
 
-Experiment proposals are planning artifacts. Completed experiment results still need D* human gate before entering graph truth.
+Agent behavior:
 
-### Human-Gated Delta Loop
+Use `related-work-lineage`; keep output paper-only and read-only. Do not append graph events or mutate project graph truth.
 
-When the user asks to preview a graph change:
+If the user gives a broad map request, ask the user to narrow or split maps and exclude low-signal follow-ups before creating the map.
 
-```bash
-python3 "$PLUGIN_ROOT/tools/graph_delta_cli.py" dry-run --repo "$WORKSPACE_PATH" --project "$PROJECT_ID" --delta "$DELTA_JSON" --json
+### record_experiment
+
+User examples:
+
+```text
+Track this planned experiment.
+Record these completed experiment results.
 ```
 
-When the user asks to register a proposed graph change:
+Agent behavior:
 
-```bash
-python3 "$PLUGIN_ROOT/tools/graph_delta_cli.py" register --repo "$WORKSPACE_PATH" --project "$PROJECT_ID" --delta "$DELTA_JSON" --json
+1. Write packet through `ProjectDatasetWriter.write_project_update`.
+2. Use `activity_type: "experiment_record"` for planned experiments.
+3. Use `activity_type: "experiment_result"` for completed runs/results.
+4. Include `experiments` with `experiment_id`, `title`; include `experiment_runs` with `run_id`, `experiment_id`, `origin_type`; include `experiment_metrics` with `metric_id`, `run_id`, `name`, `value_text`.
+5. Connect to claims/evidence with `entity_links` or `understanding_links` when available.
+6. Do not call proposal-only framing normal product language.
+
+### strict_review
+
+User examples:
+
+```text
+Use strict review for this claim update.
+Make this a formal graph update.
 ```
 
-When the human explicitly approves, rejects, parks, or requests revision of a registered delta:
+Agent behavior:
 
-```bash
-python3 "$PLUGIN_ROOT/tools/graph_delta_cli.py" decide --repo "$WORKSPACE_PATH" --project "$PROJECT_ID" --id "$DELTA_ID" --decision accept --json
-```
+1. Draft D* proposal.
+2. Dry-run.
+3. Summarize effect.
+4. Wait for human accept/reject/park/revise.
+5. Append accepted graph event only after explicit approval.
 
-### Paper Dossier Workflow
+## Internal Tools
 
-When the user asks to create a project-local paper dossier:
-
-Create a durable job record in `.research-pilot/jobs` for long-running deep-read work.
-
-```bash
-python3 "$PLUGIN_ROOT/tools/paper_dossier_cli.py" create --repo "$WORKSPACE_PATH" --project "$PROJECT_ID" --paper "$PAPER_ID" --title "$TITLE" --json
-```
-
-When the user asks to validate a dossier or export its proposed deltas:
-
-```bash
-python3 "$PLUGIN_ROOT/tools/paper_dossier_cli.py" validate --dossier "$DOSSIER" --json
-python3 "$PLUGIN_ROOT/tools/paper_dossier_cli.py" export-deltas --dossier "$DOSSIER" --output-dir "$WORKSPACE_PATH/.research-pilot/generated/deltas" --json
-```
-
-### Source Intake
-
-When the user asks to add a paper/source to a project:
-
-```bash
-python3 "$PLUGIN_ROOT/tools/source_intake_cli.py" intake --repo "$WORKSPACE_PATH" --project "$PROJECT_ID" --paper "$PAPER_ID" --title "$TITLE" --zotero-key "$ZOTERO_ITEM_KEY" --doi "$DOI" --url "$URL" --json
-```
-
-Normal paper management is Zotero-first. If Zotero credentials are not configured yet, DOI, arXiv, URL, or manual source refs may be recorded only as source identity capture; do not present this as a replacement paper manager.
-
-For Zotero setup, use the agent-facing helper:
-
-```bash
-python3 "$PLUGIN_ROOT/tools/zotero_setup.py" prepare-env --repo "$WORKSPACE_PATH" --json
-python3 "$PLUGIN_ROOT/tools/zotero_setup.py" status --repo "$WORKSPACE_PATH" --json
-```
-
-Do not print API keys. Do not mention Zotero MCP as part of the normal user flow.
-
-### Dashboard
-
-When the user asks to open the dashboard, read `commands/research-dashboard.md` and follow it.
-
-When the user asks to build or refresh the dashboard read model:
-
-```bash
-python3 "$PLUGIN_ROOT/tools/build_dashboard_index.py" --repo "$WORKSPACE_PATH" --output .dashboard/index.json
-```
-
-When the user asks to open the dashboard:
-
-```bash
-python3 "$PLUGIN_ROOT/tools/research_browser_server.py" --repo "$WORKSPACE_PATH" --port 8765
-```
-
-## Boundaries
-
-Do not claim full Zotero API automation beyond extracted source-identity and bridge behavior.
-
-Do not claim dashboard files are source of truth. Dashboard may only observe generated read models and call explicit graph delta APIs.
-
-Do not store private research data in the public plugin repo.
+Tools are internal implementation APIs. Use exact CLI commands from tool docs or advanced workflow docs when needed, but do not ask users to memorize them.

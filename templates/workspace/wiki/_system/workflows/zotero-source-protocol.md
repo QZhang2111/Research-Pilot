@@ -1,25 +1,27 @@
-# Zotero Source Protocol
+# Zotero Adapter Protocol
 
 Core rule:
 
 ```text
-Zotero = source of truth for papers, metadata, PDFs, collections, and operational paper triage.
-wiki = source of truth for digested research knowledge, claims, project reasoning, and long-term taste.
+Research Pilot is source-agnostic for first-run project memory.
+Zotero is an optional supported adapter for paper metadata, PDFs, collections, and operational paper triage.
 ```
 
-Research Pilot does not reimplement citation management.
+Research Pilot does not reimplement citation management and does not require Zotero before first value.
 
 ## Public Boundary
 
-Public source intake records durable source identity:
+Source intake records durable source identity from:
 
-- Zotero item key;
-- DOI;
-- arXiv ID;
+- PDF path;
 - URL;
-- manual source refs.
+- arXiv ID;
+- DOI;
+- manual source refs;
+- experiment result refs;
+- Zotero item key.
 
-Public tooling includes configurable Zotero bridge helpers for metadata, collection, and status-mirror workflows. Credentialed Zotero operations require user-provided local config and must preserve the Zotero-first boundary.
+Public tooling includes configurable Zotero bridge helpers for metadata, collection, and status-mirror workflows. Credentialed Zotero operations require user-provided local config and must preserve the optional-adapter boundary.
 
 ## Human Gate
 

@@ -1,21 +1,23 @@
 # Research Pilot Skills
 
-Skills are the agent-facing workflow surface. The dashboard is read-only; skills
-and tools are the write layer.
+Skills are agent-facing routing instructions. Users should not need to know skill
+names or workflow names. The normal user surface is chat; skills let the agent
+operate Research Pilot's local dataset, source adapters, dashboard observer, and
+advanced review tools.
 
 ## Skill Status
 
 | Status | Meaning |
 | --- | --- |
-| Core | Normal first-run or common project-understanding route. |
-| Supported adapter | Useful bridge into project understanding, but not product identity. |
-| Advanced | Rigor/review workflow kept behind the normal product surface. |
+| Core | Normal chat-first project tracking, source recording, dashboard opening, and project-understanding updates. |
+| Supported adapter | Useful bridge into project understanding, but not product identity or first-run requirement. |
+| Advanced | Strict review / graph rigor kept behind the normal product surface. |
 | Transition | Still tested and usable, but naming or product role should be replaced before expanding. |
 
 ## Core
 
-- `research-pilot`: router for workspace init, status, dashboard, and workflow selection.
-- `research-pilot-first-run`: first workspace/project setup.
+- `research-pilot`: intent router for project tracking, workspace inspection, dashboard opening, source recording, project updates, literature mapping, experiment records, and strict review.
+- `research-pilot-first-run`: first workspace/project setup with DB/project brief defaults.
 - `project-understanding-update`: ambient project understanding updates from agent work.
 - `related-work-lineage`: paper-only literature structure and technical lineage.
 

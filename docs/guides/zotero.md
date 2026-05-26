@@ -1,6 +1,6 @@
-# Zotero Guide
+# Zotero Adapter Guide
 
-Research Pilot is Zotero-first for normal paper management.
+Zotero is an optional supported adapter for paper metadata, PDFs, collections, tags, and reading status. Research Pilot is source-agnostic for first-run project memory.
 
 Zotero owns:
 
@@ -10,18 +10,13 @@ Zotero owns:
 - tags;
 - reading status mirror.
 
-Research Pilot owns:
-
-- digested paper dossiers;
-- project graph events;
-- claims, evidence, warrants, limitations;
-- human-gated graph deltas.
+Research Pilot stores project-scoped source identity, source notes, project understanding, literature structure, experiment records, and dashboard read models in the local workspace.
 
 Public source intake records durable source identity and can run without credentials for setup/dry-run checks. This is not a replacement paper manager.
 
 Public tooling also includes configurable Zotero bridge helpers for metadata, collection, and status-mirror workflows. Credentialed Zotero operations require user-provided local config.
 
-## Agent-Guided Setup
+## Optional Agent-Guided Setup
 
 Normal setup is conversational. Users do not need to memorize commands.
 

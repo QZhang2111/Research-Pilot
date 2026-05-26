@@ -1,17 +1,20 @@
 # Source Boundaries
 
 ```text
-Zotero = paper metadata, PDFs, collections, tags, reading status mirror
-wiki = digested research understanding and project files
+research-pilot.db = primary workspace dataset
+sources = PDF, URL, arXiv, DOI, Markdown note, experiment result, manual reference, or Zotero item
+wiki = durable agent-readable context and compatibility artifacts
 wiki/program = research taste and north-star context only
-wiki/graphs/events = append-only Project Understanding Graph truth
-graph.db/snapshots/reports = rebuildable read models
-dashboard = required browser view over read models and wiki state
+dashboard = read-only observer
 chat/agent = primary control surface
+graph events/deltas = advanced strict review
+Zotero = optional supported adapter
 ```
+
+Research Pilot is source-agnostic for first-run value. Zotero remains useful when the user already manages papers there, but it is not required before project memory or dashboard observation works.
 
 Plugin repo contains capabilities. User workspace contains private research memory.
 
 Do not move private research content into the public plugin repo.
 
-Program context may guide agent interpretation, but it is not evidence, not graph truth, and not a decision engine. Project changes still need explicit user direction and normal project graph gates.
+Program context may guide agent interpretation, but it is not evidence, not graph truth, and not a decision engine. Normal project changes need explicit user direction plus project-memory / UnderstandingUpdate gates. Graph gates apply only when accepting strict-review graph truth changes.

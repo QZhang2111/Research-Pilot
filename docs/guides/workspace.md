@@ -20,6 +20,12 @@ wiki/
   config.example.toml
 ```
 
+## Primary Dataset
+
+`research-pilot.db` is the primary local workspace dataset. It stores project-scoped research memory by `project_id`.
+
+Normal users interact through chat. Agents write through Research Pilot tools. The dashboard reads generated API/read models.
+
 Do not publish a workspace unless it is explicitly sanitized.
 
 Research-Pilot workspaces have one `research-pilot.db` at the workspace root. It is the local dataset for that workspace, not a repo-global database and not a dashboard cache. Projects are rows in the `projects` table; project-owned records in sources, understanding, experiments, literature, updates, and audit tables are connected by `project_id`.
@@ -42,13 +48,15 @@ The reusable demo seed lives under `examples/archive/seed-workspaces/demo-visual
 
 The user workspace DB created by `research_pilot_init.py` is the default runtime dataset. Generated dashboard/index, graph database, and graph snapshots are intentionally rebuildable and should not be treated as demo source.
 
+The dashboard is read-only and does not create or delete projects.
+
+## Agent/Internal Fallback
+
 Start without the demo:
 
 ```bash
 python3 "$PLUGIN_ROOT/tools/research_pilot_init.py" "$WORKSPACE_PATH" --no-demo
 ```
-
-The dashboard is read-only and does not create or delete projects.
 
 ## Program Context
 
@@ -59,12 +67,14 @@ It is not graph truth, not evidence, and not a project decision source. Agents m
 ## Workspace Stages
 
 Research Pilot workspaces are stage-aware:
-- empty workspace;
-- project shell;
-- graph started;
-- papers present;
-- open deltas;
-- stale read models;
-- Zotero setup needed.
+- no workspace yet;
+- workspace initialized;
+- project exists;
+- project has sources;
+- project has understanding updates;
+- project has literature structure;
+- project has experiment design/results;
+- strict-review graph data exists;
+- dashboard read models need refresh.
 
 The agent should inspect stage before suggesting next actions.

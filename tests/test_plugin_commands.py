@@ -1,6 +1,5 @@
 import contextlib
 import io
-import re
 import tempfile
 import unittest
 from pathlib import Path
@@ -11,36 +10,62 @@ from tools.research_pilot_init import main as research_pilot_init_main
 REPO = Path(__file__).resolve().parents[1]
 
 
+def readme_quick_start(text: str) -> str:
+    start = "## Quick Start"
+    end = "## What You Can Ask"
+    if start not in text:
+        raise AssertionError(f"README missing expected section heading: {start!r}")
+    body = text.split(start, 1)[1]
+    if end not in body:
+        raise AssertionError(f"README missing expected next section prefix: {end!r}")
+    return body.split(end, 1)[0]
+
+
+def skill_section(text: str, heading: str) -> str:
+    marker = f"### {heading}"
+    if marker not in text:
+        raise AssertionError(f"missing skill section: {marker}")
+    body = text.split(marker, 1)[1]
+    if "\n### " in body:
+        body = body.split("\n### ", 1)[0]
+    return body
+
+
 class PluginCommandTests(unittest.TestCase):
     def test_research_init_command_exists(self) -> None:
         command = REPO / "commands" / "research-init.md"
         text = command.read_text()
 
         self.assertIn("description:", text)
-        self.assertIn("# Research Pilot Init Workflow", text)
+        self.assertIn("# Research Pilot Start/Track Runbook", text)
         self.assertIn("research_pilot_init.py", text)
-        self.assertIn("Slash command visibility is not required", text)
+        self.assertIn("agent-internal compatibility runbook", text)
+        self.assertIn("natural-language intent", text)
         self.assertIn("research-pilot-first-run", text)
         self.assertNotIn("/Users/" + "qing", text)
         self.assertNotIn("Personal" + "ResearchWiki", text)
 
     def test_readme_uses_chat_first_as_primary_init_path(self) -> None:
         text = (REPO / "README.md").read_text()
-        quick_start = text.split("## 🚀 Quick Start", 1)[1].split("## 🧪 What You Can Ask", 1)[0]
+        quick_start = readme_quick_start(text)
 
-        self.assertIn("Use Research Pilot to initialize ~/Research/MyResearchWiki.", quick_start)
-        self.assertIn("chat-first", quick_start)
-        self.assertIn("do not register new top-level slash commands", quick_start)
-        self.assertRegex(quick_start, re.compile(r"Manual fallback:.*research-pilot-init", re.S))
-        self.assertNotIn("python3 tools/research_pilot_init.py", quick_start)
+        self.assertIn("Use Research Pilot to track this project.", quick_start)
+        self.assertIn("local workspace", quick_start.lower())
+        self.assertIn("research-pilot.db", quick_start)
+        self.assertNotIn("Use Research Pilot to initialize", quick_start)
+        self.assertNotIn("Manual fallback", quick_start)
+        self.assertNotIn("research-pilot-init", quick_start)
+        self.assertNotIn("human-gated graph update", quick_start)
+        self.assertNotIn("do not register new top-level slash commands", quick_start)
 
     def test_research_dashboard_command_exists(self) -> None:
         command = REPO / "commands" / "research-dashboard.md"
         text = command.read_text()
 
         self.assertIn("description:", text)
-        self.assertIn("# Research Pilot Dashboard Workflow", text)
-        self.assertIn("Chat-First Operation", text)
+        self.assertIn("# Research Pilot Dashboard Runbook", text)
+        self.assertIn("agent-internal compatibility runbook", text)
+        self.assertIn("natural-language intent", text)
         self.assertIn("research_browser_server.py", text)
         self.assertIn("examples/workspaces", text)
         self.assertIn("plugin_health.py", text)
@@ -51,10 +76,11 @@ class PluginCommandTests(unittest.TestCase):
 
     def test_readme_uses_chat_first_as_primary_dashboard_path(self) -> None:
         text = (REPO / "README.md").read_text()
-        quick_start = text.split("## 🚀 Quick Start", 1)[1].split("## 🧪 What You Can Ask", 1)[0]
+        quick_start = readme_quick_start(text)
 
-        self.assertIn("Use Research Pilot to open the dashboard for ~/Research/MyResearchWiki.", quick_start)
-        self.assertIn("Slash command visibility is not required", quick_start)
+        self.assertIn("Open the Research Pilot dashboard.", quick_start)
+        self.assertIn("agent starts or reuses the local dashboard server", quick_start)
+        self.assertNotIn("Slash command visibility" + " is not required", quick_start)
         self.assertNotIn("python3 ~/.research-pilot/repo/tools/build_dashboard_index.py", quick_start)
 
     def test_related_work_lineage_skill_and_workflow_exist(self) -> None:
@@ -74,13 +100,14 @@ class PluginCommandTests(unittest.TestCase):
         self.assertIn("must not append graph events", workflow_text)
         self.assertIn("ask the user to narrow or split maps", workflow_text)
         self.assertIn("exclude low-signal follow-ups", workflow_text)
-        self.assertRegex(
-            router_text,
-            re.compile(r"related-work route map.*related-work-lineage", re.S),
-        )
-        self.assertIn("Do not use `project-evidence-synthesis` for this intent", router_text)
-        self.assertIn("broad direction", router_text)
-        self.assertIn("candidate technical routes", router_text)
+        map_literature = skill_section(router_text, "map_literature")
+        self.assertIn("related-work-lineage", map_literature)
+        self.assertIn("paper-only", map_literature)
+        self.assertIn("read-only", map_literature)
+        self.assertIn("Do not append graph events or mutate project graph truth", map_literature)
+        self.assertNotIn("project-evidence-synthesis", map_literature)
+        self.assertIn("ask the user to narrow or split maps", map_literature)
+        self.assertIn("exclude low-signal follow-ups", map_literature)
 
     def test_related_work_lineage_workflow_copies_into_initialized_workspace(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

@@ -1,17 +1,17 @@
 ---
 name: research-pilot-first-run
-description: Use when a new user wants to start Research Pilot from scratch, initialize or inspect a workspace, create the first project, or make the first human-gated project graph update.
+description: Use when a new user wants an agent to start Research Pilot from scratch, create or inspect a local workspace, create the first project, or begin project tracking.
 argument-hint: "[workspace path] [project id]"
 ---
 
 # Research Pilot First Run
 
-Guide a user from plugin/repo confusion to a status-aware workspace and project shell. Defer the first project graph update until graph-worthy input exists.
+Guide a user from natural chat intent to a working local Research Pilot workspace and first project.
 
 Primary user intent:
 
 ```text
-Use Research Pilot to initialize [workspace_path].
+Use Research Pilot to track this project.
 ```
 
 ## Goal
@@ -20,17 +20,14 @@ Create the minimum working research memory loop:
 
 ```text
 workspace exists
+-> research-pilot.db exists
 -> first project exists
--> first question, claim, evidence pressure, paper synthesis, or experiment result becomes proposed D*
--> dry-run passes
--> human accepts/rejects/parks/revises
--> accepted event updates graph
--> read models rebuild
--> agent offers next move
+-> initial project brief or UnderstandingUpdate exists
+-> dashboard can observe the project
+-> agent continues through natural chat
 ```
 
-Do not showcase every feature. Do not start paper search first. Do not mutate graph truth without human approval.
-If the user only has a venue, broad direction, or baseline-paper need, create a project shell first. Defer the first graph delta until the user provides a real question, claim, evidence pressure, paper synthesis, or experiment result.
+Do not require Zotero setup, D* delta review, graph events, or manual read-model rebuilds for normal first-run value.
 
 ## State Detection
 
@@ -40,26 +37,16 @@ Before suggesting next actions, run:
 python3 "$PLUGIN_ROOT/tools/research_pilot_status.py" --repo "$WORKSPACE_PATH" --json
 ```
 
-Summarize the returned stage in chat. Offer at most two next actions. Do not mutate graph truth during status inspection.
+Summarize the returned stage in product terms. Do not expose command mechanics unless diagnosis is needed.
 
 Use returned stage values:
 
-- `plugin_repo`: current directory contains `install.sh`, `tools/research_pilot_init.py`, and `skills/research-pilot/SKILL.md`.
-- `plain_directory`: no Research Pilot workspace markers.
-- `empty_workspace`: workspace exists without projects.
-- `project_shell`: project shell exists without graph truth.
-- `read_models_stale`: graph events are newer than generated read models.
-- `project_has_graph`: project graph exists.
-
-If in `plugin_repo`, explain:
-
-```text
-This repo is the plugin source. Your research data belongs in a separate private workspace.
-```
-
-Then ask for or infer a workspace path.
-
-In normal installed use, the plugin repo is hidden at `~/.research-pilot/repo`; the optional plugin-root symlink is `~/.research-pilot-plugin`. User-visible research data belongs in the initialized workspace.
+- `plugin_repo`: current directory contains plugin source. Explain repo vs workspace and ask for/infer a workspace path.
+- `plain_directory`: no workspace markers. Ask whether to initialize this directory or another path.
+- `empty_workspace`: workspace exists without projects. Create or import first project.
+- `project_shell`: project shell exists. Record initial project brief/update if missing.
+- `read_models_stale`: read models may need internal rebuild before dashboard observation.
+- `project_has_graph`: project graph exists. Treat graph as existing strict-review/advanced structure, not mandatory first-run path.
 
 ## First-Run Flow
 
@@ -79,19 +66,18 @@ Resolve `PLUGIN_ROOT` in this order:
 current directory, only if it is the plugin repo
 ```
 
-If the user is already in a workspace, inspect it and continue.
-
 ### 2. Explain the boundary once
 
 Use concise language:
 
 ```text
-Research Pilot repo = plugin source.
-Your workspace = private research memory.
-Zotero = paper manager.
-Graph events = project-understanding truth.
-Dashboard = observer.
-Human approval controls graph changes.
+Research Pilot repo = plugin source and agent tools.
+Your workspace = private local project memory.
+research-pilot.db = primary workspace dataset.
+Dashboard = read-only observer.
+Chat = control surface.
+Strict graph review = optional advanced mode.
+Zotero = optional source adapter.
 ```
 
 ### 3. Collect minimum project intake
@@ -100,76 +86,67 @@ Ask only for missing essentials:
 
 - project name or short id;
 - one-sentence research direction;
-- first question, uncertainty, or claim;
-- Zotero availability: configured / later.
+- first question, uncertainty, source, note, or experiment result.
 
-If the user gives enough information in one message, do not ask again.
+Do not ask for Zotero status unless the user gives a Zotero source or asks for Zotero setup.
 
-### 4. Create project skeleton
+### 4. Create project memory
 
-Create project files only when missing:
+Create or select project in the workspace dataset. Create compatibility project shell files through:
 
-```text
-wiki/projects/<ProjectId>/overview.md
-wiki/projects/<ProjectId>/project-query-pack.md
-wiki/projects/<ProjectId>/decisions.md
-wiki/projects/<ProjectId>/papers/.gitkeep
-wiki/projects/<ProjectId>/experiment-proposals/.gitkeep
+```bash
+python3 "$PLUGIN_ROOT/tools/project_shell_cli.py" --repo "$WORKSPACE_PATH" --project "$PROJECT_ID" --title "$TITLE" --direction "$DIRECTION" --seed-question "$QUESTION" --json
 ```
 
-Use public-safe frontmatter and default `human_review: pending` unless the user explicitly approves content.
+Do not hand-create a divergent compatibility file list. The compatibility shell may include legacy `experiment-proposals/.gitkeep`.
 
-### 5. First graph update
+Record an initial project brief or UnderstandingUpdate. Use `human_review: pending` for unapproved claims and explicit status labels for uncertainty.
 
-If the user only has a venue, broad direction, or baseline-paper need, stop after project shell creation and explain what input would justify a graph delta.
+Actual experiment records belong in `research-pilot.db` through `ProjectDatasetWriter.write_project_update`. Dashboard experiments read DB or `wiki/projects/<ProjectId>/experiments/experiments.json` when imported/exported.
 
-Convert the first real question, claim, evidence pressure, paper synthesis, or experiment result into a D* proposal:
+### 5. Dashboard readiness
 
-- new question -> `operation_type: add_node`, `evolution_type: add`
-- new claim -> `operation_type: add_node`, `evolution_type: add`
-- refinement of existing project framing -> `operation_type: update_node`, `evolution_type: reframe | refine`
+If the user asks to see the dashboard, start or reuse the dashboard server through the dashboard runbook. Do not require the user to run build or server commands.
 
-Then:
+### 6. Strict review only when requested
+
+If the user asks for strict review or a formal graph update:
 
 ```text
-draft delta JSON
+draft D*
 -> dry-run
--> summarize effects
--> stop for human accept/reject/park/revise
+-> summarize effect
+-> wait for accept/reject/park/revise
+-> append accepted event only after explicit approval
 ```
 
-Only after explicit acceptance:
+Normal first-run does not require this.
 
-```text
-register/decide or append accepted event through delta tools
--> rebuild graph.db, snapshot, markdown report, dashboard index
-```
-
-### 6. Completion response
+### 7. Completion response
 
 End with:
 
 ```text
 Workspace:
 Project:
-First graph update:
-Human gate result:
-Generated read models:
-Next possible moves:
+Initial memory:
+Dashboard:
+Strict review:
+Next natural prompts:
 ```
 
-Offer exactly three next moves:
+Offer at most three natural chat prompts, for example:
 
-- add or deep-read a paper;
-- search for missing evidence;
-- propose an experiment for a weak claim.
+- read a source and record what matters;
+- open the dashboard;
+- use strict review for a specific claim.
 
 ## Stop Points
 
 Stop for human approval before:
 
-- accepting a graph delta;
+- accepting a strict-review graph delta;
 - marking a paper project-core or global-core;
-- changing research direction;
-- interpreting experiment results as evidence;
+- changing research direction as a decision;
+- interpreting experiment results as confirmed project evidence;
 - writing Zotero status mirrors with `--apply`.

@@ -1,18 +1,18 @@
 <h1 align="center">Research Pilot</h1>
 
 <p align="center" style="max-width: 980px; margin: 0 auto;">
-  <strong>Turn papers, research chats, experiments, and project notes into a private research memory your AI agent can understand, update, and use to plan the next move.</strong>
+  <strong>Give your research agent local project memory and a read-only dashboard for what it currently understands.</strong>
   <br />
-  <em>Codex-compatible. Zotero-first. Local workspace. Human-gated project understanding.</em>
+  <em>Chat-first. Local workspace. Source-agnostic. Read-only project dashboard.</em>
 </p>
 
 <p align="center">
-  <a href="#-quick-start"><img src="https://img.shields.io/badge/Quick_Start-Run_Research_Pilot-0A7ACA?style=for-the-badge" alt="Quick Start"></a>
+  <a href="#quick-start"><img src="https://img.shields.io/badge/Quick_Start-Run_Research_Pilot-0A7ACA?style=for-the-badge" alt="Quick Start"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-D4A017?style=for-the-badge" alt="MIT License"></a>
-  <a href="#-quick-start"><img src="https://img.shields.io/badge/Codex-Compatible-111111?style=for-the-badge" alt="Codex Compatible"></a>
-  <a href="#-zotero-first-source-boundary"><img src="https://img.shields.io/badge/Zotero-First-CB2D3E?style=for-the-badge" alt="Zotero First"></a>
-  <a href="#-research-browser"><img src="https://img.shields.io/badge/Research_Browser-Dashboard-31A8D6?style=for-the-badge" alt="Research Browser"></a>
-  <a href="#-private-by-design"><img src="https://img.shields.io/badge/Local_Private-Workspace-6D3FD9?style=for-the-badge" alt="Local Private Workspace"></a>
+  <a href="#quick-start"><img src="https://img.shields.io/badge/Codex-Compatible-111111?style=for-the-badge" alt="Codex Compatible"></a>
+  <a href="#source-agnostic-intake"><img src="https://img.shields.io/badge/Source_Agnostic-PDF_URL_arXiv_DOI_Zotero-4C8A2B?style=for-the-badge" alt="Source Agnostic"></a>
+  <a href="#research-browser"><img src="https://img.shields.io/badge/Research_Browser-Dashboard-31A8D6?style=for-the-badge" alt="Research Browser"></a>
+  <a href="#private-by-design"><img src="https://img.shields.io/badge/Local_Private-Workspace-6D3FD9?style=for-the-badge" alt="Local Private Workspace"></a>
 </p>
 
 <p align="center">
@@ -21,74 +21,43 @@
 
 ---
 
-**You are starting a research project. Papers pile up. Chats disappear. Claims drift. Evidence gaps are hard to see. Where should your agent begin?**
+**You are researching through an AI agent. The agent reads, compares, reasons, and writes, but important project understanding can disappear into chat history.**
 
-Research Pilot is an agent-operated research memory plugin. It gives your AI agent a private local workspace where project questions, claims, evidence, warrants, limitations, paper dossiers, experiments, graph deltas, and human decisions compound over time.
+Research Pilot gives that agent a local project memory. Each workspace has one `research-pilot.db` that stores projects, sources, paper understanding, project understanding, literature structure, experiments, updates, and audit history by `project_id`.
 
-This repo is the public plugin source. The installer keeps a local plugin checkout under `~/.research-pilot/repo` and exposes Research Pilot through installed agent skills and helper tools. Your visible research files live in the private workspace created when you ask the agent to initialize Research Pilot.
+The user-facing interface is still chat. Ask the agent normal research questions. Research Pilot provides the local dataset, typed tools, workspace templates, and read-only dashboard that let the agent keep durable project state.
 
-Initialized Research-Pilot workspaces contain one `research-pilot.db` at the workspace root. That file is the workspace-local research dataset: projects are rows in `projects`, and sources, understanding nodes, experiments, literature records, updates, and audit events are partitioned by `project_id`. The dashboard remains read-only and consumes API read models from that dataset. Legacy Markdown/JSONL/JSON artifacts remain import/export/report inputs during migration.
+The dashboard is an observer. It shows the current project state from local read models; it is not where users operate workflows or edit research memory.
 
-The goal is not another notes app. The goal is a research agent that knows your project well enough to tell what is missing, read new papers in context, propose updates, and stop for human approval before changing project understanding.
-
-> **Research Pilot does not replace Zotero, your judgment, or your research taste. It gives the agent a durable memory structure so every paper and decision can update the project instead of vanishing into chat history.**
+> **Research Pilot does not replace your judgment, your research taste, or your paper manager. It helps your agent accumulate observable local understanding of a project instead of starting over from each chat.**
 
 ---
 
-## ✨ What It Helps You Do
+## What It Helps You Do
 
-### Keep the agent oriented
+### Track project understanding through chat
 
-Start from project state, not a blank chat. The agent can inspect your current Project Understanding Graph, project query pack, open deltas, paper dossiers, and generated reports before answering.
+Ask the agent to track a project. Research Pilot creates or updates local project memory while the conversation stays natural.
 
-### Read papers in project context
+### Keep sources connected to the project
 
-Deep-read a paper into a project-local dossier, extract paper claims/evidence/limitations, translate them into project impact, and propose graph deltas instead of producing a generic summary.
+Give the agent a PDF, URL, arXiv link, DOI, note, experiment result, or Zotero item. The agent records source identity, reading depth, relevance, and project impact.
 
-### Find missing evidence
+### Preserve what changed after agent work
 
-Ask which claims have weak support, missing warrants, open limitations, or unresolved translation gaps. Turn those gaps into paper-search contracts or experiment proposals.
+After meaningful research work, the agent can record an UnderstandingUpdate: what source was used, what claim changed, what evidence or uncertainty appeared, and what should be inspected next.
 
-### Let humans approve memory updates
+### Observe without operating workflows
 
-The agent proposes D* deltas. You accept, reject, park, or request revision. Only accepted deltas enter append-only graph events.
+Open the read-only dashboard to see project state, papers, technical lineage, experiments, recent understanding, and graph views where available.
 
-<table>
-  <tr>
-    <td width="50%" valign="top">
-      <h3>🔎 Gap Detection</h3>
-      <p>Surface unsupported claims, weak warrants, missing evidence, and experiment needs from the current graph.</p>
-    </td>
-    <td width="50%" valign="top">
-      <h3>📄 Paper Dossiers</h3>
-      <p>Convert project-relevant papers into agent-readable questions, claims, evidence, warrants, limitations, and proposed deltas.</p>
-    </td>
-  </tr>
-  <tr>
-    <td width="50%" valign="top">
-      <h3>✅ Human-Gated Deltas</h3>
-      <p>Preview graph changes, dry-run effects, then accept, reject, park, or revise before memory changes.</p>
-    </td>
-    <td width="50%" valign="top">
-      <h3>🧪 Experiment Proposals</h3>
-      <p>Suggest experiments from weak claims, missing evidence, and limitations without pretending the results already exist.</p>
-    </td>
-  </tr>
-  <tr>
-    <td width="50%" valign="top">
-      <h3>🧭 Next Research Move</h3>
-      <p>Recommend whether to search, deep-read, update a question, design an experiment, or resolve an open delta.</p>
-    </td>
-    <td width="50%" valign="top">
-      <h3>🖥️ Research Browser</h3>
-      <p>Open a local dashboard to inspect projects, papers, graph snapshots, deltas, gaps, and experiment proposals.</p>
-    </td>
-  </tr>
-</table>
+### Use strict review when needed
+
+Formal graph events and D* review still exist as advanced strict review mode for high-impact claim/evidence changes. They are not required for normal first-run use.
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 ### 1. Install Research Pilot
 
@@ -96,205 +65,133 @@ The agent proposes D* deltas. You accept, reject, park, or request revision. Onl
 curl -fsSL https://raw.githubusercontent.com/QZhang2111/Research-Pilot/main/install.sh | bash
 ```
 
-This clones or updates the plugin source in `~/.research-pilot/repo`, registers Research Pilot in the local plugin catalog, links `~/plugins/research-pilot` to the hidden checkout, links skills into `~/.agents/skills/`, and creates helper commands under `~/.research-pilot/bin/`.
+This installs the local plugin source under `~/.research-pilot/repo`, links Research Pilot skills for Codex-compatible agents, and keeps helper tools available for the agent.
 
-Research Pilot is chat-first in Codex. Current local Codex plugins do not register new top-level slash commands such as `/research-init` or `/research-dashboard`.
-
-### 2. Start Codex and initialize a private workspace
+### 2. Start Codex
 
 ```bash
 codex
 ```
 
-Then ask the agent:
+Then ask:
 
 ```text
-Use Research Pilot to initialize ~/Research/MyResearchWiki.
+Use Research Pilot to track this project.
 ```
 
-The agent creates the workspace, collects minimum project context, and stops at the first human-gated graph update.
+Give the agent your topic, current question, source, note, or experiment result. If a workspace path is needed, the agent will ask for one concise path.
 
-Your research data lives in that workspace, not in the hidden plugin checkout.
+### 3. Work normally in chat
 
-Fresh workspaces include `DemoVisualAffordance` by default; pass `--no-demo` to the init helper for an empty workspace. Initialization creates `research-pilot.db` in the workspace and imports the demo project into that DB. Dashboard read models such as `.dashboard/`, `wiki/graphs/graph.db`, and graph snapshots are rebuilt locally.
-
-The public repo includes an example initialized workspace at `examples/workspaces`. Use it to inspect the default dashboard behavior; its root `research-pilot.db` contains `DemoVisualAffordance` as one project.
-
-### 3. Continue inside your workspace
-
-```bash
-cd ~/Research/MyResearchWiki
-codex
-```
-
-Ask:
+Example:
 
 ```text
-Use Research Pilot to inspect this workspace and help me start a project.
+My project asks whether vision-language models understand object interactions or only learn object co-occurrence.
+Track this with Research Pilot.
 ```
 
-This triggers the first-run flow: the agent checks workspace state, collects minimum project context, creates the first project skeleton, and stops for human approval before changing graph truth.
+The agent creates or selects a local workspace, initializes `research-pilot.db`, creates or selects a project, records the initial project brief or UnderstandingUpdate, and keeps working from chat.
 
-### 4. Make the first project update through human gate
+Fresh workspaces include `DemoVisualAffordance` by default so the dashboard has visible example data. The public repo includes an example initialized workspace at `examples/workspaces`; its root `research-pilot.db` contains `DemoVisualAffordance` as one project.
 
-Ask:
+### 4. Add sources naturally
 
 ```text
-Add my first project question: does this model family encode interaction knowledge?
+Read this arXiv paper and record what matters for the project: https://arxiv.org/...
 ```
 
-The agent should propose a graph delta, dry-run it, and wait for your decision before updating project memory.
+Research Pilot supports PDF paths, URLs, arXiv links, DOI strings, Markdown notes, experiment results, manual references, and Zotero items. Zotero is optional.
 
-Manual fallback:
-
-```bash
-~/.research-pilot/bin/research-pilot-init ~/Research/MyResearchWiki
-```
-
-### 5. Open the Research Browser
-
-Ask the agent:
+### 5. Open the dashboard
 
 ```text
-Use Research Pilot to open the dashboard for ~/Research/MyResearchWiki.
+Open the Research Pilot dashboard.
 ```
 
-The agent starts the local dashboard server and opens:
-
-```text
-http://127.0.0.1:8765/dashboard/index.html
-```
-
-The agent starts the dashboard through the plugin helper. Slash command visibility is not required.
+The agent starts or reuses the local dashboard server, waits until it is ready, then opens the browser or reports the local URL.
 
 ---
 
-## 🧪 What You Can Ask The Agent
+## What You Can Ask The Agent
 
 ```text
-Where does this project stand?
+Use Research Pilot to track this project.
 ```
 
 ```text
-What claim has the weakest evidence?
+Read this source and record what matters for the project.
 ```
 
 ```text
-Read this paper in project context and propose graph deltas.
+What does the project currently understand?
 ```
 
 ```text
-Show open deltas waiting for human review.
+Compare this paper with our current claim.
 ```
 
 ```text
-Find papers for this missing evidence gap.
-```
-
-```text
-What experiment would most reduce uncertainty?
-```
-
-```text
-Based on current graph state, what should I do next?
+Record this experiment result as project evidence.
 ```
 
 ```text
 Open the Research Pilot dashboard.
 ```
 
----
-
-## 🧩 Core Loop
-
-Research Pilot keeps the project loop explicit:
-
-Early projects may start as a project shell before graph truth exists. A project shell can capture target venue, maturity stage, broad direction, baseline anchors, and setup/search prompts. Graph truth starts only after a human-approved D* delta.
-
 ```text
-project question
--> Zotero paper / experiment / human discussion
--> paper dossier or proposal
--> Project Understanding Graph delta
--> human gate
--> append-only graph event
--> graph.db / snapshot / markdown report / dashboard
--> next research move
-```
-
-The graph event log is the source of truth for project understanding. Snapshots, SQLite, markdown reports, and dashboard data are rebuildable read models.
-
----
-
-## 🧱 Mental Model
-
-```text
-Research Pilot repo = hidden plugin source and tools
-Codex plugin = manifest + skills + assets + helper tools + catalog entry
-User research workspace = private research memory
-Agent chat = primary interface
-Zotero = paper metadata, PDFs, collections, tags
-Markdown = long-term agent-readable memory
-Program context = taste and north-star background, not evidence or decisions
-Graph events = advanced append-only project-understanding history
-research-pilot.db = workspace-local dataset, one DB per workspace, many projects by project_id
-Generated reports/dashboard/indexes = rebuildable read models
-```
-
-The hidden plugin checkout is the tool factory. Your private workspace is the research site.
-
-Repo, skill, and plugin are different layers:
-
-```text
-repo = source distribution on GitHub
-skill = one agent instruction workflow
-plugin = packaged capability: manifest, skills, assets, helper tools, install metadata
-```
-
-After installation, Research Pilot is registered through `~/.agents/plugins/marketplace.json` with source path `./plugins/research-pilot`, which resolves to `~/plugins/research-pilot`. It should appear as a local plugin in Codex plugin views. The primary interface is still agent chat: ask Codex to use Research Pilot, and the installed skills route to the right helper workflow.
-
----
-
-## 🔗 Zotero-First Source Boundary
-
-Research Pilot assumes Zotero remains the normal paper manager.
-
-```text
-Zotero = paper metadata, PDFs, collections, tags, reading status mirror
-wiki = digested research understanding and project files
-wiki/program = taste and north-star context only, not graph truth
-wiki/graphs/events = append-only project understanding graph truth
-graph.db/snapshots/reports = rebuildable read models
-dashboard = browser view over read models and wiki state
-chat/agent = primary control surface
-```
-
-DOI, arXiv, URL, or manual refs can be captured during setup and dry-runs, but they are not a replacement for Zotero as the paper source of truth.
-
----
-
-## 🖥️ Research Browser
-
-The Research Browser is a local dashboard over generated read models. It helps you inspect project state, papers, graph snapshots, deltas, gaps, and experiment proposals.
-
-It observes:
-
-```text
-.dashboard/index.json
-wiki/graphs/snapshots/
-wiki/graphs/graph.db
-wiki/projects/
-```
-
-It is not source of truth. Graph truth remains:
-
-```text
-wiki/graphs/events/**/*.jsonl
+Use strict review for this claim update.
 ```
 
 ---
 
-## 📦 What Is Included
+## Core Loop
+
+```text
+user asks agent
+-> agent reads / compares / reasons / writes
+-> agent records durable project understanding
+-> workspace-local research-pilot.db stores project data
+-> dashboard renders read-only project state
+-> user observes and asks the next better prompt
+```
+
+Normal updates go through typed Research Pilot tools and UnderstandingUpdates. Advanced strict review can still use graph deltas and human approval when formal graph truth changes are needed.
+
+---
+
+## Mental Model
+
+```text
+Research Pilot repo = plugin source and implementation resources
+User workspace = private local research dataset
+research-pilot.db = primary workspace dataset, one DB per workspace
+Agent chat = primary user control surface
+Dashboard = read-only observation surface
+Skills/tools = agent-operated internal resources
+Wiki/Markdown = agent-readable context and compatibility artifacts
+Graph events/deltas = advanced strict review mode
+Zotero = optional supported paper-manager adapter
+```
+
+---
+
+## Source-Agnostic Intake
+
+Research Pilot can track sources from PDF paths, URLs, arXiv links, DOI strings, Markdown notes, experiment results, manual references, and Zotero items.
+
+Zotero remains a supported adapter, not a required first step. The agent should record source identity, project relevance, reading depth, and impact on current understanding.
+
+---
+
+## Research Browser
+
+The Research Browser is a local read-only dashboard over workspace read models. It helps inspect project state, papers, technical lineage, experiments, recent understanding, graph views, and next research moves where available.
+
+It observes local project state; it is not where users operate workflows or edit research memory.
+
+---
+
+## What Is Included
 
 - Codex plugin manifest at `.codex-plugin/plugin.json`.
 - Chat-first Research Pilot router skills.
@@ -316,14 +213,16 @@ wiki/graphs/events/**/*.jsonl
 - Zotero bridge helpers for configurable metadata/status workflows.
 - Human-gated delta dry-run, registration, and decision commands.
 - Project-local paper dossier creation, validation, and delta export.
-- Zotero-first source identity intake with manual source-reference capture for setup/dry-run cases.
+- Source identity intake with manual source-reference capture for setup/dry-run cases.
 - Paper-only related-work lineage workflow for project-scoped technical route maps.
 - Related-work lineage dashboard view over generated read models.
 - Research Browser dashboard served from plugin UI files over workspace read models.
 
 ---
 
-## 🔬 Operator Commands
+## Advanced Internal Tools
+
+Normal users should not need these commands. They are kept for agent internals, diagnostics, compatibility, and strict review mode.
 
 Run the full release check:
 
@@ -389,7 +288,7 @@ wiki/_system/workflows/project-evidence-synthesis.md
 
 ---
 
-## 📚 Guides
+## Guides
 
 - [Install](docs/guides/install.md)
 - [Workspace](docs/guides/workspace.md)
@@ -400,7 +299,7 @@ wiki/_system/workflows/project-evidence-synthesis.md
 
 ---
 
-## 🔒 Private By Design
+## Private By Design
 
 Do not put real paper PDFs, Zotero API keys, local Zotero databases, private project dossiers, generated private dashboard data, or personal research memory into this public repo.
 
@@ -408,13 +307,13 @@ Each user should keep their research memory in their own private workspace.
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
 This project is an early public extraction. Useful contributions should preserve the core boundary:
 
 ```text
 agent chat = primary interaction
-human gate = required for project truth
 workspace data = private
 public repo = reusable plugin kit
+strict review = available for formal project-truth changes
 ```

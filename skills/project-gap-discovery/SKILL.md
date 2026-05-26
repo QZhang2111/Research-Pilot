@@ -6,17 +6,24 @@ argument-hint: "<project> <gap-id>"
 
 # Project Gap Discovery
 
-Status: **transition**. Keep for graph-derived evidence discovery. Do not expose
-as a core first-run workflow; future source/literature discovery should absorb
-this path.
+Status: **transition**. Keep as an agent/internal transition path for
+graph-derived evidence discovery. Do not expose as a core first-run workflow;
+future source/literature discovery should absorb this path.
 
-This skill owns the user-facing path:
+Natural user intents this path may satisfy:
+
+```text
+Find papers that could address this project gap.
+Look for sources for this missing evidence need.
+```
+
+Internal transition:
 
 ```text
 graph gap -> evidence need -> search -> lead scoring -> human chooses deep-read
 ```
 
-Run the user-facing discovery command:
+Run the agent-internal command:
 
 ```bash
 python3 "$PLUGIN_ROOT/tools/research_gap_discovery_cli.py" run --repo "$WORKSPACE_PATH" --project "$PROJECT_ID" --gap "$GAP_TARGET" --source memory --json

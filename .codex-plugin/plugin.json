@@ -11,17 +11,17 @@
   "license": "MIT",
   "keywords": [
     "research",
-    "papers",
-    "zotero",
-    "knowledge-graph",
     "agent-memory",
+    "local-first",
+    "project-memory",
+    "dashboard",
     "codex"
   ],
   "skills": "./skills/",
   "interface": {
     "displayName": "Research Pilot",
     "shortDescription": "Private research memory for agent-assisted projects.",
-    "longDescription": "Research Pilot helps Codex-compatible agents initialize and operate a private research workspace where papers, project questions, claims, evidence, limitations, graph deltas, and human decisions accumulate over time. Zotero remains the paper source of truth; graph updates are human-gated.",
+    "longDescription": "Research Pilot gives Codex-compatible agents local project memory for research work. It stores project understanding in a workspace-local dataset and renders a read-only dashboard so users can see what the agent currently understands. Sources can come from PDFs, URLs, arXiv, DOI, notes, experiment results, or Zotero; strict graph review remains available as advanced mode.",
     "developerName": "Qing Zhang",
     "category": "Productivity",
     "capabilities": [
@@ -33,9 +33,9 @@
     "privacyPolicyURL": "https://github.com/QZhang2111/Research-Pilot#private-by-design",
     "termsOfServiceURL": "https://github.com/QZhang2111/Research-Pilot#license",
     "defaultPrompt": [
-      "Start a Research Pilot workspace.",
-      "Inspect my project and find missing evidence.",
-      "Read this paper in context and propose graph updates."
+      "Use Research Pilot to track this project.",
+      "Read this source and record what matters for the project.",
+      "Open the Research Pilot dashboard."
     ],
     "brandColor": "#0A7ACA",
     "composerIcon": "./assets/research-pilot-icon.svg",

@@ -7,20 +7,21 @@ human_review: approved
 
 # Project Evidence Synthesis Protocol v1
 
-Use this protocol when multiple papers, dossiers, search results, or experiment notes must be synthesized into project-level understanding.
+Use this protocol when multiple sources, notes, dossiers, search results, or experiment records must be synthesized into project-level understanding.
 
-The output is not a generic literature review. It is a project-facing evidence synthesis that prepares graph deltas and next actions.
+The output is project-facing evidence synthesis. Normal output should update project memory / UnderstandingUpdate records. Strict-review D* proposals are optional advanced outputs when formal graph changes are needed.
 
 ## Source Boundary
 
-Do not approve sources. Do not mark project-core or global-core. Do not mutate graph truth directly.
+Do not approve sources. Do not mark project-core or global-core. Do not accept strict-review graph changes directly.
 
 Allowed:
 
 - compare sources;
-- identify agreement, conflict, and missing evidence;
-- propose D* graph changes;
-- recommend next search, deep read, or experiment.
+- identify agreement, conflict, missing evidence, and uncertainty;
+- update project memory through normal Research Pilot tools;
+- propose strict-review graph changes only when needed;
+- recommend natural next prompts.
 
 ## Required Context
 
@@ -86,14 +87,17 @@ What sources jointly support, challenge, or bound.
 ## Evidence Pressure
 Which Q/C should be refined, split, promoted, demoted, or retired.
 
-## Proposed Project Understanding Delta
-D* proposal summary and affected graph records.
+## Project Understanding Update
+Normal memory / UnderstandingUpdate summary.
 
-## Human Decision Queue
-accept / reject / park / revise decisions needed.
+## Optional Strict Review
+D* proposal summary only when formal graph review is requested or necessary.
 
-## Next Action Contract
-search / deep-read / experiment / no-op.
+## Human Gate
+Approvals needed before strict graph accept, project-core/global-core status, direction changes, or confirmed experiment evidence.
+
+## Next Natural Prompts
+Natural follow-up prompts for search, deep-read, experiment, or no-op.
 ```
 
 ## Delta Quality Bar
@@ -110,4 +114,4 @@ What should not be learned?
 
 ## Stop Point
 
-Stop after D* proposal unless the human explicitly accepts.
+Stop before accepting strict-review graph changes unless the human explicitly accepts.

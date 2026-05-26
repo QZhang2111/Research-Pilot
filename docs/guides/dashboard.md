@@ -1,6 +1,14 @@
 # Dashboard Guide
 
-Dashboard is a required public browser component and a read-model observer.
+Dashboard is a read-only browser observer over workspace read models.
+
+Normal user path:
+
+```text
+Open the Research Pilot dashboard.
+```
+
+The agent detects the workspace, starts or reuses the local dashboard server, waits for readiness, and opens or reports the URL.
 
 It reads:
 
@@ -11,7 +19,7 @@ It reads:
 - related-work lineage artifacts under `wiki/projects/<Project>/literature-rounds/<Round>/related-work-lineage.json`;
 - project markdown.
 
-Graph truth remains:
+Advanced strict-review graph events remain:
 
 ```text
 wiki/graphs/events/**/*.jsonl
@@ -23,11 +31,9 @@ Generated read models remain disposable. If `.dashboard/index.json` is missing, 
 
 `lineage.html` shows paper-only related-work technical lanes. It is read-only and does not write PUG truth.
 
-Ask the agent:
+Ask the agent with the normal path prompt above.
 
-```text
-Use Research Pilot to open the dashboard for ~/Research/MyResearchWiki.
-```
+## Agent/Internal Fallback
 
 Direct helper fallback:
 

@@ -25,9 +25,24 @@ class CodexPluginManifestTests(unittest.TestCase):
         self.assertIn("Interactive", interface["capabilities"])
         self.assertIn("Read", interface["capabilities"])
         self.assertIn("Write", interface["capabilities"])
-        self.assertIn("private research workspace", interface["longDescription"])
-        self.assertIn("human-gated", interface["longDescription"])
+        self.assertIn("local project memory", interface["longDescription"])
+        self.assertIn("read-only dashboard", interface["longDescription"])
+        self.assertNotIn("human-gated", interface["longDescription"])
+        self.assertNotIn("Zotero remains", interface["longDescription"])
         self.assertRegex(interface["brandColor"], r"^#[0-9A-Fa-f]{6}$")
+
+    def test_manifest_keywords_match_chat_first_positioning(self) -> None:
+        self.assertEqual(
+            self.manifest["keywords"],
+            [
+                "research",
+                "agent-memory",
+                "local-first",
+                "project-memory",
+                "dashboard",
+                "codex",
+            ],
+        )
 
     def test_default_prompts_stay_codex_sized(self) -> None:
         prompts = self.manifest["interface"]["defaultPrompt"]
@@ -35,6 +50,14 @@ class CodexPluginManifestTests(unittest.TestCase):
         self.assertLessEqual(len(prompts), 3)
         for prompt in prompts:
             self.assertLessEqual(len(prompt), 128)
+        self.assertEqual(
+            prompts,
+            [
+                "Use Research Pilot to track this project.",
+                "Read this source and record what matters for the project.",
+                "Open the Research Pilot dashboard.",
+            ],
+        )
 
     def test_referenced_assets_exist(self) -> None:
         interface = self.manifest["interface"]
