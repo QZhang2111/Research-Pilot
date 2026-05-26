@@ -50,9 +50,15 @@ For normal project memory writes, use the dataset writer:
 
 ```python
 from pathlib import Path
+import sys
+
+PLUGIN_ROOT = Path("...").expanduser().resolve()
+WORKSPACE_PATH = Path("...").expanduser().resolve()
+sys.path.insert(0, str(PLUGIN_ROOT))
+
 from tools.research_dataset_writer import ProjectDatasetWriter
 
-ProjectDatasetWriter(Path(WORKSPACE_PATH), actor="agent").write_project_update(packet)
+result = ProjectDatasetWriter(WORKSPACE_PATH, actor="agent").write_project_update(packet)
 ```
 
 Packet minimum:
@@ -64,7 +70,9 @@ Required field examples:
 
 - source needs `source_id` at minimum; usually include title, type, locator, status, and depth.
 - understanding node needs `node_id`, `scope`, `node_type`, `text`.
-- understanding link needs `link_id`, `link_type`, `relation`, `endpoints` if linking nodes.
+- understanding link needs `link_id`, `link_type`, `relation`, and `endpoints`.
+- every `understanding_links[]` item includes `endpoints: [...]`; each endpoint has `role` and `node_id`.
+- real reasoning/translation links should include meaningful endpoints.
 - experiment needs `experiment_id`, `title`.
 - run needs `run_id`, `experiment_id`, `origin_type`.
 - metric needs `metric_id`, `run_id`, `name`, `value_text`.
