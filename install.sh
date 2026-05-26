@@ -281,8 +281,8 @@ print_post_install_guidance() {
   printf 'Health check:\n'
   printf '  python3 "%s/tools/plugin_health.py" --plugin-root "%s" --json\n' "$REPO_DIR" "$REPO_DIR"
   printf 'Restart Codex after install or update so plugin metadata reloads.\n'
-  printf 'Interface: chat with the agent, e.g. "Use Research Pilot to initialize ~/Research/MyResearchWiki".\n'
-  printf 'Slash commands: local Codex plugins do not register /research-* commands; legacy prompt links are removed from %s.\n' "$CODEX_PROMPTS_DIR"
+  printf 'Interface: chat with the agent. Ask: "Use Research Pilot to track my research project."\n'
+  printf 'No Research Pilot command memorization is required. Legacy /research-* prompt links are removed from %s.\n' "$CODEX_PROMPTS_DIR"
 }
 
 cmd_install() {
@@ -293,9 +293,9 @@ cmd_install() {
   printf '\nInstalled Research Pilot for %s\n' "$id"
   printf 'Plugin source: %s\n' "$REPO_DIR"
   printf 'Plugin catalog: %s\n' "$MARKETPLACE_PATH"
-  printf 'Initialize a private workspace:\n'
-  printf '  %s/research-pilot-init ~/Research/MyResearchWiki\n' "$BIN_DIR"
-  printf 'Then run Codex from inside that workspace.\n'
+  printf 'Next step:\n'
+  printf '  Restart Codex, then ask: "Use Research Pilot to track my research project."\n'
+  printf 'Compatibility helper kept for agents and troubleshooting: %s/research-pilot-init\n' "$BIN_DIR"
   print_post_install_guidance
 }
 

@@ -31,6 +31,19 @@ class CodexPluginManifestTests(unittest.TestCase):
         self.assertNotIn("Zotero remains", interface["longDescription"])
         self.assertRegex(interface["brandColor"], r"^#[0-9A-Fa-f]{6}$")
 
+    def test_manifest_keywords_match_chat_first_positioning(self) -> None:
+        self.assertEqual(
+            self.manifest["keywords"],
+            [
+                "research",
+                "agent-memory",
+                "local-first",
+                "project-memory",
+                "dashboard",
+                "codex",
+            ],
+        )
+
     def test_default_prompts_stay_codex_sized(self) -> None:
         prompts = self.manifest["interface"]["defaultPrompt"]
         self.assertGreaterEqual(len(prompts), 1)

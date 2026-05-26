@@ -110,9 +110,10 @@ class HiddenInstallerTests(unittest.TestCase):
         self.assert_marketplace_entry_installed()
         self.assertIn("Health check", result.stdout)
         self.assertIn("plugin_health.py", result.stdout)
-        self.assertIn("Restart Codex", result.stdout)
-        self.assertIn("Use Research Pilot to track my research project.", result.stdout)
-        self.assertIn("chat with the agent", result.stdout.lower())
+        self.assertIn('Next step:\n  Restart Codex, then ask: "Use Research Pilot to track my research project."', result.stdout)
+        self.assertIn(f"Compatibility helper kept for agents and troubleshooting: {self.home}/.research-pilot/bin/research-pilot-init", result.stdout)
+        self.assertIn('Interface: chat with the agent. Ask: "Use Research Pilot to track my research project."', result.stdout)
+        self.assertIn(f"No Research Pilot command memorization is required. Legacy /research-* prompt links are removed from {self.home}/.codex/prompts.", result.stdout)
         self.assertNotIn("Initialize a private workspace:", result.stdout)
 
     def test_codex_install_uses_hidden_checkout_not_current_worktree(self) -> None:
