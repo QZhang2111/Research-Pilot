@@ -12,6 +12,16 @@ Install Research Pilot with:
 curl -fsSL https://raw.githubusercontent.com/QZhang2111/Research-Pilot/main/install.sh | bash
 ```
 
+## Normal User Path
+
+After install, restart Codex and ask:
+
+```text
+Use Research Pilot to track my research project.
+```
+
+The agent handles workspace initialization, `research-pilot.db`, project creation, and dashboard opening through internal tools.
+
 This clones or updates the plugin source into:
 
 ```text
@@ -59,8 +69,12 @@ codex
 Ask the agent:
 
 ```text
-Use Research Pilot to initialize ~/Research/MyResearchWiki.
+Use Research Pilot to track my research project.
 ```
+
+## Agent/Internal Fallbacks
+
+Normal users should not need this command. It remains available for agent internals, diagnostics, and troubleshooting.
 
 Direct helper fallback:
 
@@ -98,7 +112,7 @@ Use Research Pilot to inspect this workspace.
 Open the dashboard by asking:
 
 ```text
-Use Research Pilot to open the dashboard for ~/Research/MyResearchWiki.
+Open the Research Pilot dashboard.
 ```
 
 The dashboard fallback in `commands/research-dashboard.md` starts `tools/research_browser_server.py` from the plugin root, verifies the local URL, and opens or prints it. Slash command visibility is not required.

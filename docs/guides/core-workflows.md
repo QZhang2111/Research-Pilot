@@ -1,6 +1,21 @@
 # Core Workflows
 
+## Normal chat-first path
+
+Normal Research Pilot use starts with chat:
+
+```text
+user asks agent
+-> agent uses Research Pilot tools
+-> project memory is recorded in the workspace dataset / UnderstandingUpdates
+-> dashboard observes read models
+```
+
+Users should not need to memorize workflow names or commands.
+
 ## Project Status
+
+Agent/internal command examples:
 
 ```bash
 python3 tools/graph_query_cli.py summary --repo "$WORKSPACE" --project "$PROJECT" --json
@@ -8,6 +23,8 @@ python3 tools/project_next_action_cli.py suggest --repo "$WORKSPACE" --project "
 ```
 
 Generate a markdown project graph report:
+
+Agent/internal command examples:
 
 ```bash
 python3 tools/build_project_graph_report.py --repo "$WORKSPACE" --project "$PROJECT"
@@ -25,6 +42,8 @@ Graph deltas remain available for advanced review mode. They are not required fo
 
 Use when a project needs a paper-only technical route map before or alongside Project Understanding Graph work.
 
+Agent/internal command examples:
+
 ```bash
 python3 tools/related_work_lineage_cli.py create --repo "$WORKSPACE" --project "$PROJECT" --round "$ROUND" --title "$TITLE" --direction "$DIRECTION" --baseline-paper "$PAPER_ID" --json
 python3 tools/related_work_lineage_cli.py validate --path "$WORKSPACE/wiki/projects/$PROJECT/literature-rounds/$ROUND/related-work-lineage.json" --json
@@ -33,7 +52,9 @@ python3 tools/related_work_lineage_cli.py render-summary --path "$WORKSPACE/wiki
 
 The lineage artifact is not graph truth and does not create D* events.
 
-## Gap Detection
+## Advanced graph-derived gap inspection
+
+Agent/internal command examples:
 
 ```bash
 python3 tools/project_gap_cli.py detect --repo "$WORKSPACE" --project "$PROJECT" --json
@@ -89,7 +110,9 @@ Next Action Contract
 
 This workflow prepares D* proposals. It does not approve papers or mutate graph truth.
 
-## Paper Dossier
+## Source/Paper deep-read note
+
+Agent/internal command examples:
 
 ```bash
 python3 tools/paper_dossier_cli.py create --repo "$WORKSPACE" --project "$PROJECT" --paper "$PAPER_ID" --title "$TITLE"
@@ -113,9 +136,11 @@ failed
 
 Job records are execution state only. They are not graph truth and must not be treated as accepted project understanding.
 
-Project-understanding changes still use D* delta dry-run, registration, and explicit human acceptance before graph truth changes.
+Normal project-understanding changes use workspace project memory / UnderstandingUpdates. Strict graph review uses D* dry-run, registration, and explicit human acceptance.
 
-## Delta Update
+## Advanced review mode
+
+Agent/internal command examples:
 
 ```bash
 python3 tools/graph_delta_cli.py dry-run --repo "$WORKSPACE" --project "$PROJECT" --delta "$DELTA_JSON" --json
