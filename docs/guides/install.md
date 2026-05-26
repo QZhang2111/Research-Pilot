@@ -115,7 +115,7 @@ Open the dashboard by asking:
 Open the Research Pilot dashboard.
 ```
 
-The dashboard fallback in `commands/research-dashboard.md` starts `tools/research_browser_server.py` from the plugin root, verifies the local URL, and opens or prints it. Slash command visibility is not required.
+The dashboard fallback runbook starts `tools/research_browser_server.py` from the plugin root, verifies the local URL, and opens or prints it. It is for agent/internal compatibility, not normal user operation.
 
 Update plugin source:
 
