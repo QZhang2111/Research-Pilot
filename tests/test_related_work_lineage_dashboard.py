@@ -153,6 +153,20 @@ class RelatedWorkLineageDashboardTest(unittest.TestCase):
         )
         self.assertTrue((ROOT / "dashboard" / "lineage-atlas" / "src" / "lineage-atlas.css").is_file())
 
+    def test_workspace_page_and_island_bundle_exist(self):
+        html = (ROOT / "dashboard" / "workspace.html").read_text(encoding="utf-8")
+        package = json.loads((ROOT / "dashboard" / "package.json").read_text(encoding="utf-8"))
+
+        self.assertIn('data-page="workspace"', html)
+        self.assertIn("workspace-island.bundle.js?v=english-dashboard-20260523", html)
+        self.assertIn("workspace-island.bundle.css?v=english-dashboard-20260523", html)
+        self.assertEqual(
+            "vite build --config workspace-island/vite.config.mjs",
+            package["scripts"].get("build:workspace-island"),
+        )
+        self.assertTrue((ROOT / "dashboard" / "workspace-island" / "src" / "WorkspaceIslandApp.jsx").is_file())
+        self.assertTrue((ROOT / "dashboard" / "workspace-island" / "src" / "workspace-island.css").is_file())
+
     def test_lineage_atlas_uses_shallow_model_not_project_graph_builders(self):
         source = (
             ROOT / "dashboard" / "lineage-atlas" / "src" / "LineageAtlasApp.jsx"

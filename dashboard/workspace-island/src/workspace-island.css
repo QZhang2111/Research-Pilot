@@ -1,0 +1,130 @@
+.workspace-island-shell {
+  min-height: calc(100vh - 150px);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-1);
+  overflow: hidden;
+}
+
+.workspace-island-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-bottom: 1px solid var(--border);
+  padding: 10px;
+}
+
+.workspace-island-toolbar nav {
+  display: inline-grid;
+  grid-template-columns: repeat(3, minmax(150px, 1fr));
+  gap: 4px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 4px;
+  background: var(--surface-2);
+}
+
+.workspace-island-toolbar button {
+  min-height: 42px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-muted);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.workspace-island-toolbar button.is-active {
+  border-color: var(--accent);
+  color: var(--text-main);
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+.workspace-island-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 390px);
+  min-height: calc(100vh - 215px);
+}
+
+.workspace-canvas {
+  min-height: calc(100vh - 215px);
+  background: var(--graph-bg, var(--surface-1));
+}
+
+.workspace-inspector {
+  border-left: 1px solid var(--border);
+  padding: 18px;
+  overflow: auto;
+  background: var(--surface-1);
+}
+
+.workspace-inspector h2,
+.workspace-inspector h3 {
+  margin: 0;
+}
+
+.workspace-inspector > p {
+  color: var(--text-muted);
+}
+
+.workspace-inspector section {
+  border-top: 1px solid var(--border);
+  margin-top: 16px;
+  padding-top: 16px;
+}
+
+.workspace-inspector-list {
+  display: grid;
+  gap: 8px;
+}
+
+.workspace-inspector-list article {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px;
+  background: var(--surface-2);
+}
+
+.workspace-inspector-list span,
+.workspace-inspector-list em {
+  display: block;
+  color: var(--text-muted);
+  font-family: var(--mono);
+  font-size: 12px;
+}
+
+.workspace-node-button {
+  width: 100%;
+  min-height: 96px;
+  display: grid;
+  gap: 6px;
+  text-align: left;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  color: var(--text-main);
+  background: var(--surface-2);
+  cursor: pointer;
+}
+
+.workspace-node-button span,
+.workspace-node-button em {
+  color: var(--text-muted);
+  font-family: var(--mono);
+  font-size: 12px;
+}
+
+.workspace-node-button strong {
+  line-height: 1.2;
+}
+
+@media (max-width: 900px) {
+  .workspace-island-body {
+    grid-template-columns: 1fr;
+  }
+
+  .workspace-inspector {
+    border-left: 0;
+    border-top: 1px solid var(--border);
+  }
+}
