@@ -88,6 +88,19 @@ class ChatFirstWorkflowSurfaceTests(unittest.TestCase):
         self.assertIn("source-agnostic", zotero.lower())
         self.assertIn("without forcing a paper-manager workflow", source)
 
+    def test_gap_discovery_surfaces_are_agent_internal_and_source_agnostic(self) -> None:
+        template = read("templates/workspace/wiki/_system/workflows/gap-driven-search.md")
+        skill = read("skills/project-gap-discovery/SKILL.md")
+
+        self.assertNotIn("Zotero-first", template)
+        self.assertNotIn("Normal paper management remains Zotero-first", template)
+        self.assertIn("source-agnostic", template.lower())
+        self.assertIn("Zotero = optional adapter", template)
+
+        self.assertNotIn("user-facing discovery command", skill)
+        self.assertNotIn("This skill owns the user-facing path", skill)
+        self.assertRegex(skill, r"agent/internal transition path|agent-internal command")
+
     def test_no_user_facing_first_run_copy_promotes_dstar_or_zotero_first(self) -> None:
         user_paths = [
             "README.md",
