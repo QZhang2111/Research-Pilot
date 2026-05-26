@@ -10,6 +10,17 @@ def read(path: str) -> str:
     return (REPO / path).read_text(encoding="utf-8")
 
 
+def readme_quick_start(text: str) -> str:
+    start = "## Quick Start"
+    end = "## What You Can Ask"
+    if start not in text:
+        raise AssertionError(f"README missing expected section heading: {start!r}")
+    body = text.split(start, 1)[1]
+    if end not in body:
+        raise AssertionError(f"README missing expected next section prefix: {end!r}")
+    return body.split(end, 1)[0]
+
+
 class ChatFirstWorkflowSurfaceTests(unittest.TestCase):
     def test_readme_leads_with_chat_first_local_memory(self) -> None:
         text = read("README.md")
@@ -24,7 +35,7 @@ class ChatFirstWorkflowSurfaceTests(unittest.TestCase):
 
     def test_readme_quick_start_does_not_foreground_helper_commands(self) -> None:
         text = read("README.md")
-        quick_start = text.split("## Quick Start", 1)[1].split("## What You Can Ask", 1)[0]
+        quick_start = readme_quick_start(text)
 
         self.assertIn("Use Research Pilot to track this project.", quick_start)
         self.assertIn("Open the Research Pilot dashboard.", quick_start)
@@ -92,7 +103,10 @@ class ChatFirstWorkflowSurfaceTests(unittest.TestCase):
             "docs/guides/workspace.md",
             "docs/guides/source-boundaries.md",
         ]
-        forbidden = re.compile(r"Zotero-first|D\* delta|human-gated graph update|graph event log is the source of truth")
+        forbidden = re.compile(
+            r"zotero[-\s]+first|d\s*\*\s*[-\s]*deltas?|human[-\s]+gated[-\s]+graph[-\s]+update|graph event log is the source of truth",
+            re.IGNORECASE,
+        )
         for path in user_paths:
             with self.subTest(path=path):
                 self.assertIsNone(forbidden.search(read(path)))

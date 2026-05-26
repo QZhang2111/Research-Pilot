@@ -11,6 +11,17 @@ from tools.research_pilot_init import main as research_pilot_init_main
 REPO = Path(__file__).resolve().parents[1]
 
 
+def readme_quick_start(text: str) -> str:
+    start = "## Quick Start"
+    end = "## What You Can Ask"
+    if start not in text:
+        raise AssertionError(f"README missing expected section heading: {start!r}")
+    body = text.split(start, 1)[1]
+    if end not in body:
+        raise AssertionError(f"README missing expected next section prefix: {end!r}")
+    return body.split(end, 1)[0]
+
+
 class PluginCommandTests(unittest.TestCase):
     def test_research_init_command_exists(self) -> None:
         command = REPO / "commands" / "research-init.md"
@@ -27,7 +38,7 @@ class PluginCommandTests(unittest.TestCase):
 
     def test_readme_uses_chat_first_as_primary_init_path(self) -> None:
         text = (REPO / "README.md").read_text()
-        quick_start = text.split("## Quick Start", 1)[1].split("## What You Can Ask", 1)[0]
+        quick_start = readme_quick_start(text)
 
         self.assertIn("Use Research Pilot to track this project.", quick_start)
         self.assertIn("local workspace", quick_start.lower())
@@ -56,7 +67,7 @@ class PluginCommandTests(unittest.TestCase):
 
     def test_readme_uses_chat_first_as_primary_dashboard_path(self) -> None:
         text = (REPO / "README.md").read_text()
-        quick_start = text.split("## Quick Start", 1)[1].split("## What You Can Ask", 1)[0]
+        quick_start = readme_quick_start(text)
 
         self.assertIn("Open the Research Pilot dashboard.", quick_start)
         self.assertIn("agent starts or reuses the local dashboard server", quick_start)
