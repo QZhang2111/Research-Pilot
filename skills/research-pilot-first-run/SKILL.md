@@ -92,17 +92,17 @@ Do not ask for Zotero status unless the user gives a Zotero source or asks for Z
 
 ### 4. Create project memory
 
-Create or select project in the workspace dataset. Create compatibility project files when needed:
+Create or select project in the workspace dataset. Create compatibility project shell files through:
 
-```text
-wiki/projects/<ProjectId>/overview.md
-wiki/projects/<ProjectId>/project-query-pack.md
-wiki/projects/<ProjectId>/decisions.md
-wiki/projects/<ProjectId>/papers/.gitkeep
-wiki/projects/<ProjectId>/experiments/.gitkeep
+```bash
+python3 "$PLUGIN_ROOT/tools/project_shell_cli.py" --repo "$WORKSPACE_PATH" --project "$PROJECT_ID" --title "$TITLE" --direction "$DIRECTION" --seed-question "$QUESTION" --json
 ```
 
+Do not hand-create a divergent compatibility file list. The compatibility shell may include legacy `experiment-proposals/.gitkeep`.
+
 Record an initial project brief or UnderstandingUpdate. Use `human_review: pending` for unapproved claims and explicit status labels for uncertainty.
+
+Actual experiment records belong in `research-pilot.db` through `ProjectDatasetWriter.write_project_update`. Dashboard experiments read DB or `wiki/projects/<ProjectId>/experiments/experiments.json` when imported/exported.
 
 ### 5. Dashboard readiness
 

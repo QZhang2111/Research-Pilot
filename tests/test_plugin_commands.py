@@ -21,6 +21,16 @@ def readme_quick_start(text: str) -> str:
     return body.split(end, 1)[0]
 
 
+def skill_section(text: str, heading: str) -> str:
+    marker = f"### {heading}"
+    if marker not in text:
+        raise AssertionError(f"missing skill section: {marker}")
+    body = text.split(marker, 1)[1]
+    if "\n### " in body:
+        body = body.split("\n### ", 1)[0]
+    return body
+
+
 class PluginCommandTests(unittest.TestCase):
     def test_research_init_command_exists(self) -> None:
         command = REPO / "commands" / "research-init.md"
@@ -90,10 +100,14 @@ class PluginCommandTests(unittest.TestCase):
         self.assertIn("must not append graph events", workflow_text)
         self.assertIn("ask the user to narrow or split maps", workflow_text)
         self.assertIn("exclude low-signal follow-ups", workflow_text)
-        self.assertIn("map_literature", router_text)
-        self.assertIn("related-work-lineage", router_text)
-        self.assertIn("paper-only", router_text)
-        self.assertIn("Do not append graph events", router_text)
+        map_literature = skill_section(router_text, "map_literature")
+        self.assertIn("related-work-lineage", map_literature)
+        self.assertIn("paper-only", map_literature)
+        self.assertIn("read-only", map_literature)
+        self.assertIn("Do not append graph events or mutate project graph truth", map_literature)
+        self.assertNotIn("project-evidence-synthesis", map_literature)
+        self.assertIn("ask the user to narrow or split maps", map_literature)
+        self.assertIn("exclude low-signal follow-ups", map_literature)
 
     def test_related_work_lineage_workflow_copies_into_initialized_workspace(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

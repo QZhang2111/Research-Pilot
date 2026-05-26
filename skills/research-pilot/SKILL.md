@@ -44,6 +44,31 @@ wiki/log.md
 
 Legacy workspaces may not yet have `research-pilot.db`; if workspace markers exist, inspect status before deciding whether initialization/import is needed.
 
+## DB Write Route
+
+For normal project memory writes, use the dataset writer:
+
+```python
+from pathlib import Path
+from tools.research_dataset_writer import ProjectDatasetWriter
+
+ProjectDatasetWriter(Path(WORKSPACE_PATH), actor="agent").write_project_update(packet)
+```
+
+Packet minimum:
+
+- required top-level: `project_id`, `activity_type`, `summary`
+- optional sections: `project`, `sources`, `understanding_nodes`, `understanding_links`, `experiments`, `experiment_runs`, `experiment_metrics`, `experiment_artifacts`, `literature_lanes`, `literature_items`, `literature_relations`, `project_positionings`, `entity_links`
+
+Required field examples:
+
+- source needs `source_id` at minimum; usually include title, type, locator, status, and depth.
+- understanding node needs `node_id`, `scope`, `node_type`, `text`.
+- understanding link needs `link_id`, `link_type`, `relation`, `endpoints` if linking nodes.
+- experiment needs `experiment_id`, `title`.
+- run needs `run_id`, `experiment_id`, `origin_type`.
+- metric needs `metric_id`, `run_id`, `name`, `value_text`.
+
 ## Intent Routes
 
 ### start_or_track_project
@@ -112,9 +137,12 @@ Add this note to the project.
 Agent behavior:
 
 1. Accept PDF path, URL, arXiv, DOI, Markdown note, experiment result, manual reference, or Zotero item.
-2. Record source identity/status/relevance through source tools or DB writer.
-3. Use Zotero only when provided/configured or when user asks.
-4. If project understanding changes, write an UnderstandingUpdate.
+2. Write packet through `ProjectDatasetWriter.write_project_update`.
+3. Use `activity_type: "source_record"` for source identity/status/relevance capture.
+4. Include `sources` with `source_id`; usually include `source_type`, `title`, `locator` or `url`/`doi`/`arxiv_id`, `reading_status`, and `reading_depth`.
+5. Add `understanding_nodes` only when the source changes project understanding.
+6. Use Zotero only when provided/configured or when user asks.
+7. If project understanding changes, include an UnderstandingUpdate-style `summary` and project-scoped nodes/links.
 
 ### deep_read_source
 
@@ -127,10 +155,13 @@ Extract the claims and limitations that matter for this project.
 
 Agent behavior:
 
-1. Create or update source/paper note.
+1. Create or update source/paper note and DB source record.
 2. Separate source-level understanding from project-level understanding.
-3. Record project impact through UnderstandingUpdate or DB-backed update.
-4. Use D* only under strict review.
+3. Write packet through `ProjectDatasetWriter.write_project_update`.
+4. Use `activity_type: "deep_read"`.
+5. Include `sources` for the source, paper-scoped `understanding_nodes` for extracted claims/evidence/limitations, and project-scoped `understanding_nodes` or `understanding_links` for project impact.
+6. Include link `endpoints` when connecting nodes.
+7. Use D* only under strict review.
 
 ### update_project_understanding
 
@@ -145,9 +176,11 @@ Record this experiment result as project evidence.
 Agent behavior:
 
 1. Classify the update.
-2. Write normal project memory update through UnderstandingUpdate / typed dataset tools.
-3. Preserve uncertainty/status.
-4. Use strict review for high-impact formal graph updates or when user asks.
+2. Write normal project memory update through `ProjectDatasetWriter.write_project_update`.
+3. Use `activity_type: "understanding_update"`.
+4. Include `understanding_nodes` for questions, claims, evidence, warrants, or limitations; include `understanding_links` with `endpoints` when recording relations.
+5. Preserve uncertainty/status with status, confidence, confirmation, and metadata fields.
+6. Use strict review for high-impact formal graph updates or when user asks.
 
 ### map_literature
 
@@ -162,6 +195,8 @@ Agent behavior:
 
 Use `related-work-lineage`; keep output paper-only and read-only. Do not append graph events or mutate project graph truth.
 
+If the user gives a broad map request, ask the user to narrow or split maps and exclude low-signal follow-ups before creating the map.
+
 ### record_experiment
 
 User examples:
@@ -173,7 +208,12 @@ Record these completed experiment results.
 
 Agent behavior:
 
-Record planned design or completed evidence as project experiment data. Connect to claims/evidence when available. Do not call proposal-only framing normal product language.
+1. Write packet through `ProjectDatasetWriter.write_project_update`.
+2. Use `activity_type: "experiment_record"` for planned experiments.
+3. Use `activity_type: "experiment_result"` for completed runs/results.
+4. Include `experiments` with `experiment_id`, `title`; include `experiment_runs` with `run_id`, `experiment_id`, `origin_type`; include `experiment_metrics` with `metric_id`, `run_id`, `name`, `value_text`.
+5. Connect to claims/evidence with `entity_links` or `understanding_links` when available.
+6. Do not call proposal-only framing normal product language.
 
 ### strict_review
 
