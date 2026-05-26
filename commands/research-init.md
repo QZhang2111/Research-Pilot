@@ -71,7 +71,7 @@ Strict review = optional graph/D* mode.
    - project id or short name;
    - one-sentence research direction;
    - first question, uncertainty, or claim;
-   - Zotero status: configured now or later.
+   - optional Zotero setup/status only if the user provides a Zotero source or asks for Zotero setup.
 5. Use `research-pilot-first-run` to create missing project skeleton files.
 6. Record initial project brief or UnderstandingUpdate.
 7. Offer to open the dashboard.
