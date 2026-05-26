@@ -496,25 +496,16 @@ function renderProjectsIndex() {
     <div class="project-entry-list">
       ${(state.data.projects || []).map((project) => {
         const round = latestRound(project.id);
-        const paperCount = allPapersForProject(project.id).length;
-        const stats = project.stats || {};
         return `
           <article class="project-entry">
             <div>
               <p class="eyebrow">Project</p>
-              <h2><a href="${escapeAttr(projectUrl(project.id))}">${escapeHtml(displayProjectTitle(project))}</a>${renderDemoBadge(project)}</h2>
+              <h2><a href="${escapeAttr(workspaceUrl(project.id))}">${escapeHtml(displayProjectTitle(project))}</a>${renderDemoBadge(project)}</h2>
               <p class="project-question">${escapeHtml(project.card?.working_question || project.overview?.direction || "No project question yet.")}</p>
             </div>
-            <dl class="metric-row">
-              <div><dt>Candidate</dt><dd>${stats.candidate_papers || 0}</dd></div>
-              <div><dt>ProjectPaper</dt><dd>${stats.summarized_papers || 0}</dd></div>
-              <div><dt>paper_count</dt><dd>${paperCount || round?.paper_count || 0}</dd></div>
-              <div><dt>Rounds</dt><dd>${stats.literature_rounds || 0}</dd></div>
-              <div><dt>Claims</dt><dd>${stats.claims || 0}</dd></div>
-            </dl>
             <div class="entry-actions">
               <span class="latest-round-label">Latest status ${escapeHtml(projectStatusLine(project, round))}</span>
-              <a class="primary-action" href="${escapeAttr(projectUrl(project.id))}">OpenProject</a>
+              <a class="primary-action" href="${escapeAttr(workspaceUrl(project.id))}">OpenProject</a>
               <a class="primary-action review-action" href="${escapeAttr(papersUrl(project.id))}">Papers</a>
             </div>
           </article>
@@ -3163,7 +3154,6 @@ function renderPaperDetailShell(paper, projectId, roundName, memoPlaceholder) {
   return `
     <section class="paper-decision-shell">
       <section class="paper-readonly-strip" aria-label="PaperStatus">
-        ${renderPaperReadOnlyStatusPanel(paper)}
         ${renderAgentCommandHint(`review paper ${key}`)}
       </section>
       <section class="paper-detail-flow">
@@ -3194,24 +3184,6 @@ function renderPaperDetailShell(paper, projectId, roundName, memoPlaceholder) {
         </article>
       </section>
       ${renderProvenanceDisclosure(paper, roundName)}
-    </section>
-  `;
-}
-
-function renderPaperReadOnlyStatusPanel(paper) {
-  const stateInfo = paperCurrentState(paper);
-  return `
-    <section class="paper-readonly-status" aria-label="Read-only paper state">
-      <p class="eyebrow">Read-only Paper State</p>
-      <dl class="paper-status-grid">
-        <div><dt>review_status</dt><dd>${escapeHtml(paper.review_status || "candidate")}</dd></div>
-        <div><dt>current_state</dt><dd>${escapeHtml(stateInfo.label)}</dd></div>
-        <div><dt>read_level</dt><dd>${escapeHtml(paper.read_level || "unknown")}</dd></div>
-        <div><dt>summary_status</dt><dd>${escapeHtml(paper.summary_status || "unknown")}</dd></div>
-        <div><dt>human_review</dt><dd>${escapeHtml(paper.human_review || "pending")}</dd></div>
-        <div><dt>project_core_for</dt><dd>${escapeHtml((paper.project_core_for || []).join(", ") || "none")}</dd></div>
-        <div><dt>global_core</dt><dd>${paper.global_core ? "true" : "false"}</dd></div>
-      </dl>
     </section>
   `;
 }

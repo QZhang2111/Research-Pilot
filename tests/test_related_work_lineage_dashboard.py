@@ -139,6 +139,24 @@ class RelatedWorkLineageDashboardTest(unittest.TestCase):
         self.assertNotIn(">Technical Lineage</a>", app)
         self.assertNotIn(">Experiments</a>", app)
 
+    def test_dashboard_cleanup_removes_low_value_metrics_and_read_only_state(self):
+        app = (ROOT / "dashboard" / "app.js").read_text(encoding="utf-8")
+
+        project_index_start = app.index("function renderProjectsIndex()")
+        project_index_end = app.index("async function renderProjectWorkspace()", project_index_start)
+        project_index = app[project_index_start:project_index_end]
+        self.assertNotIn("Candidate", project_index)
+        self.assertNotIn("ProjectPaper", project_index)
+        self.assertNotIn("paper_count", project_index)
+        self.assertNotIn("Rounds", project_index)
+        self.assertNotIn("Claims", project_index)
+
+        paper_detail_start = app.index("async function renderPaperDetailPage()")
+        paper_detail_end = app.index("function renderPaperInsightMap", paper_detail_start)
+        paper_detail = app[paper_detail_start:paper_detail_end]
+        self.assertNotIn("Read-only Paper State", paper_detail)
+        self.assertNotIn("renderPaperReadOnlyStatusPanel", paper_detail)
+
     def test_dashboard_index_fetch_bypasses_browser_cache(self):
         app = (ROOT / "dashboard" / "app.js").read_text(encoding="utf-8")
 
