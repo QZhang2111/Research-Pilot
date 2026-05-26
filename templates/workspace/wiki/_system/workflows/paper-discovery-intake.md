@@ -29,11 +29,25 @@ python3 tools/source_intake_cli.py intake \
   --title "$TITLE" \
   --zotero-key "$ZOTERO_ITEM_KEY" \
   --doi "$DOI" \
+  --arxiv "$ARXIV_ID" \
   --url "$URL" \
+  --source-ref "$SOURCE_REF" \
+  --source-ref "$ANOTHER_SOURCE_REF" \
   --json
 ```
 
-DOI/arXiv/URL/manual refs, files, notes, experiment refs, and Zotero keys are supported source identity inputs.
+Use CLI flags by source identity:
+
+- PDF path: `--source-ref "file:/absolute/path/to/source.pdf"`
+- Markdown note: `--source-ref "note:/absolute/path/to/note.md"` or another stable note locator.
+- Experiment result: `--source-ref "experiment:<experiment-id-or-result-ref>"`
+- Manual reference: `--source-ref "manual:<citation-or-description>"`
+- URL: `--url "$URL"`
+- DOI: `--doi "$DOI"`
+- arXiv: `--arxiv "$ARXIV_ID"`
+- Zotero item: `--zotero-key "$ZOTERO_ITEM_KEY"`
+
+Repeat `--source-ref` for multiple file, note, experiment, or manual references.
 
 ## Human Gate
 

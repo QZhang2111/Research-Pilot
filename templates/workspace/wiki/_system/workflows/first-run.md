@@ -101,7 +101,64 @@ python3 "$PLUGIN_ROOT/tools/project_shell_cli.py" --repo "$WORKSPACE_PATH" --pro
 
 Do not hand-create a divergent compatibility file list. The compatibility shell may include legacy `experiment-proposals/.gitkeep`.
 
-Record an initial project brief or UnderstandingUpdate. Use `human_review: pending` for unapproved claims and explicit status labels for uncertainty.
+The compatibility shell is not DB project memory. Create or update `research-pilot.db` with an initial project brief or UnderstandingUpdate through `ProjectDatasetWriter.write_project_update`.
+
+Run the DB write from any workspace current directory by resolving both paths:
+
+```python
+from pathlib import Path
+import os
+import sys
+
+
+def resolve_plugin_root() -> Path:
+    candidates = [
+        os.environ.get("PLUGIN_ROOT", ""),
+        "~/.research-pilot/repo",
+        "~/.research-pilot-plugin",
+    ]
+    for candidate in candidates:
+        if not candidate:
+            continue
+        path = Path(candidate).expanduser().resolve()
+        if (path / "tools" / "research_dataset_writer.py").exists():
+            return path
+    cwd = Path.cwd().resolve()
+    if (cwd / "tools" / "research_dataset_writer.py").exists():
+        return cwd
+    raise RuntimeError("Research Pilot plugin root not found")
+
+
+PLUGIN_ROOT = resolve_plugin_root()
+WORKSPACE_PATH = Path(os.environ.get("WORKSPACE_PATH", ".")).expanduser().resolve()
+PROJECT_ID = os.environ["PROJECT_ID"]
+TITLE = os.environ.get("TITLE", PROJECT_ID)
+DIRECTION = os.environ.get("DIRECTION", "")
+QUESTION = os.environ.get("QUESTION", "")
+
+sys.path.insert(0, str(PLUGIN_ROOT))
+
+from tools.research_dataset_writer import ProjectDatasetWriter
+
+packet = {
+    "project_id": PROJECT_ID,
+    "activity_type": "understanding_update",
+    "summary": f"Initial project memory for {TITLE}.",
+    "project": {
+        "title": TITLE,
+        "summary": DIRECTION,
+        "main_question": QUESTION,
+        "stage": "idea",
+        "status": "active",
+        "confirmation": "human_review_pending",
+    },
+}
+
+result = ProjectDatasetWriter(WORKSPACE_PATH, actor="agent").write_project_update(packet)
+print(result)
+```
+
+Use `human_review: pending` or equivalent confirmation/status fields for unapproved claims and explicit labels for uncertainty.
 
 Actual experiment records belong in `research-pilot.db` through `ProjectDatasetWriter.write_project_update`. Dashboard experiments read DB or `wiki/projects/<ProjectId>/experiments/experiments.json` when imported/exported.
 
