@@ -1,10 +1,13 @@
-import React, { useMemo, useState } from "react";
+import React, { memo, useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import {
   Background,
   BackgroundVariant,
   Controls,
+  Handle,
+  MarkerType,
   MiniMap,
+  Position,
   ReactFlow,
   ReactFlowProvider,
 } from "@xyflow/react";
@@ -19,42 +22,218 @@ const modeLabels = {
   experiments: "Experiments",
 };
 
-function nodeColor(node) {
-  const type = node?.data?.entity_type || "";
-  if (type === "question") return "#8ec7ff";
-  if (type === "claim" || type === "evaluation_setting") return "#d6a84f";
-  if (type === "experiment" || type === "run") return "#70d6a3";
-  if (type === "source") return "#68c7d4";
-  return "#8f98a8";
+function relationClass(value) {
+  return String(value || "related").toLowerCase().replace(/[^a-z0-9_-]+/g, "-") || "related";
 }
 
-function toFlowNode(node, index, onNodeAction) {
+function shortLabel(value, limit = 116) {
+  const text = String(value || "").replace(/\s+/g, " ").trim();
+  if (text.length <= limit) return text;
+  return `${text.slice(0, limit - 1).trim()}...`;
+}
+
+function entityTone(entityType) {
+  const type = String(entityType || "").toLowerCase();
+  if (type === "question") return "q";
+  if (type === "claim" || type === "evaluation_setting") return "c";
+  if (type === "evidence" || type === "experiment") return "e";
+  if (type === "warrant") return "w";
+  if (type === "limitation") return "l";
+  if (type === "source" || type === "paper" || type === "literature_lane") return "p";
+  if (type === "run") return "r";
+  return "x";
+}
+
+function nodeColor(node) {
+  const tone = entityTone(node?.data?.entity_type || node?.data?.node?.entity_type);
+  return {
+    q: "#8ec7ff",
+    c: "#d6a84f",
+    e: "#70d6a3",
+    w: "#bea0ff",
+    l: "#e58b83",
+    p: "#68c7d4",
+    r: "#9bd7df",
+  }[tone] || "#8f98a8";
+}
+
+function workspaceNodePosition(node, index, model) {
+  if (node.position) return node.position;
+  const type = node.entity_type || "";
+  const mode = model?.mode || "understanding";
+  const layer = model?.layer || "";
+  const sameTypeIndex = (model?.canvas?.nodes || []).filter((item, itemIndex) => itemIndex < index && item.entity_type === type).length;
+  if (mode === "understanding" && layer === "project_overview") {
+    if (type === "question") return { x: sameTypeIndex * 360, y: -180 };
+    if (type === "claim") return { x: sameTypeIndex * 390, y: 80 };
+  }
+  if (mode === "literature") {
+    if (type === "literature_lane") return { x: 0, y: sameTypeIndex * 190 };
+    return { x: 360 + (sameTypeIndex % 4) * 340, y: Math.floor(sameTypeIndex / 4) * 170 };
+  }
+  if (mode === "experiments") {
+    if (type === "evaluation_setting") return { x: sameTypeIndex * 410, y: -40 };
+    if (type === "experiment") return { x: sameTypeIndex * 380, y: 210 };
+    if (type === "run") return { x: sameTypeIndex * 340, y: 430 };
+  }
+  return { x: (index % 4) * 360, y: Math.floor(index / 4) * 180 };
+}
+
+function workspaceNodeWidth(node, model) {
+  if (model?.mode === "literature") return node.entity_type === "literature_lane" ? 300 : 330;
+  if (model?.mode === "experiments") return node.entity_type === "evaluation_setting" ? 360 : 330;
+  return node.entity_type === "claim" ? 360 : 300;
+}
+
+function focusedNodeIds(model) {
+  const selectedId = model?.selected_id || model?.focus_id || "";
+  const ids = new Set([selectedId].filter(Boolean));
+  for (const edge of model?.canvas?.edges || []) {
+    if (edge.source === selectedId) ids.add(edge.target);
+    if (edge.target === selectedId) ids.add(edge.source);
+  }
+  return ids;
+}
+
+function nodeFocusClass(node, focusedIds, hasFocus) {
+  if (!hasFocus) return "";
+  if (focusedIds.has(node.id)) return node.id === [...focusedIds][0] ? "is-selected" : "is-neighbor";
+  return "is-dimmed";
+}
+
+function toFlowNode(node, index, model, focusedIds, onNodeAction) {
+  const hasFocus = Boolean(model?.selected_id || model?.focus_id);
+  const focusClass = nodeFocusClass(node, focusedIds, hasFocus);
   return {
     id: node.id,
-    type: "default",
-    position: node.position || { x: (index % 4) * 340, y: Math.floor(index / 4) * 180 },
+    type: "workspaceKnowledgeNode",
+    position: workspaceNodePosition(node, index, model),
+    sourcePosition: Position.Bottom,
+    targetPosition: Position.Top,
     data: {
-      label: (
-        <button type="button" className="workspace-node-button" onClick={() => onNodeAction(node)}>
-          <span>{node.local_id || node.entity_type}</span>
-          <strong>{node.label}</strong>
-          {node.subtitle ? <em>{node.subtitle}</em> : null}
-        </button>
-      ),
+      node,
       entity_type: node.entity_type,
+      tone: entityTone(node.entity_type),
+      focusClass,
+      onNodeAction,
     },
-    style: { width: node.entity_type === "source" ? 320 : 300, minHeight: 112 },
+    style: {
+      width: workspaceNodeWidth(node, model),
+      minHeight: node.entity_type === "claim" ? 138 : 118,
+    },
   };
 }
 
-function toFlowEdge(edge) {
+function toFlowEdge(edge, model, focusedIds) {
+  const relation = relationClass(edge.relation || edge.label);
+  const hasFocus = Boolean(model?.selected_id || model?.focus_id);
+  const active = focusedIds.has(edge.source) && focusedIds.has(edge.target);
+  const dimmed = hasFocus && !active;
+  const color = {
+    answers: "#8ec7ff",
+    supports: "#d6a84f",
+    qualifies: "#68c7d4",
+    bounds: "#e58b83",
+    cites: "#68c7d4",
+    contains: "#8f98a8",
+  }[relation] || "#d6a84f";
   return {
     id: edge.id,
     source: edge.source,
     target: edge.target,
-    label: edge.label,
+    label: active ? edge.label : undefined,
     type: "smoothstep",
+    className: `workspace-edge workspace-edge-${relation} ${active ? "is-selected" : ""} ${dimmed ? "is-dimmed" : ""}`.trim(),
+    markerEnd: { type: MarkerType.ArrowClosed, color },
+    style: {
+      stroke: color,
+      strokeWidth: active ? 2.4 : 1.2,
+      opacity: dimmed ? 0.06 : active ? 0.82 : 0.22,
+      strokeDasharray: relation === "bounds" || relation === "cites" ? "7 7" : undefined,
+    },
+    labelStyle: {
+      fill: "var(--text-muted)",
+      fontSize: 10,
+      fontFamily: "var(--mono)",
+      fontWeight: 800,
+    },
+    labelBgStyle: {
+      fill: "var(--surface-1)",
+      fillOpacity: 0.82,
+    },
+    labelBgPadding: [6, 3],
+    labelBgBorderRadius: 4,
   };
+}
+
+const WorkspaceKnowledgeNode = memo(function WorkspaceKnowledgeNode({ data }) {
+  const node = data.node || {};
+  const localId = node.local_id || node.subtitle || node.entity_type || "node";
+  const canDrill = Boolean(node.drill);
+  const className = [
+    "workspace-node-card",
+    `tone-${data.tone}`,
+    data.focusClass,
+    canDrill ? "can-drill" : "is-terminal",
+  ].filter(Boolean).join(" ");
+  return (
+    <button type="button" className={className} onClick={() => data.onNodeAction?.(node)}>
+      <Handle type="target" position={Position.Top} className="workspace-node-handle" />
+      <span>{localId}</span>
+      <strong>{shortLabel(node.label, 150)}</strong>
+      <em>{node.subtitle || node.status || node.entity_type || ""}</em>
+      {node.metadata?.role ? <small>{node.metadata.role}</small> : null}
+      <Handle type="source" position={Position.Bottom} className="workspace-node-handle" />
+    </button>
+  );
+});
+
+const workspaceNodeTypes = {
+  workspaceKnowledgeNode: WorkspaceKnowledgeNode,
+};
+
+function normalizeBreadcrumb(model) {
+  const crumbs = Array.isArray(model?.breadcrumb) ? model.breadcrumb : [];
+  const normalized = crumbs
+    .filter((crumb) => crumb && typeof crumb === "object")
+    .map((crumb, index) => ({
+      label: crumb.label || crumb.layer || crumb.mode || `Layer ${index + 1}`,
+      mode: crumb.mode || model?.mode || "understanding",
+      layer: crumb.layer || "",
+      focus_id: crumb.focus_id || "",
+      selected_id: crumb.selected_id || "",
+    }));
+  if (normalized.length) return normalized;
+  return [{
+    label: "Workspace",
+    mode: model?.mode || "understanding",
+    layer: model?.layer || "",
+    focus_id: "",
+    selected_id: "",
+  }];
+}
+
+function WorkspaceBreadcrumb({ model, onNavigate }) {
+  const crumbs = normalizeBreadcrumb(model);
+  return (
+    <nav className="workspace-stage-breadcrumb" aria-label="Workspace layer breadcrumb">
+      {crumbs.map((crumb, index) => {
+        const isLast = index === crumbs.length - 1;
+        return (
+          <React.Fragment key={`${crumb.mode}:${crumb.layer}:${crumb.focus_id}:${index}`}>
+            {index ? <span className="workspace-breadcrumb-separator">/</span> : null}
+            {isLast ? (
+              <span className="workspace-breadcrumb-current">{crumb.label}</span>
+            ) : (
+              <button type="button" onClick={() => onNavigate?.(crumb)}>
+                {crumb.label}
+              </button>
+            )}
+          </React.Fragment>
+        );
+      })}
+    </nav>
+  );
 }
 
 function WorkspaceInspector({ inspector }) {
@@ -99,21 +278,90 @@ function WorkspaceInspector({ inspector }) {
   );
 }
 
+function WorkspaceGraphRenderer({ model, onNavigate, modeClass }) {
+  const focusedIds = useMemo(() => focusedNodeIds(model), [model]);
+  const nodes = useMemo(
+    () =>
+      (model?.canvas?.nodes || []).map((node, index) =>
+        toFlowNode(node, index, model, focusedIds, (item) => onNavigate?.(item.drill || item.inspector || { selected_id: item.id })),
+      ),
+    [model, focusedIds, onNavigate],
+  );
+  const edges = useMemo(() => (model?.canvas?.edges || []).map((edge) => toFlowEdge(edge, model, focusedIds)), [model, focusedIds]);
+  return (
+    <div className={`workspace-knowledge-canvas ${modeClass || ""}`} aria-label="Workspace graph canvas">
+      <WorkspaceBreadcrumb model={model} onNavigate={onNavigate} />
+      <ReactFlow
+        nodes={nodes}
+        edges={edges}
+        nodeTypes={workspaceNodeTypes}
+        fitView
+        fitViewOptions={{ padding: 0.1, maxZoom: 1.12 }}
+        minZoom={0.05}
+        maxZoom={2.2}
+        panOnDrag
+        panOnScroll
+        zoomOnPinch
+        zoomOnScroll
+        zoomOnDoubleClick={false}
+        nodesDraggable={false}
+        elementsSelectable
+        proOptions={{ hideAttribution: true }}
+      >
+        <Background variant={BackgroundVariant.Lines} gap={42} size={1} color="var(--workspace-grid-color)" />
+        <Controls position="top-right" showInteractive={false} />
+        <MiniMap
+          position="bottom-right"
+          nodeColor={nodeColor}
+          pannable
+          zoomable
+          maskColor="var(--workspace-minimap-mask)"
+          className="workspace-minimap"
+        />
+      </ReactFlow>
+    </div>
+  );
+}
+
+function UnderstandingGraphRenderer(props) {
+  return <WorkspaceGraphRenderer {...props} modeClass="is-understanding" />;
+}
+
+function LiteratureGraphRenderer(props) {
+  return <WorkspaceGraphRenderer {...props} modeClass="is-literature" />;
+}
+
+function ExperimentsGraphRenderer(props) {
+  return <WorkspaceGraphRenderer {...props} modeClass="is-experiments" />;
+}
+
+function ModeGraphRenderer({ model, onNavigate }) {
+  if (model?.mode === "literature") return <LiteratureGraphRenderer model={model} onNavigate={onNavigate} />;
+  if (model?.mode === "experiments") return <ExperimentsGraphRenderer model={model} onNavigate={onNavigate} />;
+  return <UnderstandingGraphRenderer model={model} onNavigate={onNavigate} />;
+}
+
 function WorkspaceIslandApp({ model, onNavigate }) {
   const [activeMode, setActiveMode] = useState(model?.mode || "understanding");
-  React.useEffect(() => {
+  useEffect(() => {
+    setActiveMode(model?.mode || "understanding");
+  }, [model?.mode]);
+  useEffect(() => {
     const handler = (event) => onNavigate?.(event.detail || {});
     window.addEventListener("workspace-island-action", handler);
     return () => window.removeEventListener("workspace-island-action", handler);
   }, [onNavigate]);
-  const nodes = useMemo(
-    () =>
-      (model?.canvas?.nodes || []).map((node, index) =>
-        toFlowNode(node, index, (item) => onNavigate?.(item.drill || item.inspector || { selected_id: item.id })),
-      ),
-    [model, onNavigate],
-  );
-  const edges = useMemo(() => (model?.canvas?.edges || []).map(toFlowEdge), [model]);
+  useEffect(() => {
+    const handler = (event) => {
+      if (event.key !== "Escape") return;
+      const crumbs = normalizeBreadcrumb(model);
+      if (crumbs.length < 2) return;
+      event.preventDefault();
+      onNavigate?.(crumbs[crumbs.length - 2]);
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [model, onNavigate]);
   return (
     <ReactFlowProvider>
       <section className="workspace-island-shell">
@@ -135,13 +383,7 @@ function WorkspaceIslandApp({ model, onNavigate }) {
           </nav>
         </header>
         <div className="workspace-island-body">
-          <div className="workspace-canvas" aria-label="Workspace graph canvas">
-            <ReactFlow nodes={nodes} edges={edges} fitView minZoom={0.05} maxZoom={2} proOptions={{ hideAttribution: true }}>
-              <Background variant={BackgroundVariant.Lines} gap={42} size={1} />
-              <Controls position="top-right" showInteractive={false} />
-              <MiniMap position="bottom-right" nodeColor={nodeColor} pannable zoomable />
-            </ReactFlow>
-          </div>
+          <ModeGraphRenderer model={model} onNavigate={onNavigate} />
           <WorkspaceInspector inspector={model?.inspector || {}} />
         </div>
       </section>
