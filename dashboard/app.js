@@ -519,13 +519,21 @@ async function renderProjectWorkspace() {
   await renderWorkspacePage();
 }
 
+function legacyWorkspaceModeForPage(page = state.page) {
+  if (state.page === "lineage") return "literature";
+  if (state.page === "experiments") return "experiments";
+  if (page === "lineage") return "literature";
+  if (page === "experiments") return "experiments";
+  return "understanding";
+}
+
 async function renderWorkspacePage() {
   const project = projectById();
   if (!project) {
     renderProjectsIndex();
     return;
   }
-  const mode = normalizeToken(params().get("mode") || "understanding") || "understanding";
+  const mode = normalizeToken(params().get("mode") || legacyWorkspaceModeForPage(state.page)) || "understanding";
   setHeader("Workspace", displayProjectTitle(project), "Project understanding, literature, and experiments.");
   renderProjectNav(project, "workspace");
   el.content.innerHTML = `
@@ -4065,14 +4073,11 @@ async function renderPage() {
     return;
   }
   if (state.page === "projects") renderProjectsIndex();
-  else if (state.page === "workspace") await renderWorkspacePage();
-  else if (state.page === "project") await renderProjectWorkspace();
+  else if (["workspace", "project", "lineage", "experiments"].includes(state.page)) await renderWorkspacePage();
   else if (state.page === "papers") renderProjectPapersPage();
   else if (state.page === "round") renderRoundReviewPage();
   else if (state.page === "paper") await renderPaperDetailPage();
   else if (state.page === "deep-reads") renderDeepReadsPage();
-  else if (state.page === "lineage") renderLineagePage();
-  else if (state.page === "experiments") await renderExperimentsPage();
   else renderProjectsIndex();
 }
 

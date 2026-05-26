@@ -157,6 +157,13 @@ class RelatedWorkLineageDashboardTest(unittest.TestCase):
         self.assertNotIn("Read-only Paper State", paper_detail)
         self.assertNotIn("renderPaperReadOnlyStatusPanel", paper_detail)
 
+    def test_legacy_graph_pages_delegate_to_workspace_modes(self):
+        app = (ROOT / "dashboard" / "app.js").read_text(encoding="utf-8")
+
+        self.assertIn("function legacyWorkspaceModeForPage", app)
+        self.assertIn('if (state.page === "lineage") return "literature";', app)
+        self.assertIn('if (state.page === "experiments") return "experiments";', app)
+
     def test_dashboard_index_fetch_bypasses_browser_cache(self):
         app = (ROOT / "dashboard" / "app.js").read_text(encoding="utf-8")
 
