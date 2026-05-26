@@ -76,24 +76,17 @@ class ChatFirstWorkflowSurfaceTests(unittest.TestCase):
         self.assertIn("Zotero = optional supported adapter", text)
         self.assertNotIn("Zotero = paper metadata, PDFs, collections, tags, reading status mirror", text)
 
-    def test_public_guides_label_advanced_or_adapter_surfaces(self) -> None:
-        core = read("docs/guides/core-workflows.md")
-        zotero = read("docs/guides/zotero.md")
-        source = read("docs/guides/source-boundaries.md")
+    def test_workspace_workflows_label_advanced_or_adapter_surfaces(self) -> None:
+        update = read("templates/workspace/wiki/_system/workflows/project-understanding-update.md")
+        synthesis = read("templates/workspace/wiki/_system/workflows/project-evidence-synthesis.md")
+        zotero = read("templates/workspace/wiki/_system/workflows/zotero-source-protocol.md")
+        source = read("templates/workspace/wiki/_system/workflows/paper-discovery-intake.md")
 
-        self.assertIn("Normal chat-first path", core)
-        self.assertIn("Advanced review mode", core)
-        self.assertIn("optional adapter", zotero.lower())
-        self.assertIn("source-agnostic", source.lower())
-
-    def test_command_shims_are_internal_runbooks(self) -> None:
-        init = read("commands/research-init.md")
-        dashboard = read("commands/research-dashboard.md")
-
-        for text in (init, dashboard):
-            self.assertIn("agent-internal compatibility runbook", text)
-            self.assertIn("natural-language intent", text)
-            self.assertNotIn("Slash command visibility is not required", text)
+        self.assertIn("normal path = workspace dataset / UnderstandingUpdate / project memory", update)
+        self.assertIn("Strict-review D* proposals are optional advanced outputs", synthesis)
+        self.assertIn("optional supported adapter", zotero.lower())
+        self.assertIn("source-agnostic", zotero.lower())
+        self.assertIn("without forcing a paper-manager workflow", source)
 
     def test_no_user_facing_first_run_copy_promotes_dstar_or_zotero_first(self) -> None:
         user_paths = [

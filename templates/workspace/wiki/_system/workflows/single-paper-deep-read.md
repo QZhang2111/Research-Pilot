@@ -4,9 +4,10 @@ Use this workflow when a user asks an agent to read one paper into a project-loc
 
 ## Boundary
 
-- Normal paper source management is Zotero-first.
-- DOI/arXiv/URL/manual notes may be used only as setup, dry-run, or emergency source identity capture.
-- The paper dossier is project-local working memory, not global approved memory.
+- Source identity can come from PDF, URL, arXiv, DOI, manual note, experiment result, or Zotero.
+- Zotero is optional unless the user gives a Zotero item or asks for Zotero setup.
+- The source/paper note is project-local working memory, not global approved memory.
+- Project-level impact should be recorded through normal project memory; use strict review only when formal graph changes are requested or required.
 
 ## Output
 
@@ -31,4 +32,4 @@ Then fill the dossier with:
 - project relevance;
 - proposed graph delta JSON blocks when the paper changes project understanding.
 
-Graph deltas remain proposals until the human approves them through the graph delta loop.
+Strict-review graph deltas remain proposals until the human explicitly approves them.

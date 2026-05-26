@@ -4,45 +4,55 @@ This directory is a private Research Pilot workspace.
 
 ## Core Rule
 
-Agent operates the workspace through chat. Files are durable memory and execution state, not the main human UI.
+Agent operates the workspace through chat. Files and databases are durable memory and execution state, not the main human UI.
 
 ## Source Boundaries
 
 ```text
-Zotero = paper metadata, PDFs, collections, tags, reading status mirror
-wiki = digested research understanding and project files
+research-pilot.db = primary workspace dataset
+wiki = durable agent-readable context and compatibility artifacts
 wiki/program = research taste and north-star context only
-wiki/graphs/events = append-only project understanding graph truth
-graph.db/snapshots/reports = rebuildable read models
-dashboard = required browser view over read models
+dashboard = read-only observer over workspace read models
 chat/agent = primary control surface
+graph events/deltas = advanced strict review
+Zotero = optional supported adapter
 ```
 
 ## Program Context
 
-`wiki/program/` is an agent context layer for taste and north-star framing. It is not evidence, not graph truth, and not a decision source.
+`wiki/program/` is an agent context layer for taste and north-star framing. It is not evidence, not project truth, and not a decision source.
 
-Read it when it helps interpret the user's research style. Do not use it to make project decisions for the user. Do not copy program context into project graph truth.
+Read it when it helps interpret the user's research style. Do not use it to make project decisions for the user. Do not copy program context into project truth.
 
-## Human Gate
+## Normal Project Memory
 
-Agent may propose, summarize, lint, query, and draft graph deltas.
+After meaningful research work, record durable project understanding through Research Pilot tools. Prefer workspace dataset / UnderstandingUpdate style records for normal updates.
+
+Meaningful work includes:
+
+- starting or reframing a project;
+- reading or comparing a source;
+- mapping literature structure;
+- recording experiment design or result evidence;
+- revising a claim, uncertainty, limitation, or project brief.
+
+## Strict Review
+
+Use graph events and D* deltas only for advanced strict review:
+
+- user explicitly asks for strict review;
+- high-impact project claim/evidence changes need formal approval;
+- compatibility workflows require graph-level Q/C/E/W/L/RL/TL changes.
 
 Only the human may approve:
 
+- strict-review graph delta acceptance;
 - project-core papers;
 - global-core memory;
-- graph delta acceptance;
-- research direction changes;
-- experiment result interpretation.
-
-## Project Lifecycle
-
-Early projects may start as project shells with venue, broad direction, baseline anchors, and setup prompts.
-Project shells are not graph truth.
-Create graph deltas only after the human supplies or approves a graph-level question, claim, evidence pressure, paper synthesis, or experiment result.
+- research direction decisions;
+- experiment result interpretation as confirmed project evidence.
 
 ## Private Data
 
 Do not publish this workspace unless the human explicitly says it is sanitized.
-Do not commit PDFs, API keys, local Zotero databases, or generated SQLite/dashboard read models.
+Do not commit PDFs, API keys, local Zotero databases, private workspace datasets, or generated SQLite/dashboard read models.

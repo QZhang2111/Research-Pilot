@@ -13,14 +13,14 @@ The goal is durable project understanding, not chat transcript storage.
 
 ## Core Rule
 
-Project understanding has two layers:
+Project understanding has two paths:
 
 ```text
-markdown workspace memory = readable reports, decisions, context
-graph events = append-only truth for project Q/C/E/W/L/RL/TL changes
+normal path = workspace dataset / UnderstandingUpdate / project memory
+strict review = graph events and D* deltas for formal Q/C/E/W/L/RL/TL changes
 ```
 
-Markdown can preserve context. Graph changes require D* delta.
+Use the normal path for ordinary agent learning, source notes, uncertainty updates, brief changes, and recent understanding. Use strict review when the user asks for it or when a high-impact formal graph change needs explicit approval.
 
 ## Input Types
 
@@ -30,12 +30,12 @@ Classify each update:
 |---|---|---|
 | observation | New pattern, fact, or state | preserve in project memory |
 | intuition | Human hunch or taste | preserve as pending direction |
-| question | New/reframed project question | D* if graph-level |
-| claim | Contestable project judgment | D* if graph-level |
-| evidence_pressure | Evidence accumulation suggests Q/C change | D* |
-| limitation_pressure | Caveats bound or weaken current claim | D* |
-| search_need | Missing literature support | create search contract |
-| experiment_need | Missing generated evidence | create experiment proposal |
+| question | New/reframed project question | normal update; strict review if formal graph change |
+| claim | Contestable project judgment | normal update with status; strict review if high-impact |
+| evidence_pressure | Evidence accumulation suggests Q/C change | normal update; strict review if formal graph change |
+| limitation_pressure | Caveats bound or weaken current claim | normal update; strict review if formal graph change |
+| search_need | Missing literature support | record need; source/literature discovery may follow |
+| experiment_need | Missing generated evidence | record planned experiment/design need |
 | boundary | Do-not-assume constraint | preserve and enforce |
 | decision | Explicit human decision | record in decisions/report |
 
@@ -68,9 +68,9 @@ Allowed without D* when content is report/context only:
 - add search or experiment planning artifacts;
 - regenerate reports from graph state.
 
-## Graph Updates
+## Strict Review Updates
 
-Require Delta Update Protocol:
+Require Delta Update Protocol only when the user asks for strict review or a formal graph-level Q/C/E/W/L/RL/TL change is being accepted.
 
 - add/refine/split/merge/retire project questions;
 - add/refine/split/merge/retire project claims;
@@ -102,11 +102,11 @@ Examples:
 - warrants support a new sub-question;
 - translation links show a paper-level claim should become project-level.
 
-Evidence pressure should become a proposed D*, not an automatic change.
+Evidence pressure should become a normal update first. Use a strict-review D* only when formal graph change is requested or required, never as an automatic change.
 
 ## Human Discussion Delta
 
-Human discussion can create graph deltas directly.
+Human discussion can create strict-review graph deltas directly when the user asks for formal graph change.
 
 Examples:
 
@@ -128,8 +128,8 @@ End every update with:
 
 ```text
 Update type:
-Project files changed:
-Graph delta status:
+Project memory:
+Strict review:
 Human gate:
-Next action:
+Next natural prompt:
 ```
