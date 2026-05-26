@@ -79,12 +79,33 @@ function WorkspaceInspector({ inspector }) {
           </div>
         </section>
       ))}
+      {Array.isArray(inspector?.actions) && inspector.actions.length ? (
+        <section>
+          <h3>Actions</h3>
+          <div className="workspace-inspector-actions">
+            {inspector.actions.map((action, index) => (
+              <button
+                key={action.label || index}
+                type="button"
+                onClick={() => window.dispatchEvent(new CustomEvent("workspace-island-action", { detail: action.target || action }))}
+              >
+                {action.label || "Open"}
+              </button>
+            ))}
+          </div>
+        </section>
+      ) : null}
     </aside>
   );
 }
 
 function WorkspaceIslandApp({ model, onNavigate }) {
   const [activeMode, setActiveMode] = useState(model?.mode || "understanding");
+  React.useEffect(() => {
+    const handler = (event) => onNavigate?.(event.detail || {});
+    window.addEventListener("workspace-island-action", handler);
+    return () => window.removeEventListener("workspace-island-action", handler);
+  }, [onNavigate]);
   const nodes = useMemo(
     () =>
       (model?.canvas?.nodes || []).map((node, index) =>

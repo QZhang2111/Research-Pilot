@@ -178,6 +178,17 @@ class RelatedWorkLineageDashboardTest(unittest.TestCase):
         self.assertTrue((ROOT / "dashboard" / "workspace-island" / "src" / "WorkspaceIslandApp.jsx").is_file())
         self.assertTrue((ROOT / "dashboard" / "workspace-island" / "src" / "workspace-island.css").is_file())
 
+    def test_workspace_island_contains_layer_overview_and_terminal_run_rules(self):
+        source = (ROOT / "dashboard" / "workspace-island" / "src" / "WorkspaceIslandApp.jsx").read_text(encoding="utf-8")
+
+        self.assertIn("WorkspaceInspector", source)
+        self.assertIn("onNavigate?.(item.drill || item.inspector", source)
+        self.assertIn("modeLabels", source)
+        self.assertIn("understanding", source)
+        self.assertIn("literature", source)
+        self.assertIn("experiments", source)
+        self.assertNotIn("run_detail", source)
+
     def test_lineage_atlas_uses_shallow_model_not_project_graph_builders(self):
         source = (
             ROOT / "dashboard" / "lineage-atlas" / "src" / "LineageAtlasApp.jsx"

@@ -93,6 +93,27 @@
   font-size: 12px;
 }
 
+.workspace-inspector-actions {
+  display: grid;
+  gap: 8px;
+}
+
+.workspace-inspector-actions button {
+  min-height: 38px;
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  color: var(--text-main);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.react-flow__node-default {
+  border: 0;
+  padding: 0;
+  background: transparent;
+}
+
 .workspace-node-button {
   width: 100%;
   min-height: 96px;
