@@ -1,6 +1,5 @@
 import contextlib
 import io
-import re
 import tempfile
 import unittest
 from pathlib import Path
@@ -91,13 +90,10 @@ class PluginCommandTests(unittest.TestCase):
         self.assertIn("must not append graph events", workflow_text)
         self.assertIn("ask the user to narrow or split maps", workflow_text)
         self.assertIn("exclude low-signal follow-ups", workflow_text)
-        self.assertRegex(
-            router_text,
-            re.compile(r"related-work route map.*related-work-lineage", re.S),
-        )
-        self.assertIn("Do not use `project-evidence-synthesis` for this intent", router_text)
-        self.assertIn("broad direction", router_text)
-        self.assertIn("candidate technical routes", router_text)
+        self.assertIn("map_literature", router_text)
+        self.assertIn("related-work-lineage", router_text)
+        self.assertIn("paper-only", router_text)
+        self.assertIn("Do not append graph events", router_text)
 
     def test_related_work_lineage_workflow_copies_into_initialized_workspace(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
