@@ -139,7 +139,8 @@ select {
   padding: 18px 0 48px;
 }
 
-body[data-page="project"] .page-shell {
+body[data-page="project"] .page-shell,
+body[data-page="workspace"] .page-shell {
   width: min(1960px, calc(100vw - 32px));
 }
 
@@ -166,6 +167,7 @@ body[data-page="project"] .page-shell {
 }
 
 body[data-page="project"] .topbar,
+body[data-page="workspace"] .topbar,
 body[data-page="papers"] .topbar,
 body[data-page="deep-reads"] .topbar,
 body[data-page="lineage"] .topbar,
@@ -3277,9 +3279,10 @@ body[data-page="papers"] .page-content {
   position: sticky;
   top: 60px;
   z-index: 12;
+  min-width: 0;
   display: grid;
-  grid-template-columns: minmax(360px, 1fr) 220px 74px;
-  gap: 8px;
+  grid-template-columns: minmax(220px, 1fr) minmax(160px, 220px) minmax(160px, 220px) minmax(110px, 140px);
+  gap: 10px;
   align-items: end;
   margin: 10px 0;
   padding: 9px;
@@ -3306,6 +3309,8 @@ body[data-page="papers"] .page-content {
 .paper-library-filters button {
   color-scheme: dark;
   appearance: none;
+  min-width: 0;
+  width: 100%;
   min-height: 34px;
   border: 1px solid rgba(49, 57, 71, 0.86);
   border-radius: 6px;
@@ -4355,6 +4360,7 @@ body[data-page="papers"] .page-content {
 
 :root[data-theme="light"] .topbar,
 :root[data-theme="light"] body[data-page="project"] .topbar,
+:root[data-theme="light"] body[data-page="workspace"] .topbar,
 :root[data-theme="light"] body[data-page="papers"] .topbar,
 :root[data-theme="light"] body[data-page="deep-reads"] .topbar,
 :root[data-theme="light"] body[data-page="experiments"] .topbar,

@@ -4,7 +4,8 @@
   "type": "module",
   "scripts": {
     "build:project-graph": "vite build --config project-graph/vite.config.mjs",
-    "build:lineage-atlas": "vite build --config lineage-atlas/vite.config.mjs"
+    "build:lineage-atlas": "vite build --config lineage-atlas/vite.config.mjs",
+    "build:workspace-island": "vite build --config workspace-island/vite.config.mjs"
   },
   "dependencies": {
     "@vitejs/plugin-react": "^5.1.1",

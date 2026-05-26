@@ -78,8 +78,6 @@ class RelatedWorkLineageDashboardTest(unittest.TestCase):
         self.assertIn('data-page="experiments"', html)
         self.assertIn("<title>Research Browser · Experiments</title>", html)
         self.assertIn("function experimentsUrl(projectId)", app)
-        self.assertIn('current === "experiments"', app)
-        self.assertIn(">Experiments</a>", app)
         self.assertIn("/api/experiments", app)
         self.assertNotIn("Experiment Proposals</a>", app)
         self.assertIn('data-page="experiments"', legacy_html)
@@ -128,6 +126,44 @@ class RelatedWorkLineageDashboardTest(unittest.TestCase):
         self.assertNotIn("Search Status", project_renderer)
         self.assertNotIn("renderHumanGatePanel", project_renderer)
 
+    def test_workspace_page_hooks_and_primary_nav(self):
+        app = (ROOT / "dashboard" / "app.js").read_text(encoding="utf-8")
+
+        self.assertIn("function workspaceUrl(projectId, mode = \"understanding\")", app)
+        self.assertIn("async function loadWorkspaceGraphFromApi", app)
+        self.assertIn("async function renderWorkspacePage()", app)
+        self.assertIn("ResearchBrowserWorkspaceIsland.mount", app)
+        self.assertIn('current === "workspace"', app)
+        self.assertIn(">Workspace</a>", app)
+        self.assertIn(">Papers</a>", app)
+        self.assertNotIn(">Technical Lineage</a>", app)
+        self.assertNotIn(">Experiments</a>", app)
+
+    def test_dashboard_cleanup_removes_low_value_metrics_and_read_only_state(self):
+        app = (ROOT / "dashboard" / "app.js").read_text(encoding="utf-8")
+
+        project_index_start = app.index("function renderProjectsIndex()")
+        project_index_end = app.index("async function renderProjectWorkspace()", project_index_start)
+        project_index = app[project_index_start:project_index_end]
+        self.assertNotIn("Candidate", project_index)
+        self.assertNotIn("ProjectPaper", project_index)
+        self.assertNotIn("paper_count", project_index)
+        self.assertNotIn("Rounds", project_index)
+        self.assertNotIn("Claims", project_index)
+
+        paper_detail_start = app.index("async function renderPaperDetailPage()")
+        paper_detail_end = app.index("function renderPaperInsightMap", paper_detail_start)
+        paper_detail = app[paper_detail_start:paper_detail_end]
+        self.assertNotIn("Read-only Paper State", paper_detail)
+        self.assertNotIn("renderPaperReadOnlyStatusPanel", paper_detail)
+
+    def test_legacy_graph_pages_delegate_to_workspace_modes(self):
+        app = (ROOT / "dashboard" / "app.js").read_text(encoding="utf-8")
+
+        self.assertIn("function legacyWorkspaceModeForPage", app)
+        self.assertIn('if (state.page === "lineage") return "literature";', app)
+        self.assertIn('if (state.page === "experiments") return "experiments";', app)
+
     def test_dashboard_index_fetch_bypasses_browser_cache(self):
         app = (ROOT / "dashboard" / "app.js").read_text(encoding="utf-8")
 
@@ -152,6 +188,68 @@ class RelatedWorkLineageDashboardTest(unittest.TestCase):
             (ROOT / "dashboard" / "lineage-atlas" / "src" / "LineageAtlasApp.jsx").is_file()
         )
         self.assertTrue((ROOT / "dashboard" / "lineage-atlas" / "src" / "lineage-atlas.css").is_file())
+
+    def test_workspace_page_and_island_bundle_exist(self):
+        html = (ROOT / "dashboard" / "workspace.html").read_text(encoding="utf-8")
+        package = json.loads((ROOT / "dashboard" / "package.json").read_text(encoding="utf-8"))
+
+        self.assertIn('data-page="workspace"', html)
+        self.assertIn("workspace-island.bundle.js?v=english-dashboard-20260523", html)
+        self.assertIn("workspace-island.bundle.css?v=english-dashboard-20260523", html)
+        self.assertEqual(
+            "vite build --config workspace-island/vite.config.mjs",
+            package["scripts"].get("build:workspace-island"),
+        )
+        self.assertTrue((ROOT / "dashboard" / "workspace-island" / "src" / "WorkspaceIslandApp.jsx").is_file())
+        self.assertTrue((ROOT / "dashboard" / "workspace-island" / "src" / "workspace-island.css").is_file())
+
+    def test_workspace_island_contains_layer_overview_and_terminal_run_rules(self):
+        source = (ROOT / "dashboard" / "workspace-island" / "src" / "WorkspaceIslandApp.jsx").read_text(encoding="utf-8")
+
+        self.assertIn("WorkspaceInspector", source)
+        self.assertIn("onNavigate?.(item.drill || item.inspector", source)
+        self.assertIn("modeLabels", source)
+        self.assertIn("understanding", source)
+        self.assertIn("literature", source)
+        self.assertIn("experiments", source)
+        self.assertNotIn("run_detail", source)
+
+    def test_workspace_island_uses_mode_specific_renderers_and_breadcrumb(self):
+        source = (ROOT / "dashboard" / "workspace-island" / "src" / "WorkspaceIslandApp.jsx").read_text(encoding="utf-8")
+
+        self.assertIn("function WorkspaceBreadcrumb", source)
+        self.assertIn('className="workspace-stage-breadcrumb"', source)
+        self.assertIn("onNavigate?.(crumb)", source)
+        self.assertIn("function UnderstandingGraphRenderer", source)
+        self.assertIn("function LiteratureGraphRenderer", source)
+        self.assertIn("function ExperimentsGraphRenderer", source)
+        self.assertIn("function WorkspaceGraphRenderer", source)
+        self.assertIn("nodeTypes={workspaceNodeTypes}", source)
+        self.assertIn("fitViewOptions={{ padding: 0.1, maxZoom: 1.12 }}", source)
+        self.assertIn("maskColor=\"var(--workspace-minimap-mask)\"", source)
+
+    def test_workspace_island_synthesizes_current_breadcrumb_layer(self):
+        source = (ROOT / "dashboard" / "workspace-island" / "src" / "WorkspaceIslandApp.jsx").read_text(encoding="utf-8")
+
+        self.assertIn("function currentBreadcrumbTarget", source)
+        self.assertIn("function sameBreadcrumbTarget", source)
+        self.assertIn("normalized.push(currentTarget)", source)
+        self.assertIn('selected_id: model?.selected_id || ""', source)
+
+    def test_workspace_island_visual_style_guardrails(self):
+        css = (ROOT / "dashboard" / "workspace-island" / "src" / "workspace-island.css").read_text(encoding="utf-8")
+
+        self.assertIn(".workspace-knowledge-canvas", css)
+        self.assertIn("--workspace-grid-color", css)
+        self.assertIn("--workspace-minimap-mask", css)
+        self.assertIn(".workspace-stage-breadcrumb", css)
+        self.assertIn(".workspace-node-card", css)
+        self.assertIn(".workspace-node-card.is-dimmed", css)
+        self.assertIn(".workspace-node-card.is-selected", css)
+        self.assertIn(".workspace-knowledge-canvas .react-flow__controls-button", css)
+        self.assertIn(".workspace-knowledge-canvas .react-flow__minimap", css)
+        self.assertIn(".workspace-knowledge-canvas.is-literature .workspace-node-card", css)
+        self.assertNotIn("background: var(--surface-2);\n  cursor: pointer;\n}", css)
 
     def test_lineage_atlas_uses_shallow_model_not_project_graph_builders(self):
         source = (

@@ -1,0 +1,397 @@
+.workspace-island-shell {
+  min-height: calc(100vh - 150px);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-1);
+  overflow: hidden;
+}
+
+.workspace-island-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-bottom: 1px solid var(--border);
+  padding: 10px;
+}
+
+.workspace-island-toolbar nav {
+  display: inline-grid;
+  grid-template-columns: repeat(3, minmax(150px, 1fr));
+  gap: 4px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 4px;
+  background: var(--surface-2);
+}
+
+.workspace-island-toolbar button {
+  min-height: 42px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-muted);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.workspace-island-toolbar button.is-active {
+  border-color: var(--accent);
+  color: var(--text-main);
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+.workspace-island-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 390px);
+  min-height: calc(100vh - 215px);
+}
+
+.workspace-knowledge-canvas {
+  --workspace-grid-color: rgba(255, 255, 255, 0.038);
+  --workspace-minimap-mask: rgba(8, 10, 13, 0.72);
+  position: relative;
+  min-height: calc(100vh - 215px);
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 46% 30%, rgba(214, 168, 79, 0.08), transparent 34%),
+    radial-gradient(circle at 78% 62%, rgba(104, 199, 212, 0.045), transparent 26%),
+    linear-gradient(180deg, rgba(17, 21, 29, 0.74), rgba(8, 10, 13, 0.84));
+}
+
+.workspace-knowledge-canvas::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.24;
+  background-image:
+    radial-gradient(circle, rgba(255, 255, 255, 0.16) 0.7px, transparent 0.8px);
+  background-size: 18px 18px;
+  mix-blend-mode: screen;
+}
+
+.workspace-stage-breadcrumb {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  z-index: 12;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 3px;
+  border: 1px solid rgba(49, 57, 71, 0.78);
+  border-radius: 999px;
+  background: rgba(8, 10, 13, 0.68);
+  color: var(--text-dim);
+  font: 800 11px/1 var(--mono);
+  backdrop-filter: blur(8px);
+}
+
+.workspace-stage-breadcrumb button,
+.workspace-stage-breadcrumb span {
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-main);
+  padding: 8px 10px;
+  font: inherit;
+}
+
+.workspace-stage-breadcrumb button {
+  cursor: pointer;
+}
+
+.workspace-stage-breadcrumb button:hover,
+.workspace-stage-breadcrumb button:focus-visible {
+  background: rgba(214, 168, 79, 0.14);
+  color: var(--accent);
+  outline: none;
+}
+
+.workspace-breadcrumb-separator {
+  color: var(--text-muted);
+  padding: 0;
+}
+
+.workspace-breadcrumb-current {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.workspace-node-handle {
+  width: 1px;
+  height: 1px;
+  border: 0;
+  background: transparent;
+  opacity: 0;
+}
+
+.react-flow__node-workspaceKnowledgeNode {
+  border: 0;
+  padding: 0;
+  background: transparent;
+}
+
+.workspace-node-card {
+  --node-tone: #8f98a8;
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: 7px 10px;
+  align-content: start;
+  width: 100%;
+  min-height: 100%;
+  border: 1px solid color-mix(in srgb, var(--node-tone) 42%, var(--border));
+  border-radius: 8px;
+  padding: 13px;
+  background:
+    radial-gradient(circle at 22% 16%, rgba(255, 255, 255, 0.09), transparent 31%),
+    linear-gradient(90deg, color-mix(in srgb, var(--node-tone) 14%, transparent), transparent 6px),
+    linear-gradient(180deg, rgba(16, 19, 25, 0.94), rgba(8, 10, 13, 0.94));
+  color: var(--text-main);
+  text-align: left;
+  cursor: pointer;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.035);
+  transition: opacity 140ms ease, border-color 140ms ease, box-shadow 140ms ease, transform 140ms ease;
+}
+
+.workspace-node-card.tone-q { --node-tone: #8ec7ff; }
+.workspace-node-card.tone-c { --node-tone: #d6a84f; }
+.workspace-node-card.tone-e { --node-tone: #70d6a3; }
+.workspace-node-card.tone-w { --node-tone: #bea0ff; }
+.workspace-node-card.tone-l { --node-tone: #e58b83; }
+.workspace-node-card.tone-p { --node-tone: #68c7d4; }
+.workspace-node-card.tone-r { --node-tone: #9bd7df; }
+
+.workspace-node-card span {
+  display: inline-grid;
+  place-items: center;
+  width: 36px;
+  min-width: 36px;
+  height: 28px;
+  border: 1px solid color-mix(in srgb, var(--node-tone) 52%, transparent);
+  border-radius: 6px;
+  color: var(--node-tone);
+  font: 900 10px/1 var(--mono);
+}
+
+.workspace-node-card strong {
+  min-width: 0;
+  color: var(--text-main);
+  font-size: 13px;
+  line-height: 1.24;
+  overflow-wrap: anywhere;
+}
+
+.workspace-node-card em,
+.workspace-node-card small {
+  grid-column: 2;
+  color: var(--text-dim);
+  font: 800 10px/1.2 var(--mono);
+  font-style: normal;
+  text-transform: uppercase;
+}
+
+.workspace-node-card small {
+  width: fit-content;
+  max-width: 100%;
+  border: 1px solid color-mix(in srgb, var(--node-tone) 28%, var(--border));
+  border-radius: 999px;
+  padding: 4px 7px;
+  color: var(--node-tone);
+  background: rgba(8, 10, 13, 0.44);
+}
+
+.workspace-node-card:hover,
+.workspace-node-card:focus-visible,
+.workspace-node-card.is-selected {
+  border-color: color-mix(in srgb, var(--node-tone) 76%, var(--border));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--node-tone) 18%, transparent), 0 22px 52px rgba(0, 0, 0, 0.34);
+  outline: none;
+  transform: translateY(-1px);
+}
+
+.workspace-node-card.is-neighbor {
+  opacity: 0.86;
+  border-color: color-mix(in srgb, var(--node-tone) 58%, var(--border));
+}
+
+.workspace-node-card.is-dimmed {
+  opacity: 0.28;
+}
+
+.workspace-edge {
+  transition: opacity 140ms ease, stroke-width 140ms ease;
+}
+
+.workspace-edge.is-dimmed {
+  opacity: 0.08;
+}
+
+.workspace-knowledge-canvas .react-flow__pane {
+  cursor: grab;
+}
+
+.workspace-knowledge-canvas .react-flow__pane:active {
+  cursor: grabbing;
+}
+
+.workspace-knowledge-canvas .react-flow__controls {
+  overflow: hidden;
+  border: 1px solid rgba(49, 57, 71, 0.88);
+  border-radius: 8px;
+  background: rgba(8, 10, 13, 0.84);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.34);
+}
+
+.workspace-knowledge-canvas .react-flow__controls-button {
+  border-bottom: 1px solid rgba(49, 57, 71, 0.88);
+  background: rgba(13, 17, 23, 0.92);
+  color: var(--text-main);
+  fill: currentColor;
+}
+
+.workspace-knowledge-canvas .react-flow__controls-button:hover,
+.workspace-knowledge-canvas .react-flow__controls-button:focus-visible {
+  background: rgba(214, 168, 79, 0.16);
+  color: var(--accent);
+  outline: 2px solid rgba(214, 168, 79, 0.22);
+  outline-offset: -2px;
+}
+
+.workspace-knowledge-canvas .react-flow__controls-button svg {
+  fill: currentColor;
+}
+
+.workspace-knowledge-canvas .react-flow__minimap,
+.workspace-minimap {
+  overflow: hidden;
+  width: 160px;
+  height: 118px;
+  border: 1px solid rgba(49, 57, 71, 0.88);
+  border-radius: 8px;
+  background: rgba(8, 10, 13, 0.82);
+  opacity: 0.76;
+}
+
+.workspace-knowledge-canvas .react-flow__minimap:hover,
+.workspace-minimap:hover {
+  opacity: 0.95;
+}
+
+.workspace-knowledge-canvas .react-flow__edge-textbg {
+  fill: rgba(8, 10, 13, 0.84);
+}
+
+.workspace-knowledge-canvas .react-flow__edge-text {
+  fill: var(--text-muted);
+}
+
+.workspace-knowledge-canvas.is-understanding .workspace-node-card.tone-q strong {
+  font-size: 13px;
+}
+
+.workspace-knowledge-canvas.is-understanding .workspace-node-card.tone-c strong {
+  font-size: 15px;
+}
+
+.workspace-knowledge-canvas.is-literature .workspace-node-card {
+  min-height: 126px;
+}
+
+.workspace-knowledge-canvas.is-literature .workspace-node-card strong {
+  font-size: 14px;
+  line-height: 1.28;
+}
+
+.workspace-knowledge-canvas.is-experiments .workspace-node-card strong {
+  font-size: 14px;
+}
+
+:root[data-theme="light"] .workspace-knowledge-canvas {
+  --workspace-grid-color: rgba(34, 42, 54, 0.055);
+  --workspace-minimap-mask: rgba(244, 240, 232, 0.66);
+  background:
+    radial-gradient(circle at 46% 30%, rgba(152, 107, 31, 0.08), transparent 34%),
+    linear-gradient(180deg, rgba(255, 253, 248, 0.72), rgba(244, 240, 232, 0.84));
+}
+
+:root[data-theme="light"] .workspace-node-card {
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--node-tone) 12%, transparent), transparent 6px),
+    linear-gradient(180deg, rgba(255, 253, 248, 0.96), rgba(244, 240, 232, 0.94));
+  box-shadow: 0 16px 34px rgba(85, 74, 56, 0.1);
+}
+
+:root[data-theme="light"] .workspace-stage-breadcrumb,
+:root[data-theme="light"] .workspace-knowledge-canvas .react-flow__controls,
+:root[data-theme="light"] .workspace-knowledge-canvas .react-flow__minimap {
+  background: rgba(255, 253, 248, 0.84);
+}
+
+.workspace-inspector {
+  border-left: 1px solid var(--border);
+  padding: 18px;
+  overflow: auto;
+  background: var(--surface-1);
+}
+
+.workspace-inspector h2,
+.workspace-inspector h3 {
+  margin: 0;
+}
+
+.workspace-inspector > p {
+  color: var(--text-muted);
+}
+
+.workspace-inspector section {
+  border-top: 1px solid var(--border);
+  margin-top: 16px;
+  padding-top: 16px;
+}
+
+.workspace-inspector-list {
+  display: grid;
+  gap: 8px;
+}
+
+.workspace-inspector-list article {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px;
+  background: var(--surface-2);
+}
+
+.workspace-inspector-list span,
+.workspace-inspector-list em {
+  display: block;
+  color: var(--text-muted);
+  font-family: var(--mono);
+  font-size: 12px;
+}
+
+.workspace-inspector-actions {
+  display: grid;
+  gap: 8px;
+}
+
+.workspace-inspector-actions button {
+  min-height: 38px;
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  color: var(--text-main);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+@media (max-width: 900px) {
+  .workspace-island-body {
+    grid-template-columns: 1fr;
+  }
+
+  .workspace-inspector {
+    border-left: 0;
+    border-top: 1px solid var(--border);
+  }
+}

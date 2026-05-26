@@ -327,6 +327,22 @@ async function loadExperimentsFromApi(projectId) {
   }
 }
 
+async function loadWorkspaceGraphFromApi(projectId, options = {}) {
+  if (!projectId) return null;
+  const search = new URLSearchParams();
+  search.set("project", projectId);
+  search.set("mode", options.mode || "understanding");
+  if (options.layer) search.set("layer", options.layer);
+  if (options.focus_id) search.set("focus_id", options.focus_id);
+  if (options.selected_id) search.set("selected_id", options.selected_id);
+  const response = await fetch(`/api/workspace-graph?${search.toString()}`, { cache: "no-store" });
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({}));
+    throw new Error(payload.message || payload.error || `Workspace graph failed: ${response.status}`);
+  }
+  return response.json();
+}
+
 function normalizePaperDossierPath(path) {
   const value = String(path || "").trim();
   if (!value) return "";
@@ -440,6 +456,10 @@ function projectUrl(projectId) {
   return dashboardPageUrl("project", { project: projectId });
 }
 
+function workspaceUrl(projectId, mode = "understanding") {
+  return dashboardPageUrl("workspace", { project: projectId, mode });
+}
+
 function roundUrl(projectId, roundName) {
   return dashboardPageUrl("round", { project: projectId, round: roundName || "" });
 }
@@ -460,18 +480,13 @@ function lineageUrl(projectId, roundName) {
   return dashboardPageUrl("lineage", { project: projectId, round: roundName });
 }
 
-function renderProjectNav(project) {
+function renderProjectNav(project, current = state.page) {
   if (!el.projectNav || !project) return;
-  const current = state.page;
-  const projectCurrent = current === "project" ? ' aria-current="page"' : "";
+  const workspaceCurrent = current === "workspace" || ["project", "lineage", "experiments"].includes(current) ? ' aria-current="page"' : "";
   const papersCurrent = ["papers", "round", "paper", "deep-reads"].includes(current) ? ' aria-current="page"' : "";
-  const lineageCurrent = current === "lineage" ? ' aria-current="page"' : "";
-  const experimentsCurrent = current === "experiments" ? ' aria-current="page"' : "";
   el.projectNav.innerHTML = `
-    <a href="${escapeAttr(projectUrl(project.id))}"${projectCurrent}>Project</a>
+    <a href="${escapeAttr(workspaceUrl(project.id))}"${workspaceCurrent}>Workspace</a>
     <a href="${escapeAttr(papersUrl(project.id))}"${papersCurrent}>Papers</a>
-    <a href="${escapeAttr(lineageUrl(project.id))}"${lineageCurrent}>Technical Lineage</a>
-    <a href="${escapeAttr(experimentsUrl(project.id))}"${experimentsCurrent}>Experiments</a>
   `;
 }
 
@@ -481,25 +496,16 @@ function renderProjectsIndex() {
     <div class="project-entry-list">
       ${(state.data.projects || []).map((project) => {
         const round = latestRound(project.id);
-        const paperCount = allPapersForProject(project.id).length;
-        const stats = project.stats || {};
         return `
           <article class="project-entry">
             <div>
               <p class="eyebrow">Project</p>
-              <h2><a href="${escapeAttr(projectUrl(project.id))}">${escapeHtml(displayProjectTitle(project))}</a>${renderDemoBadge(project)}</h2>
+              <h2><a href="${escapeAttr(workspaceUrl(project.id))}">${escapeHtml(displayProjectTitle(project))}</a>${renderDemoBadge(project)}</h2>
               <p class="project-question">${escapeHtml(project.card?.working_question || project.overview?.direction || "No project question yet.")}</p>
             </div>
-            <dl class="metric-row">
-              <div><dt>Candidate</dt><dd>${stats.candidate_papers || 0}</dd></div>
-              <div><dt>ProjectPaper</dt><dd>${stats.summarized_papers || 0}</dd></div>
-              <div><dt>paper_count</dt><dd>${paperCount || round?.paper_count || 0}</dd></div>
-              <div><dt>Rounds</dt><dd>${stats.literature_rounds || 0}</dd></div>
-              <div><dt>Claims</dt><dd>${stats.claims || 0}</dd></div>
-            </dl>
             <div class="entry-actions">
               <span class="latest-round-label">Latest status ${escapeHtml(projectStatusLine(project, round))}</span>
-              <a class="primary-action" href="${escapeAttr(projectUrl(project.id))}">OpenProject</a>
+              <a class="primary-action" href="${escapeAttr(workspaceUrl(project.id))}">OpenProject</a>
               <a class="primary-action review-action" href="${escapeAttr(papersUrl(project.id))}">Papers</a>
             </div>
           </article>
@@ -510,38 +516,61 @@ function renderProjectsIndex() {
 }
 
 async function renderProjectWorkspace() {
+  await renderWorkspacePage();
+}
+
+function legacyWorkspaceModeForPage(page = state.page) {
+  if (state.page === "lineage") return "literature";
+  if (state.page === "experiments") return "experiments";
+  if (page === "lineage") return "literature";
+  if (page === "experiments") return "experiments";
+  return "understanding";
+}
+
+async function renderWorkspacePage() {
   const project = projectById();
   if (!project) {
-    renderEmpty("Project not found.");
+    renderProjectsIndex();
     return;
   }
-  renderProjectNav(project);
-  const [graph, understanding] = await Promise.all([
-    loadProjectGraphFromApi(project.id),
-    loadProjectUnderstandingFromApi(project.id),
-  ]);
-  setHeader("Project", displayProjectTitle(project), project.overview?.direction || "");
-  if (project.demo && el.subtitle) {
-    el.subtitle.className = "project-title-meta";
-    el.subtitle.innerHTML = `
-      ${renderDemoBadge(project)}
-      <span>${escapeHtml(project.overview?.direction || "")}</span>
-    `;
-  }
+  const mode = normalizeToken(params().get("mode") || legacyWorkspaceModeForPage(state.page)) || "understanding";
+  setHeader("Workspace", displayProjectTitle(project), "Project understanding, literature, and experiments.");
+  renderProjectNav(project, "workspace");
   el.content.innerHTML = `
-    ${renderProjectUnderstandingPanel(understanding)}
-    <section class="section-block project-graph-panel" id="project-graph">
-      <div class="section-head">
-        <div>
-          <p class="eyebrow">Understanding Graph</p>
-          <h2>Project Understanding Graph</h2>
-        </div>
+    <section class="workspace-page-shell" aria-label="Project workspace">
+      <div id="workspace-island-root" class="workspace-island-root">
+        <div class="empty-state">Loading workspace graph...</div>
       </div>
-      ${renderProjectGraphView(graph)}
     </section>
   `;
-  wireClickableRows();
-  wireGraphStudio(graph);
+  const root = document.getElementById("workspace-island-root");
+  const mountApi = window.ResearchBrowserWorkspaceIsland;
+  if (!root || !mountApi?.mount) {
+    if (root) root.innerHTML = `<div class="empty-state">Workspace island bundle unavailable.</div>`;
+    return;
+  }
+  const mountWorkspaceIsland = window.ResearchBrowserWorkspaceIsland.mount;
+  try {
+    let currentModel = await loadWorkspaceGraphFromApi(project.id, { mode });
+    const navigate = async (target = {}) => {
+      const modeChanged = target.mode && target.mode !== currentModel.mode;
+      const nextMode = target.mode || currentModel.mode || "understanding";
+      const nextLayer = modeChanged ? "" : (target.layer !== undefined ? target.layer : currentModel.layer || "");
+      const nextFocus = modeChanged ? "" : (target.focus_id !== undefined ? target.focus_id : currentModel.focus_id || "");
+      const nextSelected = modeChanged ? "" : (target.selected_id !== undefined ? target.selected_id : "");
+      const nextModel = await loadWorkspaceGraphFromApi(project.id, {
+        mode: nextMode,
+        layer: nextLayer,
+        focus_id: nextFocus,
+        selected_id: nextSelected,
+      });
+      currentModel = nextModel;
+      mountWorkspaceIsland(root, { model: currentModel, onNavigate: navigate });
+    };
+    mountWorkspaceIsland(root, { model: currentModel, onNavigate: navigate });
+  } catch (error) {
+    root.innerHTML = `<div class="empty-state">${escapeHtml(error.message || "Workspace graph failed.")}</div>`;
+  }
 }
 
 function hasProjectUnderstanding(model) {
@@ -3133,7 +3162,6 @@ function renderPaperDetailShell(paper, projectId, roundName, memoPlaceholder) {
   return `
     <section class="paper-decision-shell">
       <section class="paper-readonly-strip" aria-label="PaperStatus">
-        ${renderPaperReadOnlyStatusPanel(paper)}
         ${renderAgentCommandHint(`review paper ${key}`)}
       </section>
       <section class="paper-detail-flow">
@@ -3164,24 +3192,6 @@ function renderPaperDetailShell(paper, projectId, roundName, memoPlaceholder) {
         </article>
       </section>
       ${renderProvenanceDisclosure(paper, roundName)}
-    </section>
-  `;
-}
-
-function renderPaperReadOnlyStatusPanel(paper) {
-  const stateInfo = paperCurrentState(paper);
-  return `
-    <section class="paper-readonly-status" aria-label="Read-only paper state">
-      <p class="eyebrow">Read-only Paper State</p>
-      <dl class="paper-status-grid">
-        <div><dt>review_status</dt><dd>${escapeHtml(paper.review_status || "candidate")}</dd></div>
-        <div><dt>current_state</dt><dd>${escapeHtml(stateInfo.label)}</dd></div>
-        <div><dt>read_level</dt><dd>${escapeHtml(paper.read_level || "unknown")}</dd></div>
-        <div><dt>summary_status</dt><dd>${escapeHtml(paper.summary_status || "unknown")}</dd></div>
-        <div><dt>human_review</dt><dd>${escapeHtml(paper.human_review || "pending")}</dd></div>
-        <div><dt>project_core_for</dt><dd>${escapeHtml((paper.project_core_for || []).join(", ") || "none")}</dd></div>
-        <div><dt>global_core</dt><dd>${paper.global_core ? "true" : "false"}</dd></div>
-      </dl>
     </section>
   `;
 }
@@ -4063,13 +4073,11 @@ async function renderPage() {
     return;
   }
   if (state.page === "projects") renderProjectsIndex();
-  else if (state.page === "project") await renderProjectWorkspace();
+  else if (["workspace", "project", "lineage", "experiments"].includes(state.page)) await renderWorkspacePage();
   else if (state.page === "papers") renderProjectPapersPage();
   else if (state.page === "round") renderRoundReviewPage();
   else if (state.page === "paper") await renderPaperDetailPage();
   else if (state.page === "deep-reads") renderDeepReadsPage();
-  else if (state.page === "lineage") renderLineagePage();
-  else if (state.page === "experiments") await renderExperimentsPage();
   else renderProjectsIndex();
 }
 
