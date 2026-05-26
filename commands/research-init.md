@@ -1,15 +1,19 @@
 ---
-description: Initialize or inspect a private Research Pilot workspace, then guide first project setup and the first human-gated graph update.
+description: Agent-internal compatibility runbook for starting or inspecting a Research Pilot workspace from natural-language project-tracking intent.
 argument-hint: "[workspace_path]"
 ---
 
-# Research Pilot Init Workflow
+# Research Pilot Start/Track Runbook
 
-Initialize Research Pilot for a private research workspace. This is an agent workflow document, not a guaranteed Codex slash command registration.
+This is an agent-internal compatibility runbook, not a user command surface.
 
-Status: **chat-first shim**. Keep this command document as an installable
-fallback route. The core product surface is agent chat plus local workspace
-dataset plus read-only dashboard, not a slash-command UI.
+Users should ask a natural-language intent:
+
+```text
+Use Research Pilot to track this project.
+```
+
+The agent may use this runbook to resolve plugin root, initialize a workspace, inspect status, and hand off to `research-pilot-first-run`.
 
 ## Arguments
 
@@ -36,9 +40,9 @@ Stop with a clear install instruction if no plugin root is found:
 curl -fsSL https://raw.githubusercontent.com/QZhang2111/Research-Pilot/main/install.sh | bash
 ```
 
-## Chat-First Operation
+## Natural-Language Operation
 
-When the user asks to initialize Research Pilot, the agent must resolve `PLUGIN_ROOT`, run `tools/research_pilot_init.py` from that plugin root, and report the same completion summary. Slash command visibility is not required.
+When the user asks to use Research Pilot to track a project, the agent must resolve `PLUGIN_ROOT`, run `tools/research_pilot_init.py` from that plugin root, and report the same completion summary.
 
 ## Workflow
 
@@ -58,9 +62,9 @@ python3 "$PLUGIN_ROOT/tools/research_pilot_init.py" "$WORKSPACE_PATH"
 ```text
 Research Pilot plugin = hidden agent capability.
 Workspace = visible private research memory.
-Zotero = paper manager.
-Graph events = project-understanding truth.
-Human gate = required before graph truth changes.
+research-pilot.db = primary workspace dataset.
+Dashboard = read-only observer.
+Strict review = optional graph/D* mode.
 ```
 
 4. Collect only minimum first-project intake:
@@ -69,10 +73,9 @@ Human gate = required before graph truth changes.
    - first question, uncertainty, or claim;
    - Zotero status: configured now or later.
 5. Use `research-pilot-first-run` to create missing project skeleton files.
-6. Convert the first question or claim into a D* delta proposal.
-7. Dry-run the delta.
-8. Stop for human `accept`, `reject`, `park`, or `revise`.
-9. Only after explicit acceptance, append graph events and rebuild read models.
+6. Record initial project brief or UnderstandingUpdate.
+7. Offer to open the dashboard.
+8. Use strict-review D* only if the user explicitly asks for formal graph review.
 
 ## Completion
 
@@ -81,8 +84,8 @@ End with:
 ```text
 Workspace:
 Project:
-First graph update:
-Human gate result:
-Generated read models:
-Next possible moves:
+Initial memory:
+Dashboard:
+Strict review:
+Next natural prompts:
 ```

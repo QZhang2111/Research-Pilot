@@ -1,15 +1,19 @@
 ---
-description: Open the local Research Pilot dashboard for a private research workspace.
+description: Agent-internal compatibility runbook for opening the local Research Pilot dashboard from natural-language intent.
 argument-hint: "[workspace_path] [port]"
 ---
 
-# Research Pilot Dashboard Workflow
+# Research Pilot Dashboard Runbook
 
-Open the Research Pilot dashboard for a workspace. This is an agent workflow document, not a guaranteed Codex slash command registration.
+This is an agent-internal compatibility runbook, not a user command surface.
 
-Status: **chat-first shim**. Keep this command document as an installable
-fallback route. The dashboard remains a read-only observer over workspace
-dataset/read models; command visibility is not required for normal use.
+Users should ask a natural-language intent:
+
+```text
+Open the Research Pilot dashboard.
+```
+
+The agent may use this runbook to resolve workspace, start or reuse the dashboard server, verify readiness, and open or report the local URL.
 
 ## Arguments
 
@@ -88,9 +92,9 @@ open "$URL"
 
 If `open` is unavailable, print the URL.
 
-## Chat-First Operation
+## Natural-Language Operation
 
-When the user asks to open the dashboard, the agent must run these server steps from chat. Slash command visibility is not required. Resolve `PLUGIN_ROOT`, run the health check, start `tools/research_browser_server.py`, verify the URL, and report the same completion summary.
+When the user asks to open the dashboard, the agent must run these server steps from chat. Resolve `PLUGIN_ROOT`, run the health check, start `tools/research_browser_server.py`, verify the URL, and report the same completion summary.
 
 ## Boundary
 

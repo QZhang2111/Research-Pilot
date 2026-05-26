@@ -37,7 +37,7 @@ class PluginCommandTests(unittest.TestCase):
         text = command.read_text()
 
         self.assertIn("description:", text)
-        self.assertIn("# Research Pilot Init Workflow", text)
+        self.assertIn("# Research Pilot Start/Track Runbook", text)
         self.assertIn("research_pilot_init.py", text)
         self.assertIn("agent-internal compatibility runbook", text)
         self.assertIn("natural-language intent", text)
@@ -63,7 +63,7 @@ class PluginCommandTests(unittest.TestCase):
         text = command.read_text()
 
         self.assertIn("description:", text)
-        self.assertIn("# Research Pilot Dashboard Workflow", text)
+        self.assertIn("# Research Pilot Dashboard Runbook", text)
         self.assertIn("agent-internal compatibility runbook", text)
         self.assertIn("natural-language intent", text)
         self.assertIn("research_browser_server.py", text)
@@ -80,7 +80,7 @@ class PluginCommandTests(unittest.TestCase):
 
         self.assertIn("Open the Research Pilot dashboard.", quick_start)
         self.assertIn("agent starts or reuses the local dashboard server", quick_start)
-        self.assertNotIn("Slash command visibility is not required", quick_start)
+        self.assertNotIn("Slash command visibility" + " is not required", quick_start)
         self.assertNotIn("python3 ~/.research-pilot/repo/tools/build_dashboard_index.py", quick_start)
 
     def test_related_work_lineage_skill_and_workflow_exist(self) -> None:
