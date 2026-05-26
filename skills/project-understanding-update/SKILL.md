@@ -1,6 +1,6 @@
 ---
 name: project-understanding-update
-description: Use when a research project needs its current understanding updated from human intent, new questions, new claims, evidence pressure, paper synthesis, experiment results, or direction changes.
+description: Use when a research project needs normal project memory updated from human intent, sources, evidence pressure, experiment results, or direction changes; strict graph review is optional advanced mode.
 argument-hint: "[workspace path] [project id]"
 ---
 
@@ -12,18 +12,18 @@ This skill preserves and updates project understanding. It is not a paper search
 
 Human intent is first-class input.
 
-The agent may classify, preserve, compare, and propose. It must not silently convert a human idea into an approved claim, project decision, or graph truth.
+Normal project understanding updates should be recorded through Research Pilot project memory / UnderstandingUpdate / typed dataset tools. The agent may classify, preserve, compare, and propose. It must not silently convert a human idea into a confirmed claim, project decision, or strict graph truth.
 
-Graph-level changes must go through Delta Update Protocol:
+Strict graph-level changes use Delta Update Protocol only when the user asks for strict review or a formal Q/C/E/W/L/RL/TL change is being accepted:
 
 ```text
-human/project input
+input
 -> classify meaning
--> propose D* delta with patch_ops
+-> normal project memory update
+-> optional strict-review D* proposal
 -> dry-run
 -> human accept/reject/park/revise
--> append JSONL event
--> rebuild read models
+-> append accepted graph event only after approval
 ```
 
 ## Required Reads
@@ -84,10 +84,10 @@ End with:
 
 ```text
 Update type:
-Files touched:
-Graph delta:
+Project memory:
+Strict review:
 Human gate:
-Next recommended workflow:
+Next natural prompt:
 ```
 
 If no durable update is needed, say so and explain why.
