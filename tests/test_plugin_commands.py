@@ -27,7 +27,7 @@ class PluginCommandTests(unittest.TestCase):
 
     def test_readme_uses_chat_first_as_primary_init_path(self) -> None:
         text = (REPO / "README.md").read_text()
-        quick_start = text.split("## 🚀 Quick Start", 1)[1].split("## 🧪 What You Can Ask", 1)[0]
+        quick_start = text.split("## Quick Start", 1)[1].split("## What You Can Ask", 1)[0]
 
         self.assertIn("Use Research Pilot to track this project.", quick_start)
         self.assertIn("local workspace", quick_start.lower())
@@ -56,7 +56,7 @@ class PluginCommandTests(unittest.TestCase):
 
     def test_readme_uses_chat_first_as_primary_dashboard_path(self) -> None:
         text = (REPO / "README.md").read_text()
-        quick_start = text.split("## 🚀 Quick Start", 1)[1].split("## 🧪 What You Can Ask", 1)[0]
+        quick_start = text.split("## Quick Start", 1)[1].split("## What You Can Ask", 1)[0]
 
         self.assertIn("Open the Research Pilot dashboard.", quick_start)
         self.assertIn("agent starts or reuses the local dashboard server", quick_start)
