@@ -6,6 +6,7 @@ from __future__ import annotations
 import json
 import re
 import sqlite3
+from contextlib import closing
 from pathlib import Path
 from typing import Any
 
@@ -668,5 +669,442 @@ def _build_literature(root: Path, project_id: str, layer: str, focus_id: str, se
     raise ValueError(f"unknown literature layer: {layer}")
 
 
+EVALUATION_METRIC_HINTS = {
+    "miou": "segmentation overlap",
+    "iou": "segmentation overlap",
+    "kld": "saliency/heatmap alignment",
+    "sim": "saliency/heatmap alignment",
+    "nss": "saliency/heatmap alignment",
+    "auc": "saliency/heatmap alignment",
+    "accuracy": "classification accuracy",
+    "top-1": "classification accuracy",
+    "top-5": "classification accuracy",
+    "cosine": "representation similarity",
+    "activation similarity": "representation similarity",
+    "qualitative": "qualitative assessment",
+    "human rating": "qualitative assessment",
+    "rubric": "qualitative assessment",
+}
+DESCRIPTIVE_METRIC_HINTS = {
+    "train images",
+    "test images",
+    "affordance categories",
+    "supervision",
+    "hold localization",
+    "cut localization",
+    "drink localization",
+    "evidence type",
+    "full-scene response",
+    "simplified shape response",
+}
+SHORT_METRIC_HINTS = {"iou", "kld", "sim", "nss", "auc"}
+
+
+def _metadata_list(item: dict[str, Any], key: str) -> list[str]:
+    metadata = item.get("metadata") if isinstance(item.get("metadata"), dict) else {}
+    value = metadata.get(key, [])
+    if isinstance(value, list):
+        return [str(entry) for entry in value if str(entry).strip()]
+    if isinstance(value, str) and value.strip():
+        return [value.strip()]
+    return []
+
+
+def _metadata_text(item: dict[str, Any], key: str) -> str:
+    metadata = item.get("metadata") if isinstance(item.get("metadata"), dict) else {}
+    return str(metadata.get(key) or "").strip()
+
+
+def _metric_family_from_names(names: list[str]) -> str:
+    families = []
+    for name in names:
+        lower = name.lower()
+        if any(hint in lower for hint in DESCRIPTIVE_METRIC_HINTS):
+            continue
+        for hint, family in EVALUATION_METRIC_HINTS.items():
+            if _metric_hint_matches(hint, lower):
+                families.append(family)
+                break
+    unique_families = sorted(set(families))
+    if unique_families:
+        return " + ".join(unique_families)
+    return ""
+
+
+def _metric_hint_matches(hint: str, lower_name: str) -> bool:
+    if hint in SHORT_METRIC_HINTS:
+        return re.search(rf"(?<![a-z0-9]){re.escape(hint)}(?![a-z0-9])", lower_name) is not None
+    return hint in lower_name
+
+
+def _planned_metric_family(experiment: dict[str, Any]) -> str:
+    return _metric_family_from_names(_metadata_list(experiment, "metrics")) or "qualitative assessment"
+
+
+def _experiment_setting(experiment: dict[str, Any], runs: list[dict[str, Any]]) -> dict[str, Any]:
+    metric_names = [str(metric.get("name") or "") for run in runs for metric in run.get("metrics", [])]
+    metric_benchmark = next(
+        (
+            metric.get("benchmark") or metric.get("benchmark_name")
+            for run in runs
+            for metric in run.get("metrics", [])
+            if metric.get("benchmark") or metric.get("benchmark_name")
+        ),
+        "",
+    )
+    metric_dataset = next(
+        (
+            metric.get("dataset") or metric.get("dataset_name")
+            for run in runs
+            for metric in run.get("metrics", [])
+            if metric.get("dataset") or metric.get("dataset_name")
+        ),
+        "",
+    )
+    benchmark = str(metric_benchmark or experiment.get("benchmark") or experiment.get("benchmark_name") or _metadata_text(experiment, "benchmark") or "Unspecified benchmark")
+    dataset = str(metric_dataset or experiment.get("dataset") or experiment.get("dataset_name") or _metadata_text(experiment, "dataset") or "Unspecified dataset")
+    family = _metric_family_from_names(metric_names) or _planned_metric_family(experiment) or "qualitative assessment"
+    setting_id = f"evaluation_setting:{_slug(benchmark)}:{_slug(dataset)}:{_slug(family)}"
+    return {
+        "id": setting_id,
+        "entity_type": "evaluation_setting",
+        "label": f"{benchmark} / {dataset} / {family}",
+        "benchmark": benchmark,
+        "dataset": dataset,
+        "metric_family": family,
+        "metadata": {"raw_benchmark": benchmark, "raw_dataset": dataset},
+    }
+
+
+def _experiments_by_id(model: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    return {experiment["id"]: experiment for experiment in model.get("experiments", [])}
+
+
+def _runs_by_experiment(model: dict[str, Any]) -> dict[str, list[dict[str, Any]]]:
+    grouped: dict[str, list[dict[str, Any]]] = {}
+    for run in model.get("runs", []):
+        grouped.setdefault(run.get("experiment_id", ""), []).append(run)
+    return grouped
+
+
+def _evaluation_settings(model: dict[str, Any]) -> list[dict[str, Any]]:
+    runs_by_experiment = _runs_by_experiment(model)
+    by_id: dict[str, dict[str, Any]] = {}
+    for experiment in model.get("experiments", []):
+        runs = runs_by_experiment.get(experiment.get("id"), [])
+        setting = _experiment_setting(experiment, runs)
+        current = by_id.setdefault(
+            setting["id"],
+            {**setting, "experiment_ids": set(), "run_ids": set(), "imported_evidence_count": 0, "local_result_count": 0},
+        )
+        current["experiment_ids"].add(experiment.get("id", ""))
+        for run in runs:
+            current["run_ids"].add(run.get("id", ""))
+            if run.get("origin_type") == "imported_paper":
+                current["imported_evidence_count"] += 1
+            if run.get("origin_type") == "local":
+                current["local_result_count"] += 1
+
+    result = []
+    for setting in by_id.values():
+        experiment_ids = sorted(item for item in setting["experiment_ids"] if item)
+        run_ids = sorted(item for item in setting["run_ids"] if item)
+        result.append(
+            {
+                **{key: value for key, value in setting.items() if key not in {"experiment_ids", "run_ids"}},
+                "experiment_ids": experiment_ids,
+                "run_ids": run_ids,
+                "experiment_count": len(experiment_ids),
+                "run_count": len(run_ids),
+            }
+        )
+    return sorted(result, key=lambda item: item["label"])
+
+
+def _claim_impacts(root: Path, project_id: str, run_id: str) -> list[dict[str, Any]]:
+    impacts: list[dict[str, Any]] = []
+    with closing(_connection(root)) as connection:
+        rows = connection.execute(
+            """
+            SELECT relation_type, to_entity_id, metadata_json
+            FROM entity_links
+            WHERE project_id = ?
+              AND from_entity_type = 'experiment_run'
+              AND from_entity_id = ?
+              AND relation_type LIKE 'claim_impact:%'
+            ORDER BY relation_type, to_entity_id
+            """,
+            (project_id, run_id),
+        ).fetchall()
+    for row in rows:
+        metadata = _json_loads(row["metadata_json"], {})
+        impact = row["relation_type"].split(":", 1)[-1]
+        local_claim = metadata.get("claim") or _local_id(row["to_entity_id"])
+        impacts.append(
+            {
+                "id": f"claim_impact:{run_id}:{impact}:{local_claim}",
+                "target_id": f"claim:{local_claim}",
+                "target_db_id": row["to_entity_id"],
+                "impact": impact,
+                "strength": metadata.get("strength", ""),
+                "metadata": metadata,
+                "jump": {"mode": "understanding", "layer": "claim_focus", "focus_id": f"claim:{local_claim}"},
+            }
+        )
+    return impacts
+
+
+def _support_node(kind: str, experiment_id: str, index: int, value: str) -> dict[str, Any]:
+    node_id = f"{kind}:{experiment_id}:{index}"
+    return {
+        "id": node_id,
+        "entity_type": kind,
+        "label": str(value),
+        "subtitle": kind,
+        "status": "",
+        "confidence": "",
+        "metadata": {"experiment_id": experiment_id, "value": value},
+        "drill": None,
+        "inspector": {"selected_id": node_id},
+    }
+
+
+def _run_inspector(root: Path, project_id: str, selected_id: str, runs: list[dict[str, Any]]) -> dict[str, Any]:
+    run_id = _strip_prefix(selected_id, "run:")
+    run = next((item for item in runs if item.get("id") == run_id), None)
+    if not run:
+        raise ValueError(f"unknown run: {selected_id}")
+    impacts = _claim_impacts(root, project_id, run_id)
+    actions = []
+    for item in impacts:
+        action = dict(item["jump"])
+        action.update({"label": f"Open {item['target_id']}", "kind": "cross_mode_jump"})
+        actions.append(action)
+    return {
+        "kind": "run_detail",
+        "title": run.get("run_label") or run_id,
+        "summary": run.get("summary") or "",
+        "sections": [
+            {"title": "Metric Values", "kind": "metric_values", "items": run.get("metrics") or []},
+            {"title": "Artifacts", "kind": "artifacts", "items": run.get("artifacts") or []},
+            {"title": "Interpretation", "kind": "text", "items": [{"text": _metadata_text(run, "interpretation")}]},
+            {"title": "Weaknesses", "kind": "weakness_list", "items": [{"text": item} for item in _metadata_list(run, "weaknesses")]},
+            {"title": "Project Understanding Impact", "kind": "project_understanding_impact", "items": impacts},
+        ],
+        "actions": actions,
+    }
+
+
 def _build_experiments(root: Path, project_id: str, layer: str, focus_id: str, selected_id: str) -> dict[str, Any]:
-    raise NotImplementedError
+    model = build_experiments_model(root, project_id)
+    payload = _base_payload(project_id, "experiments", layer, focus_id, selected_id)
+    experiments = _experiments_by_id(model)
+    runs_by_experiment = _runs_by_experiment(model)
+    settings = _evaluation_settings(model)
+
+    if layer == "evaluation_overview":
+        payload["canvas"]["nodes"] = [
+            {
+                "id": setting["id"],
+                "entity_type": "evaluation_setting",
+                "label": setting["label"],
+                "subtitle": f"{setting['experiment_count']} experiments / {setting['run_count']} runs",
+                "status": "",
+                "confidence": "",
+                "drill": {"mode": "experiments", "layer": "evaluation_setting_focus", "focus_id": setting["id"]},
+                "inspector": {"selected_id": setting["id"]},
+                "metadata": setting,
+            }
+            for setting in settings
+        ]
+        payload["inspector"] = {
+            "kind": "overview",
+            "title": "Evaluation Settings",
+            "summary": "Datasets, benchmarks/tasks, and metric families organize Experiments before claim impact.",
+            "sections": [{"title": "Evaluation Settings", "kind": "evaluation_setting_list", "items": settings}],
+            "actions": [],
+        }
+        return payload
+
+    if layer == "evaluation_setting_focus":
+        setting = next((item for item in settings if item["id"] == focus_id), None)
+        if not setting:
+            raise ValueError(f"unknown evaluation setting: {focus_id}")
+        payload["focus_id"] = focus_id
+        metric_id = f"metric_family:{_slug(setting['metric_family'])}"
+        benchmark_id = f"benchmark:{_slug(setting['benchmark'])}"
+        dataset_id = f"dataset:{_slug(setting['dataset'])}"
+        experiment_nodes = []
+        for experiment_id in setting["experiment_ids"]:
+            experiment = experiments.get(experiment_id)
+            if not experiment:
+                continue
+            runs = runs_by_experiment.get(experiment_id, [])
+            graph_id = _experiment_graph_id(experiment_id)
+            experiment_nodes.append(
+                {
+                    "id": graph_id,
+                    "entity_type": "experiment",
+                    "db_id": experiment_id,
+                    "local_id": experiment_id,
+                    "label": experiment.get("title") or experiment_id,
+                    "subtitle": f"{len(runs)} runs / {experiment.get('status', '')}",
+                    "status": experiment.get("status") or "",
+                    "confidence": "",
+                    "drill": {"mode": "experiments", "layer": "experiment_design_focus", "focus_id": graph_id},
+                    "inspector": {"selected_id": graph_id},
+                    "metadata": experiment,
+                }
+            )
+        payload["canvas"]["nodes"] = [
+            {
+                "id": setting["id"],
+                "entity_type": "evaluation_setting",
+                "label": setting["label"],
+                "subtitle": "selected setting",
+                "status": "",
+                "confidence": "",
+                "drill": None,
+                "inspector": {"selected_id": setting["id"]},
+                "metadata": setting,
+            },
+            {
+                "id": dataset_id,
+                "entity_type": "dataset",
+                "label": setting["dataset"],
+                "subtitle": "dataset",
+                "status": "",
+                "confidence": "",
+                "metadata": setting,
+                "drill": None,
+                "inspector": {"selected_id": dataset_id},
+            },
+            {
+                "id": benchmark_id,
+                "entity_type": "benchmark",
+                "label": setting["benchmark"],
+                "subtitle": "benchmark/task",
+                "status": "",
+                "confidence": "",
+                "metadata": setting,
+                "drill": None,
+                "inspector": {"selected_id": benchmark_id},
+            },
+            {
+                "id": metric_id,
+                "entity_type": "metric_family",
+                "label": setting["metric_family"],
+                "subtitle": "metric family",
+                "status": "",
+                "confidence": "",
+                "metadata": setting,
+                "drill": None,
+                "inspector": {"selected_id": metric_id},
+            },
+            *experiment_nodes,
+        ]
+        payload["canvas"]["edges"] = [
+            {"id": f"setting-dataset:{focus_id}", "source": dataset_id, "target": focus_id, "relation": "defines", "label": "defines", "metadata": {}},
+            {"id": f"setting-benchmark:{focus_id}", "source": benchmark_id, "target": focus_id, "relation": "defines", "label": "defines", "metadata": {}},
+            {"id": f"setting-metric:{focus_id}", "source": metric_id, "target": focus_id, "relation": "measured_by", "label": "measured by", "metadata": {}},
+            *[
+                {"id": f"setting-exp:{focus_id}:{node['id']}", "source": focus_id, "target": node["id"], "relation": "used_by", "label": "used by", "metadata": {}}
+                for node in experiment_nodes
+            ],
+        ]
+        payload["inspector"] = {
+            "kind": "evaluation_setting_detail",
+            "title": setting["label"],
+            "summary": "This setting groups experiment designs by benchmark/task, dataset, and metric family.",
+            "sections": [
+                {"title": "Dataset", "kind": "dataset", "items": [{"label": setting["dataset"]}]},
+                {"title": "Benchmark / Task", "kind": "benchmark", "items": [{"label": setting["benchmark"]}]},
+                {"title": "Metric Family", "kind": "metric_family", "items": [{"label": setting["metric_family"]}]},
+                {"title": "Experiment Designs", "kind": "experiment_list", "items": experiment_nodes},
+            ],
+            "actions": [],
+        }
+        return payload
+
+    if layer == "experiment_design_focus":
+        experiment_id = _strip_prefix(focus_id, "experiment:")
+        experiment = experiments.get(experiment_id)
+        if not experiment:
+            raise ValueError(f"unknown experiment: {focus_id}")
+        runs = runs_by_experiment.get(experiment_id, [])
+        payload["focus_id"] = _experiment_graph_id(experiment_id)
+        run_nodes = [
+            {
+                "id": _run_graph_id(run["id"]),
+                "entity_type": "run",
+                "db_id": run["id"],
+                "local_id": run["id"],
+                "label": run.get("run_label") or run.get("id"),
+                "subtitle": f"{run.get('origin_type', '')} / {run.get('status', '')}",
+                "status": run.get("status") or "",
+                "confidence": "",
+                "drill": None,
+                "inspector": {"selected_id": _run_graph_id(run["id"])},
+                "metadata": run,
+            }
+            for run in runs
+        ]
+        exp_node = {
+            "id": _experiment_graph_id(experiment_id),
+            "entity_type": "experiment",
+            "db_id": experiment_id,
+            "local_id": experiment_id,
+            "label": experiment.get("title") or experiment_id,
+            "subtitle": experiment.get("status") or "experiment",
+            "status": experiment.get("status") or "",
+            "confidence": "",
+            "drill": None,
+            "inspector": {"selected_id": _experiment_graph_id(experiment_id)},
+            "metadata": experiment,
+        }
+        support_nodes = []
+        for kind, values in [
+            ("model", _metadata_list(experiment, "models")),
+            ("baseline", _metadata_list(experiment, "baselines")),
+            ("protocol", experiment.get("protocol") or _metadata_list(experiment, "protocol")),
+            ("metric_family", _metadata_list(experiment, "metrics")),
+        ]:
+            for index, value in enumerate(values, start=1):
+                support_nodes.append(_support_node(kind, experiment_id, index, value))
+        payload["canvas"]["nodes"] = [exp_node, *support_nodes, *run_nodes]
+        payload["canvas"]["edges"] = [
+            *[
+                {"id": f"exp-support:{node['id']}", "source": node["id"], "target": exp_node["id"], "relation": "defines", "label": "defines", "metadata": {}}
+                for node in support_nodes
+            ],
+            *[
+                {
+                    "id": f"exp-run:{experiment_id}:{node['local_id']}",
+                    "source": exp_node["id"],
+                    "target": node["id"],
+                    "relation": "produces",
+                    "label": "produces",
+                    "metadata": {},
+                }
+                for node in run_nodes
+            ],
+        ]
+        if selected_id.startswith("run:"):
+            payload["inspector"] = _run_inspector(root, project_id, selected_id, runs)
+        else:
+            payload["inspector"] = {
+                "kind": "experiment_detail",
+                "title": experiment.get("title") or experiment_id,
+                "summary": experiment.get("question") or "",
+                "sections": [
+                    {"title": "Hypothesis", "kind": "text", "items": [{"text": experiment.get("hypothesis") or ""}]},
+                    {"title": "Expected Evidence", "kind": "text", "items": [{"text": _metadata_text(experiment, "expected_evidence")}]},
+                    {"title": "Risks", "kind": "risk_list", "items": [{"text": item} for item in _metadata_list(experiment, "risks")]},
+                    {"title": "Runs", "kind": "run_list", "items": run_nodes},
+                ],
+                "actions": [],
+            }
+        payload["selected_id"] = selected_id
+        return payload
+
+    raise ValueError(f"unknown experiments layer: {layer}")
