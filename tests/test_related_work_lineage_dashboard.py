@@ -214,6 +214,35 @@ class RelatedWorkLineageDashboardTest(unittest.TestCase):
         self.assertIn("experiments", source)
         self.assertNotIn("run_detail", source)
 
+    def test_workspace_island_uses_mode_specific_renderers_and_breadcrumb(self):
+        source = (ROOT / "dashboard" / "workspace-island" / "src" / "WorkspaceIslandApp.jsx").read_text(encoding="utf-8")
+
+        self.assertIn("function WorkspaceBreadcrumb", source)
+        self.assertIn('className="workspace-stage-breadcrumb"', source)
+        self.assertIn("onNavigate?.(crumb)", source)
+        self.assertIn("function UnderstandingGraphRenderer", source)
+        self.assertIn("function LiteratureGraphRenderer", source)
+        self.assertIn("function ExperimentsGraphRenderer", source)
+        self.assertIn("function WorkspaceGraphRenderer", source)
+        self.assertIn("nodeTypes={workspaceNodeTypes}", source)
+        self.assertIn("fitViewOptions={{ padding: 0.1, maxZoom: 1.12 }}", source)
+        self.assertIn("maskColor=\"var(--workspace-minimap-mask)\"", source)
+
+    def test_workspace_island_visual_style_guardrails(self):
+        css = (ROOT / "dashboard" / "workspace-island" / "src" / "workspace-island.css").read_text(encoding="utf-8")
+
+        self.assertIn(".workspace-knowledge-canvas", css)
+        self.assertIn("--workspace-grid-color", css)
+        self.assertIn("--workspace-minimap-mask", css)
+        self.assertIn(".workspace-stage-breadcrumb", css)
+        self.assertIn(".workspace-node-card", css)
+        self.assertIn(".workspace-node-card.is-dimmed", css)
+        self.assertIn(".workspace-node-card.is-selected", css)
+        self.assertIn(".workspace-knowledge-canvas .react-flow__controls-button", css)
+        self.assertIn(".workspace-knowledge-canvas .react-flow__minimap", css)
+        self.assertIn(".workspace-knowledge-canvas.is-literature .workspace-node-card", css)
+        self.assertNotIn("background: var(--surface-2);\n  cursor: pointer;\n}", css)
+
     def test_lineage_atlas_uses_shallow_model_not_project_graph_builders(self):
         source = (
             ROOT / "dashboard" / "lineage-atlas" / "src" / "LineageAtlasApp.jsx"
