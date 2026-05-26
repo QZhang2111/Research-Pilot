@@ -327,6 +327,22 @@ async function loadExperimentsFromApi(projectId) {
   }
 }
 
+async function loadWorkspaceGraphFromApi(projectId, options = {}) {
+  if (!projectId) return null;
+  const search = new URLSearchParams();
+  search.set("project", projectId);
+  search.set("mode", options.mode || "understanding");
+  if (options.layer) search.set("layer", options.layer);
+  if (options.focus_id) search.set("focus_id", options.focus_id);
+  if (options.selected_id) search.set("selected_id", options.selected_id);
+  const response = await fetch(`/api/workspace-graph?${search.toString()}`, { cache: "no-store" });
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({}));
+    throw new Error(payload.message || payload.error || `Workspace graph failed: ${response.status}`);
+  }
+  return response.json();
+}
+
 function normalizePaperDossierPath(path) {
   const value = String(path || "").trim();
   if (!value) return "";
@@ -440,6 +456,10 @@ function projectUrl(projectId) {
   return dashboardPageUrl("project", { project: projectId });
 }
 
+function workspaceUrl(projectId, mode = "understanding") {
+  return dashboardPageUrl("workspace", { project: projectId, mode });
+}
+
 function roundUrl(projectId, roundName) {
   return dashboardPageUrl("round", { project: projectId, round: roundName || "" });
 }
@@ -460,18 +480,13 @@ function lineageUrl(projectId, roundName) {
   return dashboardPageUrl("lineage", { project: projectId, round: roundName });
 }
 
-function renderProjectNav(project) {
+function renderProjectNav(project, current = state.page) {
   if (!el.projectNav || !project) return;
-  const current = state.page;
-  const projectCurrent = current === "project" ? ' aria-current="page"' : "";
+  const workspaceCurrent = current === "workspace" || ["project", "lineage", "experiments"].includes(current) ? ' aria-current="page"' : "";
   const papersCurrent = ["papers", "round", "paper", "deep-reads"].includes(current) ? ' aria-current="page"' : "";
-  const lineageCurrent = current === "lineage" ? ' aria-current="page"' : "";
-  const experimentsCurrent = current === "experiments" ? ' aria-current="page"' : "";
   el.projectNav.innerHTML = `
-    <a href="${escapeAttr(projectUrl(project.id))}"${projectCurrent}>Project</a>
+    <a href="${escapeAttr(workspaceUrl(project.id))}"${workspaceCurrent}>Workspace</a>
     <a href="${escapeAttr(papersUrl(project.id))}"${papersCurrent}>Papers</a>
-    <a href="${escapeAttr(lineageUrl(project.id))}"${lineageCurrent}>Technical Lineage</a>
-    <a href="${escapeAttr(experimentsUrl(project.id))}"${experimentsCurrent}>Experiments</a>
   `;
 }
 
@@ -510,38 +525,53 @@ function renderProjectsIndex() {
 }
 
 async function renderProjectWorkspace() {
+  await renderWorkspacePage();
+}
+
+async function renderWorkspacePage() {
   const project = projectById();
   if (!project) {
-    renderEmpty("Project not found.");
+    renderProjectsIndex();
     return;
   }
-  renderProjectNav(project);
-  const [graph, understanding] = await Promise.all([
-    loadProjectGraphFromApi(project.id),
-    loadProjectUnderstandingFromApi(project.id),
-  ]);
-  setHeader("Project", displayProjectTitle(project), project.overview?.direction || "");
-  if (project.demo && el.subtitle) {
-    el.subtitle.className = "project-title-meta";
-    el.subtitle.innerHTML = `
-      ${renderDemoBadge(project)}
-      <span>${escapeHtml(project.overview?.direction || "")}</span>
-    `;
-  }
+  const mode = normalizeToken(params().get("mode") || "understanding") || "understanding";
+  setHeader("Workspace", displayProjectTitle(project), "Project understanding, literature, and experiments.");
+  renderProjectNav(project, "workspace");
   el.content.innerHTML = `
-    ${renderProjectUnderstandingPanel(understanding)}
-    <section class="section-block project-graph-panel" id="project-graph">
-      <div class="section-head">
-        <div>
-          <p class="eyebrow">Understanding Graph</p>
-          <h2>Project Understanding Graph</h2>
-        </div>
+    <section class="workspace-page-shell" aria-label="Project workspace">
+      <div id="workspace-island-root" class="workspace-island-root">
+        <div class="empty-state">Loading workspace graph...</div>
       </div>
-      ${renderProjectGraphView(graph)}
     </section>
   `;
-  wireClickableRows();
-  wireGraphStudio(graph);
+  const root = document.getElementById("workspace-island-root");
+  const mountApi = window.ResearchBrowserWorkspaceIsland;
+  if (!root || !mountApi?.mount) {
+    if (root) root.innerHTML = `<div class="empty-state">Workspace island bundle unavailable.</div>`;
+    return;
+  }
+  const mountWorkspaceIsland = window.ResearchBrowserWorkspaceIsland.mount;
+  try {
+    let currentModel = await loadWorkspaceGraphFromApi(project.id, { mode });
+    const navigate = async (target = {}) => {
+      const modeChanged = target.mode && target.mode !== currentModel.mode;
+      const nextMode = target.mode || currentModel.mode || "understanding";
+      const nextLayer = modeChanged ? "" : (target.layer !== undefined ? target.layer : currentModel.layer || "");
+      const nextFocus = modeChanged ? "" : (target.focus_id !== undefined ? target.focus_id : currentModel.focus_id || "");
+      const nextSelected = modeChanged ? "" : (target.selected_id !== undefined ? target.selected_id : "");
+      const nextModel = await loadWorkspaceGraphFromApi(project.id, {
+        mode: nextMode,
+        layer: nextLayer,
+        focus_id: nextFocus,
+        selected_id: nextSelected,
+      });
+      currentModel = nextModel;
+      mountWorkspaceIsland(root, { model: currentModel, onNavigate: navigate });
+    };
+    mountWorkspaceIsland(root, { model: currentModel, onNavigate: navigate });
+  } catch (error) {
+    root.innerHTML = `<div class="empty-state">${escapeHtml(error.message || "Workspace graph failed.")}</div>`;
+  }
 }
 
 function hasProjectUnderstanding(model) {
@@ -4063,6 +4093,7 @@ async function renderPage() {
     return;
   }
   if (state.page === "projects") renderProjectsIndex();
+  else if (state.page === "workspace") await renderWorkspacePage();
   else if (state.page === "project") await renderProjectWorkspace();
   else if (state.page === "papers") renderProjectPapersPage();
   else if (state.page === "round") renderRoundReviewPage();

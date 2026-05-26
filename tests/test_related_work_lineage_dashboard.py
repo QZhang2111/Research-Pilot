@@ -78,8 +78,6 @@ class RelatedWorkLineageDashboardTest(unittest.TestCase):
         self.assertIn('data-page="experiments"', html)
         self.assertIn("<title>Research Browser · Experiments</title>", html)
         self.assertIn("function experimentsUrl(projectId)", app)
-        self.assertIn('current === "experiments"', app)
-        self.assertIn(">Experiments</a>", app)
         self.assertIn("/api/experiments", app)
         self.assertNotIn("Experiment Proposals</a>", app)
         self.assertIn('data-page="experiments"', legacy_html)
@@ -127,6 +125,19 @@ class RelatedWorkLineageDashboardTest(unittest.TestCase):
         self.assertNotIn("Current Question", project_renderer)
         self.assertNotIn("Search Status", project_renderer)
         self.assertNotIn("renderHumanGatePanel", project_renderer)
+
+    def test_workspace_page_hooks_and_primary_nav(self):
+        app = (ROOT / "dashboard" / "app.js").read_text(encoding="utf-8")
+
+        self.assertIn("function workspaceUrl(projectId, mode = \"understanding\")", app)
+        self.assertIn("async function loadWorkspaceGraphFromApi", app)
+        self.assertIn("async function renderWorkspacePage()", app)
+        self.assertIn("ResearchBrowserWorkspaceIsland.mount", app)
+        self.assertIn('current === "workspace"', app)
+        self.assertIn(">Workspace</a>", app)
+        self.assertIn(">Papers</a>", app)
+        self.assertNotIn(">Technical Lineage</a>", app)
+        self.assertNotIn(">Experiments</a>", app)
 
     def test_dashboard_index_fetch_bypasses_browser_cache(self):
         app = (ROOT / "dashboard" / "app.js").read_text(encoding="utf-8")
