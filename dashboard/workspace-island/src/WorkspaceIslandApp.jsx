@@ -48,6 +48,18 @@ function displayTone(node) {
   return node?.data?.node?.display?.tone || node?.data?.display?.tone || entityTone(node?.data?.entity_type || node?.data?.node?.entity_type);
 }
 
+function cssTone(tone) {
+  return {
+    question: "q",
+    claim: "c",
+    evidence: "e",
+    warrant: "w",
+    limitation: "l",
+    source: "p",
+    run: "r",
+  }[tone] || tone || "x";
+}
+
 function nodeColor(node) {
   const tone = displayTone(node);
   return {
@@ -124,7 +136,7 @@ function toFlowNode(node, index, model, focusedIds, onNodeAction) {
     data: {
       node,
       entity_type: node.entity_type,
-      tone: entityTone(node.entity_type),
+      tone: cssTone(node.display?.tone || entityTone(node.entity_type)),
       focusClass,
       onNodeAction,
     },
@@ -525,7 +537,7 @@ function buildUnderstandingClaimFocusFlowModel(model, onNavigate) {
           zIndex: 3,
           data: {
             node,
-            tone: lane.tone,
+            tone: cssTone(node.display?.tone || lane.tone),
             onNodeAction: (item) => {
               const target = nodeNavigationTarget(item);
               if (!target) return;
@@ -550,7 +562,7 @@ function buildUnderstandingClaimFocusFlowModel(model, onNavigate) {
         targetPosition: Position.Left,
         style: { width: 310, minHeight: 104 },
         zIndex: 3,
-        data: { node, tone: lane.tone },
+        data: { node, tone: cssTone(node.display?.tone || lane.tone) },
       });
       edges.push({
         id: `claim-focus:${nodeId}:${claim.id}`,
