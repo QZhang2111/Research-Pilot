@@ -111,11 +111,13 @@ A scene describes:
 - canonical entities
 - factual relations
 - derived groups
-- allowed interactions
+- semantic capabilities
 - inspector payloads
-- provenance for every entity, relation, and group
+- provenance for every entity, relation, group, and portal
 
 The scene does not contain React Flow node types, React Flow positions, CSS class names, or layout dimensions.
+
+The scene also does not decide concrete click behavior. It may say an entity is capable of inspection, drill, portal navigation, or no interaction. The projection layer decides which capability is active in a specific mode/layer.
 
 ### 7.3 Projection Layer
 
@@ -130,8 +132,11 @@ Projection answers:
 - Which derived groups become frames or containers?
 - Which relations should be drawn, aggregated, hidden, or shown only in inspector?
 - Which cross-mode portals are available?
+- Which concrete interaction each projected object receives?
 
 Projection may be mode-specific. The projection contract is still shared.
+
+Projection is the boundary between domain meaning and UI behavior. It consumes scene capabilities and mode registry rules, then emits concrete projected interactions such as `inspect`, `drill`, `portal`, or `none`.
 
 ### 7.4 React Flow Adapter Layer
 
@@ -155,7 +160,7 @@ Every scene object must carry a stable canonical id and a source reference.
 
 ### 8.1 Canonical Entity IDs
 
-Recommended ids:
+Required id shapes:
 
 ```text
 understanding:project:<project_id>:question:<local_id>
@@ -179,6 +184,17 @@ derived:group:<mode>:<layer>:<slug>
 ```
 
 Short display ids such as `Q1`, `C2`, `E4`, `P3`, and `EXP1` remain labels, not canonical ids.
+
+Source papers use `source:<source_id>` globally.
+
+Reason: `sources.source_id` is already the canonical paper/source identity in `research-pilot.db`. Project-specific meaning belongs in links, positionings, summaries, and inspector context, not in the source id itself.
+
+Examples:
+
+```text
+source:zhang2026-geometry-interaction-vfm
+source:do2017-affordancenet
+```
 
 ### 8.2 Source References
 
@@ -237,6 +253,34 @@ type SceneObjectKind =
   | "portal";
 ```
 
+`entity` may be DB-backed or derived. Derivation is expressed in `source.kind`, not by inventing a separate untyped frontend object.
+
+### 9.1 Layer Name Compatibility
+
+The v2 layer names are semantic names. The current v1 endpoint uses shorter names. During migration, the compatibility wrapper must map them explicitly.
+
+| v1 mode | v1 layer | v2 layer |
+| --- | --- | --- |
+| `understanding` | `project_overview` | `understanding.project_overview` |
+| `understanding` | `claim_focus` | `understanding.claim_focus` |
+| `understanding` | `paper_focus` | `understanding.paper_focus` |
+| `literature` | `literature_overview` | `literature.overview` |
+| `literature` | `literature_route_focus` | `literature.route_focus` |
+| `literature` | `literature_paper_focus` | `literature.paper_focus` |
+| `experiments` | `evaluation_overview` | `experiments.evaluation_overview` |
+| `experiments` | `evaluation_setting_focus` | `experiments.evaluation_setting_focus` |
+| `experiments` | `experiment_design_focus` | `experiments.experiment_design_focus` |
+
+Compatibility rule: the UI may keep URL/query names while the new internal graph system uses v2 names. The adapter owns the mapping. Scene builders should emit v2 names only.
+
+Source id compatibility:
+
+| v1 source id | v2 canonical id |
+| --- | --- |
+| `source:paper:<source_id>` | `source:<source_id>` |
+
+The adapter must normalize old `source:paper:*` ids before comparing focus ids, relation endpoints, or inspector subjects.
+
 Required top-level fields:
 
 ```json
@@ -256,7 +300,7 @@ Required top-level fields:
 }
 ```
 
-### 9.1 Entity Contract
+### 9.2 Entity Contract
 
 ```json
 {
@@ -267,10 +311,7 @@ Required top-level fields:
   "summary": "",
   "status": "accepted",
   "confidence": "medium",
-  "interaction": {
-    "kind": "terminal",
-    "inspector_id": "understanding:project:DemoVisualAffordance:evidence:E1"
-  },
+  "capabilities": ["inspectable"],
   "source": {
     "kind": "db_row",
     "table": "understanding_nodes",
@@ -280,15 +321,16 @@ Required top-level fields:
 }
 ```
 
-Interaction kinds:
+Capability kinds:
 
-- `drill`: enters another canvas layer.
-- `inspect`: updates inspector only.
-- `terminal`: may show inspector, but cannot create a deeper layer.
-- `portal`: jumps to another mode/layer.
+- `inspectable`: scene has enough detail for inspector.
+- `drillable`: scene can support a deeper semantic layer.
+- `portalable`: scene can support a cross-mode or page target.
 - `none`: visual-only label or group member.
 
-### 9.2 Relation Contract
+Capabilities are semantic permissions, not concrete UI behavior. Projection maps them into projected interactions.
+
+### 9.3 Relation Contract
 
 ```json
 {
@@ -313,7 +355,9 @@ Relation types should be limited and mode-aware:
 - Experiments: `defines`, `uses_dataset`, `uses_benchmark`, `measures_with`, `has_design`, `has_run`, `reports_metric`, `impacts`
 - Cross-mode: `source_of`, `informs`, `evaluates`, `impacts_understanding`
 
-### 9.3 Group Contract
+Scene relations are semantic relations. They are not layout lines. If several relations become one visible line, that aggregation happens in the projection layer and must retain member relation ids.
+
+### 9.4 Group Contract
 
 Groups are derived view objects.
 
@@ -339,7 +383,46 @@ Groups are derived view objects.
 
 Groups never become factual edges by themselves.
 
-### 9.4 Portal Contract
+### 9.5 Derived Entity Contract
+
+Some visible objects are not single DB rows but still need stable ids and provenance. They must be emitted as derived entities, not as untyped frontend cards.
+
+Examples:
+
+- evaluation setting: dataset + benchmark/task + metric family
+- experiment protocol block: selected protocol fields from `experiments.metadata_json`
+- model or baseline block: model/baseline fields from `experiments.metadata_json` or linked artifacts
+- planned metric summary: declared metric fields before run results exist
+- literature topic anchor: project + literature lanes + project positionings
+
+Contract:
+
+```json
+{
+  "canonical_id": "derived:evaluation_setting:DemoVisualAffordance:agd20k-kld-sim-nss",
+  "display_id": "evaluation_setting:agd20k-kld-sim-nss",
+  "entity_type": "evaluation_setting",
+  "title": "AGD20K quantitative evaluation / qualitative validation",
+  "summary": "AGD20K unseen egocentric objects; UMD categorical masks; saliency/heatmap alignment metrics.",
+  "capabilities": ["inspectable", "drillable"],
+  "source": {
+    "kind": "derived",
+    "rule": "dataset + benchmark_task + metric_family from experiment rows",
+    "inputs": [
+      {"table": "experiments", "primary_key": "EXP1"},
+      {"table": "experiment_runs", "primary_key": "run:exp1:paper"},
+      {"table": "experiment_metrics", "primary_key": "metric:exp1:umd-miou"}
+    ]
+  },
+  "metadata": {
+    "derived_from": "experiment_substrate"
+  }
+}
+```
+
+Derived entities must not pretend to be DB rows. Inspector copy must label them as derived when provenance is shown.
+
+### 9.6 Portal Contract
 
 ```json
 {
@@ -360,11 +443,176 @@ Groups never become factual edges by themselves.
 }
 ```
 
-## 10. Shared Visual Grammar
+## 10. Projected Graph Contract
+
+Projection consumes `WorkspaceScene` plus `modeRegistry`, then emits `ProjectedGraph`.
+
+`ProjectedGraph` is the only data shape the React Flow adapter may render.
+
+```ts
+type ProjectedGraph = {
+  schema_version: "workspace-projection-v1";
+  project_id: string;
+  mode: WorkspaceMode;
+  layer: WorkspaceLayer;
+  focus_id?: string;
+  breadcrumb: ProjectedBreadcrumbItem[];
+  nodes: ProjectedNode[];
+  edges: ProjectedEdge[];
+  frames: ProjectedFrame[];
+  portals: ProjectedPortal[];
+  inspector_default_id?: string;
+  layout: ProjectedLayoutSpec;
+  warnings: string[];
+};
+
+type ProjectedNodeRole =
+  | "anchor"
+  | "entity"
+  | "terminal"
+  | "portal";
+
+type ProjectedInteractionKind =
+  | "none"
+  | "inspect"
+  | "drill"
+  | "portal";
+```
+
+### 10.1 Projected Node
+
+```json
+{
+  "projected_id": "node:understanding:claim:C2:evidence:E1",
+  "semantic_id": "understanding:project:DemoVisualAffordance:evidence:E1",
+  "role": "terminal",
+  "visual_kind": "evidence",
+  "title": "Across probed VFMs, stronger geometric awareness aligns...",
+  "display_id": "E1",
+  "interaction": {
+    "kind": "inspect",
+    "inspector_id": "understanding:project:DemoVisualAffordance:evidence:E1"
+  },
+  "source": {
+    "kind": "db_row",
+    "table": "understanding_nodes",
+    "primary_key": "project:DemoVisualAffordance:E1"
+  },
+  "layout_hints": {
+    "lane": "evidence",
+    "rank": 1
+  }
+}
+```
+
+Rules:
+
+- `terminal` is a node role, not an interaction kind.
+- `inspect` means click changes inspector only.
+- `drill` means click enters another canvas layer.
+- `portal` means click jumps mode/page through a typed target.
+- terminal nodes may use `inspect` or `none`; terminal nodes must not use `drill`.
+- projected nodes carry source/provenance copied from the scene object or derived rule.
+
+### 10.2 Projected Edge
+
+```json
+{
+  "projected_id": "edge:aggregate:C2:evidence",
+  "relation_type": "supports",
+  "source_id": "understanding:project:DemoVisualAffordance:evidence:E1",
+  "target_id": "understanding:project:DemoVisualAffordance:claim:C2",
+  "label": "3 supports",
+  "member_relation_ids": [
+    "relation:project:DemoVisualAffordance:RL4",
+    "relation:project:DemoVisualAffordance:RL5",
+    "relation:project:DemoVisualAffordance:RL6"
+  ],
+  "aggregation": {
+    "kind": "same_relation_type_same_target",
+    "count": 3,
+    "relation_types": ["supports"]
+  },
+  "source": {
+    "kind": "derived",
+    "rule": "aggregate supports edges from evidence lane to focused claim",
+    "inputs": [
+      "relation:project:DemoVisualAffordance:RL4",
+      "relation:project:DemoVisualAffordance:RL5",
+      "relation:project:DemoVisualAffordance:RL6"
+    ]
+  }
+}
+```
+
+Rules:
+
+- Factual one-to-one projected edges keep exactly one `member_relation_id`.
+- Aggregated projected edges must include all member relation ids and an aggregation rule.
+- Frame membership is not a projected edge unless the underlying scene relation is semantic.
+- Layout helper lines must use a non-semantic `visual_connector` type and must not enter inspector as evidence.
+
+### 10.3 Projected Frame
+
+```json
+{
+  "projected_id": "frame:understanding.claim_focus:evidence",
+  "semantic_id": "derived:group:understanding.claim_focus:evidence",
+  "frame_kind": "lane",
+  "title": "Evidence / Grounds",
+  "member_node_ids": [
+    "node:understanding:claim:C2:evidence:E1",
+    "node:understanding:claim:C2:evidence:E2"
+  ],
+  "interaction": {"kind": "none"},
+  "source": {
+    "kind": "derived",
+    "rule": "entity_type == evidence for focused claim C2"
+  }
+}
+```
+
+Frame kinds:
+
+- `frame`: static visual boundary around related nodes.
+- `lane`: ordered visual bucket with semantic type ordering.
+- `container`: collapsible/nestable grouping for dense scenes.
+
+Rules:
+
+- frames are projected view objects, not DB facts.
+- frames default to non-clickable.
+- containers may collapse/expand in frontend state without mutating scene truth.
+- lanes define reading order; lanes do not imply factual relation.
+
+### 10.4 Projected Portal
+
+```json
+{
+  "projected_id": "portal:claim:C2:experiments",
+  "from_node_id": "node:understanding:claim:C2",
+  "label": "View related experiment results",
+  "target": {
+    "mode": "experiments",
+    "layer": "experiments.evaluation_overview",
+    "filter": {
+      "impacts": "understanding:project:DemoVisualAffordance:claim:C2"
+    }
+  },
+  "source": {
+    "kind": "derived",
+    "rule": "entity_links from experiment runs to understanding node"
+  }
+}
+```
+
+Portals are navigation affordances. They do not assert support, proof, or contradiction unless a separate semantic relation exists.
+
+## 11. Shared Visual Grammar
 
 The UI needs a common grammar across modes.
 
-### 10.1 Anchor
+### 11.1 Anchor
 
 Anchor is the current focus object.
 
@@ -382,7 +630,7 @@ Rules:
 - inspector defaults to anchor detail
 - anchor can have portals
 
-### 10.2 Entity Node
+### 11.2 Entity Node
 
 Entity node represents a DB-backed or canonical semantic entity.
 
@@ -398,11 +646,11 @@ Examples:
 
 Rules:
 
-- can be `drill`, `inspect`, `terminal`, or `portal`
+- projected interaction can be `drill`, `inspect`, `portal`, or `none`
 - must show display id and title
 - should show status only if status affects research interpretation
 
-### 10.3 Terminal Atom
+### 11.3 Terminal Atom
 
 Terminal atom is the last graph-level knowledge unit in the current hierarchy.
 
@@ -422,9 +670,9 @@ Rules:
 - optional inspector
 - visually lower weight than anchor
 
-### 10.4 Frame / Lane / Container
+### 11.4 Frame / Lane / Container
 
-Frame is visual grouping.
+Frame, lane, and container are related but distinct projected view objects.
 
 Examples:
 
@@ -437,12 +685,15 @@ Examples:
 
 Rules:
 
-- derived object only
-- not clickable by default
-- no factual relation implied
-- must have `source.kind = derived`
+- Frame: static visual boundary around related nodes.
+- Lane: ordered visual bucket with semantic type ordering.
+- Container: collapsible or nested grouping for dense scenes.
+- All three are derived objects only.
+- All three are non-clickable by default.
+- None implies a factual relation.
+- All three must have `source.kind = derived`.
 
-### 10.5 Portal Node / Portal Action
+### 11.5 Portal Node / Portal Action
 
 Portal is explicit cross-mode navigation.
 
@@ -459,7 +710,7 @@ Rules:
 - target must be typed
 - missing target should not render as active portal
 
-### 10.6 Edge
+### 11.6 Edge
 
 Edges represent factual or interpreted relations, not layout grouping.
 
@@ -470,11 +721,11 @@ Rules:
 - dense edges should aggregate
 - frame membership should not be drawn as edges unless the membership itself is a semantic relation
 
-## 11. Mode And Layer Registry
+## 12. Mode And Layer Registry
 
 Each mode/layer must declare its expected objects.
 
-### 11.1 Understanding
+### 12.1 Understanding
 
 `understanding.project_overview`
 
@@ -482,8 +733,8 @@ Each mode/layer must declare its expected objects.
 - Groups: Questions frame, Claims frame
 - Relations: `answers`, claim-to-claim `supports` if useful
 - Default inspector: question list
-- Question interaction: `inspect`
-- Claim interaction: `drill -> understanding.claim_focus`
+- Projected question interaction: `inspect`
+- Projected claim interaction: `drill -> understanding.claim_focus`
 
 `understanding.claim_focus`
 
@@ -493,7 +744,7 @@ Each mode/layer must declare its expected objects.
 - Optional inspector-only entities: supporting claims, related claims
 - Groups: Evidence lane, Warrants lane, Limitations lane, Source Papers lane
 - Relations: `supports`, `qualifies`, `bounds`, `cites`
-- Source paper interaction: `drill -> understanding.paper_focus` or `portal -> literature.paper_focus`, depending available data
+- Projected source paper interaction: `drill -> understanding.paper_focus` or `portal -> literature.paper_focus`, depending available data
 
 `understanding.paper_focus`
 
@@ -503,7 +754,7 @@ Each mode/layer must declare its expected objects.
 - Relations: paper argument links, translation links
 - Inspector: paper node detail or paper overview
 
-### 11.2 Literature
+### 12.2 Literature
 
 `literature.overview`
 
@@ -511,8 +762,8 @@ Each mode/layer must declare its expected objects.
 - Entities: literature lanes/routes, readable paper/source nodes
 - Groups: route lanes or field-position clusters
 - Relations: paper lineage relations
-- Route interaction: `drill -> literature.route_focus`
-- Paper interaction: `drill -> literature.paper_focus`
+- Projected route interaction: `drill -> literature.route_focus`
+- Projected paper interaction: `drill -> literature.paper_focus`
 
 `literature.route_focus`
 
@@ -529,15 +780,15 @@ Each mode/layer must declare its expected objects.
 - Groups: optional paper argument group
 - Portals: Paper detail page, Understanding nodes if linked
 
-### 11.3 Experiments
+### 12.3 Experiments
 
 `experiments.evaluation_overview`
 
-- Entities: evaluation settings only
-- Derived group rule: benchmark/task + dataset + metric family
+- Entities: derived evaluation settings only
+- Derived entity rule: benchmark/task + dataset + metric family
 - Relations: none by default, unless setting dependencies become explicit
 - Default inspector: evaluation setting list
-- Setting interaction: `drill -> experiments.evaluation_setting_focus`
+- Projected setting interaction: `drill -> experiments.evaluation_setting_focus`
 
 `experiments.evaluation_setting_focus`
 
@@ -545,19 +796,27 @@ Each mode/layer must declare its expected objects.
 - Entities: dataset, benchmark/task, metric family, experiment designs
 - Groups: evaluation substrate frame, experiment design frame
 - Relations: `uses_dataset`, `uses_benchmark`, `measures_with`, `has_design`
-- Experiment design interaction: `drill -> experiments.experiment_design_focus`
+- Projected experiment design interaction: `drill -> experiments.experiment_design_focus`
 - Runs do not appear here
 
 `experiments.experiment_design_focus`
 
 - Anchor: selected experiment design
-- Entities: protocol blocks, model/method nodes, baseline nodes, planned metric summary, run nodes
+- Entities: derived protocol blocks, derived model/method nodes, derived baseline nodes, derived planned metric summary, DB-backed run nodes
 - Groups: Protocol, Models/Baselines, Runs, Interpretation Links
 - Relations: `has_run`, `reports_metric`, `impacts`
-- Run interaction: `terminal inspect`
+- Projected run role: `terminal`
+- Projected run interaction: `inspect`
 - Project Understanding Impact appears in inspector and portals, not as the primary layout driver
 
-## 12. Inspector Contract
+Experiment projection rules:
+
+- Evaluation setting nodes are derived substrate entities, not experiment result claims.
+- Protocol/model/baseline/planned-metric nodes must carry derived provenance from experiment metadata, metrics, artifacts, or run rows.
+- If metadata is absent, the node must not be fabricated. Use inspector warning instead.
+- `impacts` links describe recorded interpretation links. They do not mean the experiment proved the target claim.
+
+## 13. Inspector Contract
 
 Inspector is not a dump of raw DB state.
 
@@ -582,7 +841,7 @@ Section rules:
 - Debug state such as raw review status belongs in collapsible provenance only, not primary copy.
 - Long inspector content must scroll independently from canvas.
 
-## 13. Frontend Architecture
+## 14. Frontend Architecture
 
 Recommended module split:
 
@@ -625,7 +884,7 @@ React Flow rules:
 - terminal nodes cannot call layer navigation
 - scrollable inspector uses `nowheel` where embedded inside React Flow; external inspector uses normal scroll
 
-## 14. Backend Architecture
+## 15. Backend Architecture
 
 Recommended module split:
 
@@ -656,20 +915,23 @@ Compatibility path:
 3. Add tests that compare v2 scene provenance to DB rows.
 4. Retire v1 only after all modes render from v2.
 
-## 15. Source Of Truth Rules
+## 16. Source Of Truth Rules
 
 Hard rules:
 
 - DB rows are facts.
+- Source papers use `source:<source_id>` as global canonical ids.
 - Derived groups must say they are derived.
+- Derived entities must say which DB rows or metadata fields produced them.
 - React Flow nodes are render objects, not source objects.
+- Projected graph objects are render contracts, not source truth.
 - Inspector summaries may synthesize, but must carry subject ids and provenance.
 - Cross-mode portals are navigation affordances, not evidence claims.
 - Experiments do not prove claims by default; they record substrate and results, then link interpreted impact separately.
 - Literature remains paper/source lineage, not project truth.
 - Understanding remains current project truth.
 
-## 16. Testing Strategy
+## 17. Testing Strategy
 
 Backend tests:
 
@@ -677,13 +939,19 @@ Backend tests:
 - every entity has provenance
 - every relation endpoint exists in scene or is intentionally external
 - every derived group has rule and inputs
+- every derived entity has rule and inputs
+- v1 layer names map to v2 layer names
+- v1 `source:paper:*` ids map to v2 `source:*` ids
 - mode/layer registry rejects invalid layer
-- terminal objects do not return drill targets
+- scene capabilities do not include unsupported drill targets
 
 Frontend source tests:
 
+- projected graph schema validates before React Flow rendering
 - React Flow adapter does not inspect DB fields directly
 - terminal node component cannot call `onNavigate`
+- terminal projected nodes never receive `interaction.kind = drill`
+- aggregated projected edges retain `member_relation_ids`
 - mode projections are separate modules
 - frame nodes are non-draggable, non-selectable by default
 - top-level mode breadcrumbs remain siblings
@@ -697,7 +965,7 @@ Browser tests:
 - Inspector scroll does not resize canvas
 - Run click updates inspector, no breadcrumb layer
 
-## 17. Migration Plan Shape
+## 18. Migration Plan Shape
 
 This is not the implementation plan, but expected sequence:
 
@@ -709,22 +977,21 @@ This is not the implementation plan, but expected sequence:
 6. Add provenance-aware inspector.
 7. Deprecate v1 payload once all mode screenshots match or improve current behavior.
 
-## 18. Open Questions
+## 19. Open Questions
 
 - Whether `/api/workspace-graph` should become v2 by default or expose `?schema=scene-v2`.
-- Whether canonical ids should include `project_id` for all source objects or keep `source:<source_id>` globally stable.
 - Whether `entity_links` is sufficient for cross-mode impact links, or backend needs a dedicated read-model helper.
 - Whether paper focus belongs under Understanding only, or should be accessible as a shared source/paper scene.
 - Whether frontend state should stay local React state or move to a small Zustand store like Understand-Anything.
 
-## 19. Acceptance Criteria
+## 20. Acceptance Criteria
 
 The system framework is ready for implementation when:
 
 - Product, backend, and frontend agents agree on scene object meanings.
 - A frontend node frame cannot be confused with a DB fact.
 - Every visible entity can trace back to DB or a derived rule.
-- Every drill/terminal/portal interaction is explicit in data.
+- Every `drill`, `inspect`, and `portal` interaction is explicit in projection data.
+- Every terminal node role is explicit in projection data.
 - Understanding, Literature, and Experiments each have declared mode/layer object contracts.
 - React Flow adapter can be replaced without changing semantic scene builders.
-
