@@ -229,10 +229,11 @@ def _understanding_node(node: dict[str, Any], *, selected_id: str = "") -> dict[
         "subtitle": node.get("subtitle") or node.get("status") or "",
         "status": node.get("status") or "",
         "confidence": node.get("confidence") or "",
-        "drill": drill,
         "selected": graph_id == selected_id,
         "metadata": node.get("metadata") or {},
     }
+    if drill:
+        result["drill"] = drill
     if inspector:
         result["inspector"] = inspector
     return result

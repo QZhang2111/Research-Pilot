@@ -75,6 +75,27 @@ class WorkspaceGraphReadModelsTest(unittest.TestCase):
         self.assertEqual("question:Q1", model["selected_id"])
         self.assertTrue(any(section["kind"] == "linked_claims" for section in model["inspector"]["sections"]))
 
+    def test_workspace_payload_has_no_dashboard_owned_storage_fields(self):
+        model = build_workspace_graph_model(self.root, PROJECT_ID, mode="understanding", layer="project_overview")
+
+        self.assertEqual("research-pilot.db", model["source"])
+        self.assertNotIn("dashboard_db", model)
+        self.assertNotIn("dashboard_state", model)
+        self.assertNotIn("mutation", model)
+
+    def test_understanding_question_nodes_do_not_create_question_layer(self):
+        model = build_workspace_graph_model(
+            self.root,
+            PROJECT_ID,
+            mode="understanding",
+            layer="project_overview",
+            selected_id="question:Q2",
+        )
+
+        self.assertEqual("project_overview", model["layer"])
+        self.assertEqual("question_detail", model["inspector"]["kind"])
+        self.assertTrue(all(node.get("drill", {}).get("layer") != "question_focus" for node in model["canvas"]["nodes"] if node["entity_type"] == "question"))
+
     def test_understanding_claim_focus_contract(self):
         model = build_workspace_graph_model(
             self.root,
@@ -205,6 +226,21 @@ class WorkspaceGraphReadModelsTest(unittest.TestCase):
         self.assertFalse(any(node["entity_type"] == "evaluation_setting" for node in model["canvas"]["nodes"]))
         impact = next(section for section in model["inspector"]["sections"] if section["kind"] == "project_understanding_impact")
         self.assertTrue(any(item["target_id"] == "claim:C4" for item in impact["items"]))
+
+    def test_experiment_run_is_terminal_inspector_selection(self):
+        model = build_workspace_graph_model(
+            self.root,
+            PROJECT_ID,
+            mode="experiments",
+            layer="experiment_design_focus",
+            focus_id="experiment:EXP3",
+            selected_id="run:RUN3",
+        )
+
+        run = next(node for node in model["canvas"]["nodes"] if node["id"] == "run:RUN3")
+        self.assertIsNone(run.get("drill"))
+        self.assertEqual({"selected_id": "run:RUN3"}, run["inspector"])
+        self.assertEqual("run_detail", model["inspector"]["kind"])
 
     def test_invalid_layer_raises_value_error(self):
         with self.assertRaises(ValueError):
