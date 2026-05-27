@@ -176,14 +176,22 @@ const WorkspaceKnowledgeNode = memo(function WorkspaceKnowledgeNode({ data }) {
     data.focusClass,
     canDrill ? "can-drill" : "is-terminal",
   ].filter(Boolean).join(" ");
-  return (
-    <button type="button" className={className} onClick={() => data.onNodeAction?.(node)}>
+  const content = (
+    <>
       <Handle type="target" position={Position.Top} className="workspace-node-handle" />
       <span>{localId}</span>
       <strong>{shortLabel(node.label, 150)}</strong>
       <em>{node.subtitle || node.status || node.entity_type || ""}</em>
       {node.metadata?.role ? <small>{node.metadata.role}</small> : null}
       <Handle type="source" position={Position.Bottom} className="workspace-node-handle" />
+    </>
+  );
+  if (!canDrill && !node.inspector) {
+    return <article className={className}>{content}</article>;
+  }
+  return (
+    <button type="button" className={className} onClick={() => data.onNodeAction?.(node)}>
+      {content}
     </button>
   );
 });
@@ -191,6 +199,14 @@ const WorkspaceKnowledgeNode = memo(function WorkspaceKnowledgeNode({ data }) {
 const workspaceNodeTypes = {
   workspaceKnowledgeNode: WorkspaceKnowledgeNode,
 };
+
+function isTopLevelWorkspaceLayer(layer) {
+  return (
+    layer === "project_overview" ||
+    layer === "literature_overview" ||
+    layer === "evaluation_overview"
+  );
+}
 
 function breadcrumbLabelForTarget(target) {
   const raw = target?.selected_id || target?.focus_id || target?.layer || target?.mode || "Workspace";
@@ -203,6 +219,8 @@ function currentBreadcrumbTarget(model) {
   const focus_id = model?.focus_id || "";
   const selected_id = model?.selected_id || "";
   if (!layer && !focus_id && !selected_id) return null;
+  if (isTopLevelWorkspaceLayer(layer) && !focus_id) return null;
+  if (!focus_id && selected_id) return null;
   const target = {
     label: "",
     mode: model?.mode || "understanding",
@@ -312,12 +330,22 @@ function WorkspaceInspector({ inspector }) {
   );
 }
 
+function nodeNavigationTarget(node) {
+  if (node?.drill) return node.drill;
+  if (node?.inspector) return node.inspector;
+  return null;
+}
+
 function WorkspaceGraphRenderer({ model, onNavigate, modeClass }) {
   const focusedIds = useMemo(() => focusedNodeIds(model), [model]);
   const nodes = useMemo(
     () =>
       (model?.canvas?.nodes || []).map((node, index) =>
-        toFlowNode(node, index, model, focusedIds, (item) => onNavigate?.(item.drill || item.inspector || { selected_id: item.id })),
+        toFlowNode(node, index, model, focusedIds, (item) => {
+          const target = nodeNavigationTarget(item);
+          if (!target) return;
+          onNavigate?.(target);
+        }),
       ),
     [model, focusedIds, onNavigate],
   );
