@@ -269,6 +269,43 @@ class WorkspaceGraphReadModelsTest(unittest.TestCase):
         self.assertEqual("workspace-graph-error-v1", data["schema_version"])
         self.assertIn("unknown workspace graph layer", data["message"])
 
+    def test_workspace_graph_handler_defaults_to_understanding(self):
+        status, payload = handle_workspace_graph_request(
+            self.root,
+            "/api/workspace-graph?project=DemoVisualAffordance",
+        )
+
+        self.assertEqual(HTTPStatus.OK, status)
+        data = json.loads(payload.decode("utf-8"))
+        self.assertEqual("understanding", data["mode"])
+        self.assertEqual("project_overview", data["layer"])
+
+    def test_workspace_graph_handler_rejects_invalid_mode(self):
+        status, payload = handle_workspace_graph_request(
+            self.root,
+            "/api/workspace-graph?project=DemoVisualAffordance&mode=madeup",
+        )
+
+        self.assertEqual(HTTPStatus.BAD_REQUEST, status)
+        data = json.loads(payload.decode("utf-8"))
+        self.assertEqual("workspace-graph-error-v1", data["schema_version"])
+        self.assertIn("unknown workspace graph mode", data["message"])
+
+    def test_literature_empty_data_returns_payload_not_crash(self):
+        with closing(connect_dataset(self.root)) as connection:
+            with connection:
+                connection.execute("DELETE FROM literature_relations WHERE project_id = ?", (PROJECT_ID,))
+                connection.execute("DELETE FROM literature_items WHERE project_id = ?", (PROJECT_ID,))
+                connection.execute("DELETE FROM literature_lanes WHERE project_id = ?", (PROJECT_ID,))
+
+        model = build_workspace_graph_model(self.root, PROJECT_ID, mode="literature", layer="literature_overview")
+
+        self.assertEqual("literature_overview", model["layer"])
+        self.assertEqual([], model["canvas"]["nodes"])
+        self.assertEqual("overview", model["inspector"]["kind"])
+        self.assertIsNotNone(model["empty_state"])
+        self.assertIn("No literature structure", model["empty_state"]["message"])
+
     def test_all_workspace_canvas_nodes_have_display_contract(self):
         experiment_overview = build_workspace_graph_model(self.root, PROJECT_ID, mode="experiments", layer="evaluation_overview")
         setting_id = next(node["id"] for node in experiment_overview["canvas"]["nodes"] if "AGD20K" in node["label"])

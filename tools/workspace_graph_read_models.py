@@ -624,6 +624,20 @@ def _build_literature(root: Path, project_id: str, layer: str, focus_id: str, se
     edges = model.get("explicit_edges") or []
     paper_by_key = _literature_paper_lookup(papers)
 
+    if not routes and not papers:
+        payload["empty_state"] = {
+            "title": "No literature structure",
+            "message": "No literature structure has been recorded for this project yet.",
+        }
+        payload["inspector"] = {
+            "kind": "overview",
+            "title": "Literature Routes",
+            "summary": "No literature structure has been recorded.",
+            "sections": [],
+            "actions": [],
+        }
+        return payload
+
     if layer == "literature_overview":
         nodes = []
         for route in routes:
