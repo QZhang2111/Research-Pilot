@@ -253,6 +253,16 @@ class RelatedWorkLineageDashboardTest(unittest.TestCase):
         self.assertIn("if (!target) return", source)
         self.assertNotIn("item.drill || item.inspector || { selected_id: item.id }", source)
 
+    def test_workspace_island_renders_display_not_raw_metadata(self):
+        source = (ROOT / "dashboard" / "workspace-island" / "src" / "WorkspaceIslandApp.jsx").read_text(encoding="utf-8")
+
+        self.assertIn("function DisplayBadges", source)
+        self.assertIn("node.display", source)
+        self.assertIn("display?.badges", source)
+        self.assertIn("display?.tone", source)
+        self.assertNotIn("metadata?.role", source)
+        self.assertNotIn("node.metadata.role", source)
+
     def test_workspace_island_has_understanding_specific_layout(self):
         source = (ROOT / "dashboard" / "workspace-island" / "src" / "WorkspaceIslandApp.jsx").read_text(encoding="utf-8")
 

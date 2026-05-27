@@ -5,7 +5,7 @@ import unittest
 from http import HTTPStatus
 from pathlib import Path
 
-from tools.research_dataset import initialize_dataset
+from tools.research_dataset import connect_dataset, initialize_dataset
 from tools.research_dataset_import import import_demo_visual_affordance
 from tools.research_browser_server import handle_workspace_graph_request
 from tools.workspace_graph_read_models import build_workspace_graph_model
@@ -26,6 +26,20 @@ class WorkspaceGraphReadModelsTest(unittest.TestCase):
 
     def tearDown(self):
         self.tmp.cleanup()
+
+    def assert_workspace_node_contract(self, node):
+        self.assertIn("id", node)
+        self.assertIn("entity_type", node)
+        self.assertIn("label", node)
+        self.assertIn("metadata", node)
+        self.assertIn("display", node)
+        self.assertIsInstance(node["metadata"], dict)
+        self.assertIsInstance(node["display"], dict)
+        self.assertIn("tone", node["display"])
+        self.assertIn("badges", node["display"])
+        self.assertIn("warnings", node["display"])
+        self.assertIsInstance(node["display"]["badges"], list)
+        self.assertIsInstance(node["display"]["warnings"], list)
 
     def test_understanding_project_overview_contract(self):
         model = build_workspace_graph_model(self.root, PROJECT_ID, mode="understanding", layer="project_overview")
@@ -217,6 +231,69 @@ class WorkspaceGraphReadModelsTest(unittest.TestCase):
         data = json.loads(payload.decode("utf-8"))
         self.assertEqual("workspace-graph-error-v1", data["schema_version"])
         self.assertIn("unknown workspace graph layer", data["message"])
+
+    def test_all_workspace_canvas_nodes_have_display_contract(self):
+        overview = build_workspace_graph_model(self.root, PROJECT_ID, mode="experiments", layer="evaluation_overview")
+        setting_id = next(node["id"] for node in overview["canvas"]["nodes"] if "AGD20K" in node["label"])
+        cases = [
+            ("understanding", "project_overview", "", ""),
+            ("understanding", "claim_focus", "claim:C2", ""),
+            ("understanding", "paper_focus", "claim:C2", "source:paper:do2017-affordancenet"),
+            ("literature", "literature_overview", "", ""),
+            ("experiments", "evaluation_overview", "", ""),
+            ("experiments", "evaluation_setting_focus", setting_id, ""),
+            ("experiments", "experiment_design_focus", "experiment:EXP3", "run:RUN3"),
+        ]
+
+        for mode, layer, focus_id, selected_id in cases:
+            with self.subTest(mode=mode, layer=layer):
+                model = build_workspace_graph_model(
+                    self.root,
+                    PROJECT_ID,
+                    mode=mode,
+                    layer=layer,
+                    focus_id=focus_id,
+                    selected_id=selected_id,
+                )
+                self.assertTrue(model["canvas"]["nodes"])
+                for node in model["canvas"]["nodes"]:
+                    self.assert_workspace_node_contract(node)
+
+    def test_display_contract_maps_allowed_demo_roles(self):
+        model = build_workspace_graph_model(self.root, PROJECT_ID, mode="understanding", layer="project_overview")
+
+        q1 = next(node for node in model["canvas"]["nodes"] if node.get("local_id") == "Q1")
+        c2 = next(node for node in model["canvas"]["nodes"] if node.get("local_id") == "C2")
+        q1_badges = {(badge["key"], badge["label"]) for badge in q1["display"]["badges"]}
+        c2_badges = {(badge["key"], badge["label"]) for badge in c2["display"]["badges"]}
+
+        self.assertIn(("question_role", "Framing"), q1_badges)
+        self.assertIn(("claim_role", "Geometry Primitive"), c2_badges)
+        self.assertEqual([], q1["display"]["warnings"])
+
+    def test_display_contract_blocks_unknown_metadata_role(self):
+        with connect_dataset(self.root) as connection:
+            connection.execute(
+                """
+                UPDATE understanding_nodes
+                SET metadata_json = ?
+                WHERE project_id = ? AND node_id = ?
+                """,
+                (
+                    json.dumps({"demo": True, "local_id": "Q1", "role": "agent invented role"}),
+                    PROJECT_ID,
+                    "project:DemoVisualAffordance:Q1",
+                ),
+            )
+
+        model = build_workspace_graph_model(self.root, PROJECT_ID, mode="understanding", layer="project_overview")
+        q1 = next(node for node in model["canvas"]["nodes"] if node.get("local_id") == "Q1")
+        badge_labels = [badge["label"] for badge in q1["display"]["badges"]]
+
+        self.assertEqual("agent invented role", q1["metadata"]["role"])
+        self.assertNotIn("Agent Invented Role", badge_labels)
+        self.assertIn("Unsupported metadata.role was not rendered.", q1["display"]["warnings"])
+        self.assertTrue(any(item["node_id"] == "question:Q1" for item in model["warnings"]))
 
 
 if __name__ == "__main__":
