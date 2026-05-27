@@ -504,6 +504,16 @@ def _build_understanding(root: Path, project_id: str, layer: str, focus_id: str,
             raise ValueError(f"unknown claim focus: {claim_id}")
         payload["focus_id"] = claim_id
         payload["selected_id"] = selected_id
+        payload["breadcrumb"] = [
+            {"label": "Workspace", "mode": "understanding", "layer": "project_overview", "focus_id": ""},
+            {
+                "label": _node_local_id(claim) or claim_id,
+                "mode": "understanding",
+                "layer": "claim_focus",
+                "focus_id": claim_id,
+                "selected_id": "",
+            },
+        ]
         payload["canvas"]["nodes"] = [
             {
                 "id": claim_id,

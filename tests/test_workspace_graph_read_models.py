@@ -163,6 +163,13 @@ class WorkspaceGraphReadModelsTest(unittest.TestCase):
         self.assertEqual("paper_layer", model["inspector"]["kind"])
         self.assertTrue(any(node["entity_type"] == "paper_claim" for node in model["canvas"]["nodes"]))
         self.assertTrue(any(node["entity_type"] == "project_claim_anchor" for node in model["canvas"]["nodes"]))
+        self.assertEqual(
+            [
+                {"label": "Workspace", "mode": "understanding", "layer": "project_overview", "focus_id": ""},
+                {"label": "C2", "mode": "understanding", "layer": "claim_focus", "focus_id": "claim:C2", "selected_id": ""},
+            ],
+            model["breadcrumb"],
+        )
 
     def test_literature_overview_contract(self):
         model = build_workspace_graph_model(self.root, PROJECT_ID, mode="literature", layer="literature_overview")
