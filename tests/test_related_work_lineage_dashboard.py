@@ -297,6 +297,15 @@ class RelatedWorkLineageDashboardTest(unittest.TestCase):
         self.assertIn("workspacePaperSourceNode", source)
         self.assertIn("model?.mode === \"understanding\"", source)
 
+    def test_workspace_claim_focus_stacks_argument_lanes(self):
+        source = (ROOT / "dashboard" / "workspace-island" / "src" / "WorkspaceIslandApp.jsx").read_text(encoding="utf-8")
+
+        self.assertIn("function claimFocusFrameHeight", source)
+        self.assertIn("function buildClaimFocusLaneLayout", source)
+        self.assertIn("leftStackY += evidenceHeight + laneGap;", source)
+        self.assertIn('frameHeight: claimFocusFrameHeight((nodeCounts.get("warrant") || 0))', source)
+        self.assertNotIn('{ key: "warrant", title: "Warrants / Bridges", tone: "w", x: 720, y: 310', source)
+
     def test_workspace_island_visual_style_guardrails(self):
         css = (ROOT / "dashboard" / "workspace-island" / "src" / "workspace-island.css").read_text(encoding="utf-8")
 

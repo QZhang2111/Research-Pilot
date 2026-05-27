@@ -488,18 +488,69 @@ function buildUnderstandingOverviewFlowModel(model, onNavigate) {
   return { nodes, edges };
 }
 
+function claimFocusFrameHeight(itemCount) {
+  return Math.max(190, itemCount * 130 + 92);
+}
+
+function buildClaimFocusLaneLayout(rawNodes) {
+  const nodeCounts = new Map();
+  for (const node of rawNodes) {
+    nodeCounts.set(node.entity_type, (nodeCounts.get(node.entity_type) || 0) + 1);
+  }
+
+  const laneGap = 72;
+  let leftStackY = 20;
+  const evidenceHeight = claimFocusFrameHeight((nodeCounts.get("evidence") || 0));
+  const evidenceLane = {
+    key: "evidence",
+    title: "Evidence / Grounds",
+    tone: "e",
+    x: 720,
+    y: leftStackY,
+    frameHeight: evidenceHeight,
+    relation: "supports",
+  };
+  leftStackY += evidenceHeight + laneGap;
+
+  return [
+    evidenceLane,
+    {
+      key: "warrant",
+      title: "Warrants / Bridges",
+      tone: "w",
+      x: 720,
+      y: leftStackY,
+      frameHeight: claimFocusFrameHeight((nodeCounts.get("warrant") || 0)),
+      relation: "qualifies",
+    },
+    {
+      key: "limitation",
+      title: "Limitations / Boundaries",
+      tone: "l",
+      x: 1120,
+      y: 20,
+      frameHeight: claimFocusFrameHeight((nodeCounts.get("limitation") || 0)),
+      relation: "bounds",
+    },
+    {
+      key: "source",
+      title: "Source Papers",
+      tone: "p",
+      x: 1540,
+      y: 20,
+      frameHeight: claimFocusFrameHeight((nodeCounts.get("source") || 0)),
+      relation: "cites",
+    },
+  ];
+}
+
 function buildUnderstandingClaimFocusFlowModel(model, onNavigate) {
   const rawNodes = model?.canvas?.nodes || [];
   const focusId = model?.focus_id || rawNodes.find((node) => node.entity_type === "claim")?.id || "";
   const claim = rawNodes.find((node) => node.id === focusId) || rawNodes.find((node) => node.entity_type === "claim");
   if (!claim) return { nodes: [], edges: [] };
 
-  const laneConfig = [
-    { key: "evidence", title: "Evidence / Grounds", tone: "e", x: 720, y: 20, relation: "supports" },
-    { key: "warrant", title: "Warrants / Bridges", tone: "w", x: 720, y: 310, relation: "qualifies" },
-    { key: "limitation", title: "Limitations / Boundaries", tone: "l", x: 1120, y: 165, relation: "bounds" },
-    { key: "source", title: "Source Papers", tone: "p", x: 1540, y: 20, relation: "cites" },
-  ];
+  const laneConfig = buildClaimFocusLaneLayout(rawNodes);
 
   const nodes = [
     {
@@ -520,7 +571,7 @@ function buildUnderstandingClaimFocusFlowModel(model, onNavigate) {
 
   laneConfig.forEach((lane) => {
     const items = rawNodes.filter((node) => node.entity_type === lane.key);
-    const frameHeight = Math.max(190, items.length * 130 + 92);
+    const frameHeight = lane.frameHeight || claimFocusFrameHeight(items.length);
     nodes.push({
       id: `frame:${lane.key}`,
       type: "workspaceLaneFrameNode",
