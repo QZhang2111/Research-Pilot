@@ -50,6 +50,13 @@ function displayTone(node) {
 
 function cssTone(tone) {
   return {
+    q: "q",
+    c: "c",
+    e: "e",
+    w: "w",
+    l: "l",
+    p: "p",
+    r: "r",
     question: "q",
     claim: "c",
     evidence: "e",
@@ -57,7 +64,7 @@ function cssTone(tone) {
     limitation: "l",
     source: "p",
     run: "r",
-  }[tone] || tone || "x";
+  }[tone] || "x";
 }
 
 function nodeColor(node) {
@@ -258,7 +265,7 @@ const WorkspaceArgumentAtomNode = memo(function WorkspaceArgumentAtomNode({ data
 const WorkspacePaperSourceNode = memo(function WorkspacePaperSourceNode({ data }) {
   const node = data.node || {};
   return (
-    <button type="button" className="workspace-paper-source-node" onClick={() => data.onNodeAction?.(node)}>
+    <button type="button" className={`workspace-paper-source-node tone-${data.tone || "x"}`} onClick={() => data.onNodeAction?.(node)}>
       <Handle type="target" position={Position.Left} className="workspace-node-handle" />
       <span>{node.local_id || node.source_id || "paper"}</span>
       <strong>{shortLabel(node.label, 96)}</strong>

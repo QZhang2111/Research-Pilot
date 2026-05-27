@@ -294,10 +294,17 @@
 .workspace-argument-atom.tone-l { --node-tone: #e58b83; }
 
 .workspace-paper-source-node {
-  --node-tone: #68c7d4;
   border-style: dashed;
   cursor: pointer;
 }
+
+.workspace-paper-source-node.tone-q { --node-tone: #8ec7ff; }
+.workspace-paper-source-node.tone-c { --node-tone: #d6a84f; }
+.workspace-paper-source-node.tone-e { --node-tone: #70d6a3; }
+.workspace-paper-source-node.tone-w { --node-tone: #bea0ff; }
+.workspace-paper-source-node.tone-l { --node-tone: #e58b83; }
+.workspace-paper-source-node.tone-p { --node-tone: #68c7d4; }
+.workspace-paper-source-node.tone-r { --node-tone: #9bd7df; }
 
 .workspace-argument-atom span,
 .workspace-paper-source-node span {
