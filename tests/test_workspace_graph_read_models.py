@@ -2,6 +2,7 @@ import json
 import shutil
 import tempfile
 import unittest
+from contextlib import closing
 from http import HTTPStatus
 from pathlib import Path
 
@@ -277,19 +278,20 @@ class WorkspaceGraphReadModelsTest(unittest.TestCase):
         self.assertEqual([], q1["display"]["warnings"])
 
     def test_display_contract_blocks_unknown_metadata_role(self):
-        with connect_dataset(self.root) as connection:
-            connection.execute(
-                """
-                UPDATE understanding_nodes
-                SET metadata_json = ?
-                WHERE project_id = ? AND node_id = ?
-                """,
-                (
-                    json.dumps({"demo": True, "local_id": "Q1", "role": "agent invented role"}),
-                    PROJECT_ID,
-                    "project:DemoVisualAffordance:Q1",
-                ),
-            )
+        with closing(connect_dataset(self.root)) as connection:
+            with connection:
+                connection.execute(
+                    """
+                    UPDATE understanding_nodes
+                    SET metadata_json = ?
+                    WHERE project_id = ? AND node_id = ?
+                    """,
+                    (
+                        json.dumps({"demo": True, "local_id": "Q1", "role": "agent invented role"}),
+                        PROJECT_ID,
+                        "project:DemoVisualAffordance:Q1",
+                    ),
+                )
 
         model = build_workspace_graph_model(self.root, PROJECT_ID, mode="understanding", layer="project_overview")
         q1 = next(node for node in model["canvas"]["nodes"] if node.get("local_id") == "Q1")
