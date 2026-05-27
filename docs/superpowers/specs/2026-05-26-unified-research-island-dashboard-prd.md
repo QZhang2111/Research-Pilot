@@ -366,6 +366,17 @@ Canvas node minimum shape:
   "subtitle": "Status or source context",
   "status": "active",
   "confidence": "medium",
+  "display": {
+    "tone": "claim",
+    "badges": [
+      {
+        "key": "entity_type",
+        "label": "Claim",
+        "tone": "claim"
+      }
+    ],
+    "warnings": []
+  },
   "drill": {
     "mode": "understanding",
     "layer": "claim_focus",
@@ -417,7 +428,87 @@ Action shape:
 }
 ```
 
-### 13.4 Stable ID Rules
+### 13.4 Source Of Truth And Display Governance
+
+The Workspace island must make source-of-truth boundaries explicit. The dashboard should never let freeform agent text become user-facing taxonomy, node badges, graph colors, graph layers, or empty-state behavior.
+
+Source-of-truth rules:
+
+- `research-pilot.db` is the only durable source for project, source, understanding, literature, experiment, update, and link data.
+- The dashboard owns no separate storage and must not mutate DB state.
+- The read model is the only place that maps DB records into graph/display payloads.
+- The frontend renders the read-model contract and should not inspect arbitrary raw DB metadata for visible labels.
+
+Agent write boundary:
+
+- Agents may write structured research data into source tables through approved writers/importers.
+- Agents may update conceptual fields such as node text, node type, status, confidence, source refs, links, experiment records, metrics, artifacts, and update summaries.
+- Agents must not directly author UI-only labels such as node chip copy, graph lane names, card subtitles, colors, layout hints, button text, or dashboard empty-state text.
+- If an agent proposes a new taxonomy or role, it must be recorded as project understanding/provenance first, then promoted into the display contract only through schema/read-model changes.
+
+Read-model display boundary:
+
+- `/api/workspace-graph` must emit explicit `display` fields for user-facing rendering.
+- `label`, `subtitle`, `display.tone`, `display.badges`, `display.sections`, and `display.actions` are read-model outputs, not arbitrary frontend fallbacks.
+- `metadata` may be included for provenance/debugging, but must be treated as raw data. It is not a display API.
+- Unknown metadata keys must not render as badges, subtitles, lanes, graph colors, or inspector facts by default.
+- Missing optional data should produce deterministic empty states from the read model, not frontend guesses.
+
+Allowed node display sources for MVP:
+
+- Identity: `id`, `db_id`, `local_id`, `entity_type`.
+- Main text: canonical DB text fields such as `understanding_nodes.text`, `sources.title`, `experiments.title`, and `experiment_runs.summary`.
+- Status: controlled status/confidence fields from DB columns.
+- Source context: source ids, paper titles, benchmark/dataset/metric fields, and explicit `entity_links`.
+- Badges: only controlled enums defined in the read-model mapper.
+
+Legacy metadata handling:
+
+- Existing legacy fields such as `metadata.role` may be read only through an explicit allowlist mapper.
+- Known legacy roles can become `display.badges` if the PRD or implementation plan names them as approved values.
+- Unknown or unsupported legacy roles must be hidden from primary UI and reported in `warnings`.
+- The read model should preserve raw legacy metadata for provenance, but frontend components must not render `metadata.role` directly.
+
+Example controlled mapping:
+
+```json
+{
+  "db_id": "project:DemoVisualAffordance:Q1",
+  "entity_type": "question",
+  "local_id": "Q1",
+  "label": "What mechanistic primitives make visual affordance understanding possible in Visual Foundation Models?",
+  "metadata": {
+    "role": "framing"
+  },
+  "display": {
+    "tone": "question",
+    "badges": [
+      {
+        "key": "question_role",
+        "label": "Framing",
+        "tone": "question"
+      }
+    ],
+    "warnings": []
+  }
+}
+```
+
+If `metadata.role = "agent invented role"` and no mapper allows it, the payload should keep the raw metadata but omit the badge:
+
+```json
+{
+  "metadata": {
+    "role": "agent invented role"
+  },
+  "display": {
+    "badges": [],
+    "warnings": ["Unsupported metadata.role was not rendered."]
+  }
+}
+```
+
+### 13.5 Stable ID Rules
 
 Workspace graph IDs should be stable, namespaced strings:
 
@@ -450,7 +541,7 @@ Rules:
 - Cross-mode jumps must carry target `mode`, `layer`, and `focus_id`.
 - If a source appears in Understanding, Literature, and Papers, the canonical bridge is `source:<source_id>`.
 
-### 13.5 Mode And Layer Mapping
+### 13.6 Mode And Layer Mapping
 
 Understanding mode:
 
@@ -502,7 +593,7 @@ Experiments mode:
   - Canvas stays on the Experiment Design Focus graph.
   - Inspector displays result summary, metrics, artifacts, interpretation, weaknesses, origin, and Project Understanding Impact.
 
-### 13.6 Evaluation Setting Normalization
+### 13.7 Evaluation Setting Normalization
 
 For MVP, `EvaluationSetting` is a read-model entity, not a stored table.
 
@@ -561,7 +652,7 @@ Counts:
 - `imported_evidence_count`: runs with `origin_type = imported_paper`.
 - `local_result_count`: runs with `origin_type = local`.
 
-### 13.7 Claim Impact Mapping
+### 13.8 Claim Impact Mapping
 
 Run-to-Understanding impact should come from `entity_links` where possible.
 
@@ -584,7 +675,7 @@ Rules:
 - If explicit claim impact links are missing, the read model may show "No linked project impact yet" instead of inferring impact.
 - The dashboard may display source refs and confidence, but must not upgrade an impact to confirmed project evidence.
 
-### 13.8 Error, Empty, And Cache Rules
+### 13.9 Error, Empty, And Cache Rules
 
 Error shape:
 
@@ -613,7 +704,7 @@ Cache/invalidation:
 - Later optimization may add file/DB mtime-based in-memory caching.
 - Cache must invalidate when `research-pilot.db` changes.
 
-### 13.9 Implementation Boundary
+### 13.10 Implementation Boundary
 
 Backend implementation should add read-model builders and endpoint adapters, not mutate existing dataset schema.
 
@@ -623,6 +714,7 @@ Allowed for MVP:
 - Add `/api/workspace-graph` handler in `tools/research_browser_server.py`.
 - Reuse existing `build_project_graph_model`, `build_literature_model`, `build_experiments_model`, and `build_paper_graph_model` internally.
 - Add tests for each mode/layer payload.
+- Add tests proving arbitrary `metadata` fields are not rendered as primary UI labels/badges.
 
 Not allowed for MVP:
 
@@ -696,6 +788,9 @@ Backend/read model:
 - Evaluation Setting read model exists as a derived grouping, not a new stored DB table.
 - Stable namespaced IDs support drill and cross-mode jumps.
 - Run-to-claim impact reads from `entity_links` where available and shows an explicit empty state where not available.
+- Workspace payloads include explicit `display` fields for visible labels, badges, tones, empty states, and actions.
+- Frontend graph components do not render arbitrary `metadata` fields such as `metadata.role` directly.
+- Unknown metadata values are hidden from primary UI and surfaced as read-model warnings or inspector provenance only.
 - Existing page-specific APIs remain available during migration.
 
 Cleanup:
@@ -711,3 +806,4 @@ Cleanup:
 - Should Paper Focus remain inside Understanding mode only, or become reusable when entering from Papers detail?
 - Should Evaluation Setting become a stored table after MVP if users begin curating benchmark/task definitions directly?
 - Should Workspace graph payloads include layout coordinates from backend, or should frontend layout remain fully client-derived for MVP?
+- Which controlled role/badge enums should ship first for question and claim nodes, and which legacy demo roles should be mapped versus hidden?
