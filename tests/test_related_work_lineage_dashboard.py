@@ -207,7 +207,8 @@ class RelatedWorkLineageDashboardTest(unittest.TestCase):
         source = (ROOT / "dashboard" / "workspace-island" / "src" / "WorkspaceIslandApp.jsx").read_text(encoding="utf-8")
 
         self.assertIn("WorkspaceInspector", source)
-        self.assertIn("onNavigate?.(item.drill || item.inspector", source)
+        self.assertIn("function nodeNavigationTarget", source)
+        self.assertIn("onNavigate?.(target)", source)
         self.assertIn("modeLabels", source)
         self.assertIn("understanding", source)
         self.assertIn("literature", source)
