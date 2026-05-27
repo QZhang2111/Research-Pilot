@@ -233,13 +233,18 @@ class WorkspaceGraphReadModelsTest(unittest.TestCase):
         self.assertIn("unknown workspace graph layer", data["message"])
 
     def test_all_workspace_canvas_nodes_have_display_contract(self):
-        overview = build_workspace_graph_model(self.root, PROJECT_ID, mode="experiments", layer="evaluation_overview")
-        setting_id = next(node["id"] for node in overview["canvas"]["nodes"] if "AGD20K" in node["label"])
+        experiment_overview = build_workspace_graph_model(self.root, PROJECT_ID, mode="experiments", layer="evaluation_overview")
+        setting_id = next(node["id"] for node in experiment_overview["canvas"]["nodes"] if "AGD20K" in node["label"])
+        literature_overview = build_workspace_graph_model(self.root, PROJECT_ID, mode="literature", layer="literature_overview")
+        literature_route_id = next(node["id"] for node in literature_overview["canvas"]["nodes"] if node["entity_type"] == "literature_lane")
+        literature_paper_id = next(node["id"] for node in literature_overview["canvas"]["nodes"] if node["entity_type"] == "source")
         cases = [
             ("understanding", "project_overview", "", ""),
             ("understanding", "claim_focus", "claim:C2", ""),
             ("understanding", "paper_focus", "claim:C2", "source:paper:do2017-affordancenet"),
             ("literature", "literature_overview", "", ""),
+            ("literature", "literature_route_focus", literature_route_id, ""),
+            ("literature", "literature_paper_focus", literature_paper_id, ""),
             ("experiments", "evaluation_overview", "", ""),
             ("experiments", "evaluation_setting_focus", setting_id, ""),
             ("experiments", "experiment_design_focus", "experiment:EXP3", "run:RUN3"),
