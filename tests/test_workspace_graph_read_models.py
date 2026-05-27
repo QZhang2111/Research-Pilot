@@ -77,6 +77,40 @@ class WorkspaceGraphReadModelsTest(unittest.TestCase):
         self.assertTrue(any(node["entity_type"] == "limitation" for node in model["canvas"]["nodes"]))
         self.assertTrue(any(node["entity_type"] == "source" for node in model["canvas"]["nodes"]))
 
+    def test_understanding_claim_focus_canvas_contains_only_focused_claim(self):
+        model = build_workspace_graph_model(
+            self.root,
+            PROJECT_ID,
+            mode="understanding",
+            layer="claim_focus",
+            focus_id="claim:C2",
+        )
+
+        claim_nodes = [node for node in model["canvas"]["nodes"] if node["entity_type"] == "claim"]
+        self.assertEqual(["claim:C2"], [node["id"] for node in claim_nodes])
+
+        supporting_claims = next(
+            section for section in model["inspector"]["sections"] if section["kind"] == "claim"
+        )
+        self.assertTrue(any(item["id"] == "claim:C0" for item in supporting_claims["items"]))
+
+    def test_understanding_claim_focus_argument_atoms_are_terminal(self):
+        model = build_workspace_graph_model(
+            self.root,
+            PROJECT_ID,
+            mode="understanding",
+            layer="claim_focus",
+            focus_id="claim:C2",
+        )
+
+        terminal_nodes = [
+            node for node in model["canvas"]["nodes"]
+            if node["entity_type"] in {"evidence", "warrant", "limitation"}
+        ]
+        self.assertTrue(terminal_nodes)
+        self.assertTrue(all(not node.get("drill") for node in terminal_nodes))
+        self.assertTrue(all(not node.get("inspector") for node in terminal_nodes))
+
     def test_understanding_paper_focus_contract(self):
         model = build_workspace_graph_model(
             self.root,

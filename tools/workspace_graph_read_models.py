@@ -149,7 +149,8 @@ def _understanding_node(node: dict[str, Any], *, selected_id: str = "") -> dict[
     drill = None
     if kind == "claim":
         drill = {"mode": "understanding", "layer": "claim_focus", "focus_id": graph_id}
-    return {
+    inspector = {"selected_id": graph_id} if kind == "question" else None
+    result = {
         "id": graph_id,
         "entity_type": kind,
         "db_id": node.get("id", ""),
@@ -159,10 +160,12 @@ def _understanding_node(node: dict[str, Any], *, selected_id: str = "") -> dict[
         "status": node.get("status") or "",
         "confidence": node.get("confidence") or "",
         "drill": drill,
-        "inspector": {"selected_id": graph_id},
         "selected": graph_id == selected_id,
         "metadata": node.get("metadata") or {},
     }
+    if inspector:
+        result["inspector"] = inspector
+    return result
 
 
 def _question_claim_ids(graph: dict[str, Any]) -> dict[str, list[str]]:
@@ -406,9 +409,10 @@ def _build_understanding(root: Path, project_id: str, layer: str, focus_id: str,
         if not claim:
             raise ValueError(f"unknown claim focus: {claim_id}")
         payload["focus_id"] = claim_id
+        canvas_related_nodes = [node for node in related_nodes if node.get("kind") != "claim"]
         payload["canvas"]["nodes"] = [
-            _understanding_node(claim, selected_id=selected_id or claim_id),
-            *[_understanding_node(node, selected_id=selected_id) for node in related_nodes],
+            _understanding_node(claim, selected_id=claim_id),
+            *[_understanding_node(node, selected_id=selected_id) for node in canvas_related_nodes],
             *source_nodes,
         ]
         related_ids = {node["id"] for node in payload["canvas"]["nodes"]}

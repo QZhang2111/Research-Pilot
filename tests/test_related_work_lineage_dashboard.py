@@ -207,7 +207,8 @@ class RelatedWorkLineageDashboardTest(unittest.TestCase):
         source = (ROOT / "dashboard" / "workspace-island" / "src" / "WorkspaceIslandApp.jsx").read_text(encoding="utf-8")
 
         self.assertIn("WorkspaceInspector", source)
-        self.assertIn("onNavigate?.(item.drill || item.inspector", source)
+        self.assertIn("function nodeNavigationTarget", source)
+        self.assertIn("onNavigate?.(target)", source)
         self.assertIn("modeLabels", source)
         self.assertIn("understanding", source)
         self.assertIn("literature", source)
@@ -236,6 +237,34 @@ class RelatedWorkLineageDashboardTest(unittest.TestCase):
         self.assertIn("normalized.push(currentTarget)", source)
         self.assertIn('selected_id: model?.selected_id || ""', source)
 
+    def test_workspace_island_breadcrumb_treats_modes_as_siblings(self):
+        source = (ROOT / "dashboard" / "workspace-island" / "src" / "WorkspaceIslandApp.jsx").read_text(encoding="utf-8")
+
+        self.assertIn("function isTopLevelWorkspaceLayer", source)
+        self.assertIn('layer === "project_overview"', source)
+        self.assertIn('layer === "literature_overview"', source)
+        self.assertIn('layer === "evaluation_overview"', source)
+        self.assertIn("if (isTopLevelWorkspaceLayer(layer) && !focus_id) return null", source)
+
+    def test_workspace_island_terminal_argument_nodes_do_not_navigate(self):
+        source = (ROOT / "dashboard" / "workspace-island" / "src" / "WorkspaceIslandApp.jsx").read_text(encoding="utf-8")
+
+        self.assertIn("function nodeNavigationTarget", source)
+        self.assertIn("if (!target) return", source)
+        self.assertNotIn("item.drill || item.inspector || { selected_id: item.id }", source)
+
+    def test_workspace_island_has_understanding_specific_layout(self):
+        source = (ROOT / "dashboard" / "workspace-island" / "src" / "WorkspaceIslandApp.jsx").read_text(encoding="utf-8")
+
+        self.assertIn("function WorkspaceLaneFrameNode", source)
+        self.assertIn("function buildUnderstandingFlowModel", source)
+        self.assertIn("function buildUnderstandingOverviewFlowModel", source)
+        self.assertIn("function buildUnderstandingClaimFocusFlowModel", source)
+        self.assertIn("workspaceLaneFrameNode", source)
+        self.assertIn("workspaceArgumentAtomNode", source)
+        self.assertIn("workspacePaperSourceNode", source)
+        self.assertIn("model?.mode === \"understanding\"", source)
+
     def test_workspace_island_visual_style_guardrails(self):
         css = (ROOT / "dashboard" / "workspace-island" / "src" / "workspace-island.css").read_text(encoding="utf-8")
 
@@ -249,6 +278,12 @@ class RelatedWorkLineageDashboardTest(unittest.TestCase):
         self.assertIn(".workspace-knowledge-canvas .react-flow__controls-button", css)
         self.assertIn(".workspace-knowledge-canvas .react-flow__minimap", css)
         self.assertIn(".workspace-knowledge-canvas.is-literature .workspace-node-card", css)
+        self.assertIn("height: calc(100vh - 215px)", css)
+        self.assertIn("min-height: 0", css)
+        self.assertIn("overflow-y: auto", css)
+        self.assertIn(".workspace-lane-frame", css)
+        self.assertIn(".workspace-argument-atom", css)
+        self.assertIn(".workspace-paper-source-node", css)
         self.assertNotIn("background: var(--surface-2);\n  cursor: pointer;\n}", css)
 
     def test_lineage_atlas_uses_shallow_model_not_project_graph_builders(self):
