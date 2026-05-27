@@ -139,6 +139,28 @@ class RelatedWorkLineageDashboardTest(unittest.TestCase):
         self.assertNotIn(">Technical Lineage</a>", app)
         self.assertNotIn(">Experiments</a>", app)
 
+    def test_workspace_navigation_stays_workspace_and_papers_only(self):
+        app = (ROOT / "dashboard" / "app.js").read_text(encoding="utf-8")
+
+        self.assertIn("function workspaceUrl(projectId, mode = \"understanding\")", app)
+        self.assertIn("function legacyWorkspaceModeForPage", app)
+        self.assertIn('if (state.page === "lineage") return "literature";', app)
+        self.assertIn('if (state.page === "experiments") return "experiments";', app)
+        self.assertIn(">Workspace</a>", app)
+        self.assertIn(">Papers</a>", app)
+        self.assertNotIn(">Technical Lineage</a>", app)
+        self.assertNotIn(">Experiments</a>", app)
+
+    def test_workspace_loader_uses_one_mode_layer_request(self):
+        app = (ROOT / "dashboard" / "app.js").read_text(encoding="utf-8")
+
+        self.assertIn("async function loadWorkspaceGraphFromApi", app)
+        self.assertIn("search.set(\"mode\", options.mode || \"understanding\")", app)
+        self.assertIn("if (options.layer) search.set(\"layer\", options.layer)", app)
+        self.assertIn("if (options.focus_id) search.set(\"focus_id\", options.focus_id)", app)
+        self.assertIn("if (options.selected_id) search.set(\"selected_id\", options.selected_id)", app)
+        self.assertNotIn("Promise.all([loadWorkspaceGraphFromApi", app)
+
     def test_dashboard_cleanup_removes_low_value_metrics_and_read_only_state(self):
         app = (ROOT / "dashboard" / "app.js").read_text(encoding="utf-8")
 
