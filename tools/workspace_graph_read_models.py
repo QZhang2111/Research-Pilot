@@ -32,6 +32,41 @@ VALID_LAYERS = {
     "literature": {"literature_overview", "literature_route_focus", "literature_paper_focus"},
     "experiments": {"evaluation_overview", "evaluation_setting_focus", "experiment_design_focus"},
 }
+ENTITY_DISPLAY = {
+    "question": {"tone": "question", "label": "Question"},
+    "claim": {"tone": "claim", "label": "Claim"},
+    "evidence": {"tone": "evidence", "label": "Evidence"},
+    "warrant": {"tone": "warrant", "label": "Warrant"},
+    "limitation": {"tone": "limitation", "label": "Limitation"},
+    "source": {"tone": "source", "label": "Source"},
+    "paper": {"tone": "source", "label": "Paper"},
+    "literature_lane": {"tone": "source", "label": "Literature Lane"},
+    "evaluation_setting": {"tone": "claim", "label": "Evaluation Setting"},
+    "experiment": {"tone": "evidence", "label": "Experiment"},
+    "run": {"tone": "run", "label": "Run"},
+    "dataset": {"tone": "source", "label": "Dataset"},
+    "benchmark": {"tone": "source", "label": "Benchmark"},
+    "metric_family": {"tone": "warrant", "label": "Metric Family"},
+    "model": {"tone": "warrant", "label": "Model"},
+    "baseline": {"tone": "limitation", "label": "Baseline"},
+    "protocol": {"tone": "warrant", "label": "Protocol"},
+    "project_claim_anchor": {"tone": "claim", "label": "Project Claim"},
+    "paper_question": {"tone": "question", "label": "Paper Question"},
+    "paper_claim": {"tone": "claim", "label": "Paper Claim"},
+    "paper_evidence": {"tone": "evidence", "label": "Paper Evidence"},
+    "paper_warrant": {"tone": "warrant", "label": "Paper Warrant"},
+    "paper_limitation": {"tone": "limitation", "label": "Paper Limitation"},
+}
+
+ROLE_BADGE_ALLOWLIST = {
+    ("question", "framing"): {"key": "question_role", "label": "Framing", "tone": "question"},
+    ("question", "primary"): {"key": "question_role", "label": "Primary", "tone": "question"},
+    ("question", "validation"): {"key": "question_role", "label": "Validation", "tone": "question"},
+    ("claim", "central thesis"): {"key": "claim_role", "label": "Central Thesis", "tone": "claim"},
+    ("claim", "geometry primitive"): {"key": "claim_role", "label": "Geometry Primitive", "tone": "claim"},
+    ("claim", "interaction primitive"): {"key": "claim_role", "label": "Interaction Primitive", "tone": "claim"},
+    ("claim", "mechanistic bridge"): {"key": "claim_role", "label": "Mechanistic Bridge", "tone": "claim"},
+}
 
 
 def build_workspace_graph_model(
@@ -50,10 +85,12 @@ def build_workspace_graph_model(
     if layer not in VALID_LAYERS[mode]:
         raise ValueError(f"unknown workspace graph layer for {mode}: {layer}")
     if mode == "understanding":
-        return _build_understanding(root, project_id, layer, focus_id, selected_id)
-    if mode == "literature":
-        return _build_literature(root, project_id, layer, focus_id, selected_id)
-    return _build_experiments(root, project_id, layer, focus_id, selected_id)
+        model = _build_understanding(root, project_id, layer, focus_id, selected_id)
+    elif mode == "literature":
+        model = _build_literature(root, project_id, layer, focus_id, selected_id)
+    else:
+        model = _build_experiments(root, project_id, layer, focus_id, selected_id)
+    return _finalize_payload(model)
 
 
 def _base_payload(project_id: str, mode: str, layer: str, focus_id: str = "", selected_id: str = "") -> dict[str, Any]:
@@ -82,6 +119,39 @@ def _json_loads(value: Any, fallback: Any) -> Any:
         return json.loads(str(value or ""))
     except (TypeError, json.JSONDecodeError):
         return fallback
+
+
+def _display_for_entity(entity_type: str, metadata: dict[str, Any] | None = None) -> dict[str, Any]:
+    metadata = metadata if isinstance(metadata, dict) else {}
+    entity = ENTITY_DISPLAY.get(entity_type, {"tone": "unknown", "label": entity_type or "Node"})
+    badges = [{"key": "entity_type", "label": entity["label"], "tone": entity["tone"]}]
+    warnings = []
+    raw_role = str(metadata.get("role") or "").strip().lower()
+    if raw_role:
+        role_badge = ROLE_BADGE_ALLOWLIST.get((entity_type, raw_role))
+        if role_badge:
+            badges.append(dict(role_badge))
+        else:
+            warnings.append("Unsupported metadata.role was not rendered.")
+    return {"tone": entity["tone"], "badges": badges, "warnings": warnings}
+
+
+def _normalize_node_display(node: dict[str, Any]) -> dict[str, Any]:
+    entity_type = str(node.get("entity_type") or "unknown")
+    metadata = node.get("metadata") if isinstance(node.get("metadata"), dict) else {}
+    node["metadata"] = metadata
+    node["display"] = _display_for_entity(entity_type, metadata)
+    return node
+
+
+def _finalize_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    warnings = list(payload.get("warnings") or [])
+    for node in payload.get("canvas", {}).get("nodes", []):
+        _normalize_node_display(node)
+        for warning in node["display"]["warnings"]:
+            warnings.append({"node_id": node.get("id", ""), "message": warning})
+    payload["warnings"] = warnings
+    return payload
 
 
 def _slug(value: Any) -> str:
@@ -159,10 +229,11 @@ def _understanding_node(node: dict[str, Any], *, selected_id: str = "") -> dict[
         "subtitle": node.get("subtitle") or node.get("status") or "",
         "status": node.get("status") or "",
         "confidence": node.get("confidence") or "",
-        "drill": drill,
         "selected": graph_id == selected_id,
         "metadata": node.get("metadata") or {},
     }
+    if drill:
+        result["drill"] = drill
     if inspector:
         result["inspector"] = inspector
     return result
@@ -552,6 +623,20 @@ def _build_literature(root: Path, project_id: str, layer: str, focus_id: str, se
     papers = model.get("papers") or []
     edges = model.get("explicit_edges") or []
     paper_by_key = _literature_paper_lookup(papers)
+
+    if layer == "literature_overview" and not routes and not papers:
+        payload["empty_state"] = {
+            "title": "No literature structure",
+            "message": "No literature structure has been recorded for this project yet.",
+        }
+        payload["inspector"] = {
+            "kind": "overview",
+            "title": "Literature Routes",
+            "summary": "No literature structure has been recorded.",
+            "sections": [],
+            "actions": [],
+        }
+        return payload
 
     if layer == "literature_overview":
         nodes = []

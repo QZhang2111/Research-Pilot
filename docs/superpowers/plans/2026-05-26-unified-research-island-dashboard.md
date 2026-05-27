@@ -19,15 +19,24 @@ This is one product initiative with two coupled tracks:
 
 Do backend contract and tests first. Frontend must not consume old page-specific APIs directly once `/api/workspace-graph` exists.
 
+Mandatory source-of-truth/display boundary:
+
+- `research-pilot.db` is source of truth.
+- `/api/workspace-graph` is the display contract.
+- Frontend renders `display`, not raw `metadata`.
+- Raw `metadata` may stay in payload for provenance/debugging only.
+- Agent-written freeform metadata must never become badges, subtitles, tones, colors, lanes, buttons, or empty states unless read-model allowlist maps it.
+- Unknown `metadata.role` values must be hidden from primary UI and reported in node-level `display.warnings`.
+
 ## File Map
 
 Create:
 
 - `tools/workspace_graph_read_models.py`  
-  Owns `/api/workspace-graph` read models: request parsing helpers, stable graph IDs, payload assembly, mode/layer builders, evaluation setting normalization.
+  Owns `/api/workspace-graph` read models: request parsing helpers, stable graph IDs, payload assembly, display governance, mode/layer builders, evaluation setting normalization.
 
 - `tests/test_workspace_graph_read_models.py`  
-  Tests backend workspace graph payloads for all modes/layers using imported Demo Visual Affordance workspace.
+  Tests backend workspace graph payloads for all modes/layers using imported Demo Visual Affordance workspace. Includes display-governance tests proving arbitrary metadata is not rendered.
 
 - `dashboard/workspace.html`  
   New Workspace page. Loads shared dashboard CSS/JS and workspace island bundle.
@@ -38,7 +47,7 @@ Create:
   Vite config for Workspace island bundle.
 
 - `dashboard/workspace-island/src/WorkspaceIslandApp.jsx`  
-  React entry point and shared shell.
+  React entry point and shared shell. Must render `node.display` and must not render arbitrary `node.metadata` fields.
 
 - `dashboard/workspace-island/src/workspace-island.css`  
   Island-specific styles for shell, React Flow nodes, inspector, controls, light/dark compatibility.
@@ -83,12 +92,13 @@ Do not modify `dashboard/project-graph/src/ProjectGraphApp.jsx` or `dashboard/li
 Create `tests/test_workspace_graph_read_models.py`:
 
 ```python
+import json
 import shutil
 import tempfile
 import unittest
 from pathlib import Path
 
-from tools.research_dataset import initialize_dataset
+from tools.research_dataset import connect_dataset, initialize_dataset
 from tools.research_dataset_import import import_demo_visual_affordance
 from tools.workspace_graph_read_models import build_workspace_graph_model
 
@@ -121,12 +131,49 @@ class WorkspaceGraphReadModelsTest(unittest.TestCase):
         self.assertEqual("Questions", model["inspector"]["title"])
         self.assertTrue(any(node["entity_type"] == "question" for node in model["canvas"]["nodes"]))
         self.assertTrue(any(node["entity_type"] == "claim" for node in model["canvas"]["nodes"]))
+        self.assertTrue(all("display" in node for node in model["canvas"]["nodes"]))
+        self.assertTrue(all("badges" in node["display"] for node in model["canvas"]["nodes"]))
         question_section = next(section for section in model["inspector"]["sections"] if section["kind"] == "question_list")
         self.assertTrue(any(item["local_id"] == "Q1" for item in question_section["items"]))
         c2 = next(node for node in model["canvas"]["nodes"] if node.get("local_id") == "C2")
         self.assertEqual("claim:C2", c2["id"])
         self.assertEqual("project:DemoVisualAffordance:C2", c2["db_id"])
         self.assertEqual({"mode": "understanding", "layer": "claim_focus", "focus_id": "claim:C2"}, c2["drill"])
+
+    def test_display_contract_maps_allowed_legacy_roles(self):
+        model = build_workspace_graph_model(self.root, PROJECT_ID, mode="understanding", layer="project_overview")
+
+        q1 = next(node for node in model["canvas"]["nodes"] if node.get("local_id") == "Q1")
+        c2 = next(node for node in model["canvas"]["nodes"] if node.get("local_id") == "C2")
+        q1_badges = {(badge["key"], badge["label"]) for badge in q1["display"]["badges"]}
+        c2_badges = {(badge["key"], badge["label"]) for badge in c2["display"]["badges"]}
+
+        self.assertIn(("question_role", "Framing"), q1_badges)
+        self.assertIn(("claim_role", "Geometry Primitive"), c2_badges)
+        self.assertEqual([], q1["display"]["warnings"])
+
+    def test_display_contract_blocks_unknown_metadata_role(self):
+        with connect_dataset(self.root) as connection:
+            connection.execute(
+                """
+                UPDATE understanding_nodes
+                SET metadata_json = ?
+                WHERE project_id = ? AND node_id = ?
+                """,
+                (
+                    json.dumps({"demo": True, "local_id": "Q1", "role": "agent invented role"}),
+                    PROJECT_ID,
+                    "project:DemoVisualAffordance:Q1",
+                ),
+            )
+
+        model = build_workspace_graph_model(self.root, PROJECT_ID, mode="understanding", layer="project_overview")
+        q1 = next(node for node in model["canvas"]["nodes"] if node.get("local_id") == "Q1")
+        badge_labels = [badge["label"] for badge in q1["display"]["badges"]]
+
+        self.assertEqual("agent invented role", q1["metadata"]["role"])
+        self.assertNotIn("Agent Invented Role", badge_labels)
+        self.assertIn("Unsupported metadata.role was not rendered.", q1["display"]["warnings"])
 
     def test_understanding_question_selection_stays_on_project_overview(self):
         model = build_workspace_graph_model(
@@ -288,7 +335,7 @@ from contextlib import closing
 from pathlib import Path
 from typing import Any
 
-from tools.research_dataset import dataset_path
+from tools.research_dataset import dataset_db_path
 from tools.research_dataset_read_models import (
     build_experiments_model,
     build_literature_model,
@@ -310,6 +357,40 @@ VALID_LAYERS = {
     "literature": {"literature_overview", "literature_route_focus", "literature_paper_focus"},
     "experiments": {"evaluation_overview", "evaluation_setting_focus", "experiment_design_focus"},
 }
+ENTITY_DISPLAY = {
+    "question": {"tone": "question", "label": "Question"},
+    "claim": {"tone": "claim", "label": "Claim"},
+    "evidence": {"tone": "evidence", "label": "Evidence"},
+    "warrant": {"tone": "warrant", "label": "Warrant"},
+    "limitation": {"tone": "limitation", "label": "Limitation"},
+    "source": {"tone": "source", "label": "Source"},
+    "paper": {"tone": "source", "label": "Paper"},
+    "literature_lane": {"tone": "source", "label": "Literature Lane"},
+    "evaluation_setting": {"tone": "claim", "label": "Evaluation Setting"},
+    "experiment": {"tone": "evidence", "label": "Experiment"},
+    "run": {"tone": "run", "label": "Run"},
+    "dataset": {"tone": "source", "label": "Dataset"},
+    "benchmark": {"tone": "source", "label": "Benchmark"},
+    "metric_family": {"tone": "warrant", "label": "Metric Family"},
+    "model": {"tone": "warrant", "label": "Model"},
+    "baseline": {"tone": "limitation", "label": "Baseline"},
+    "protocol": {"tone": "warrant", "label": "Protocol"},
+    "project_claim_anchor": {"tone": "claim", "label": "Project Claim"},
+    "paper_question": {"tone": "question", "label": "Paper Question"},
+    "paper_claim": {"tone": "claim", "label": "Paper Claim"},
+    "paper_evidence": {"tone": "evidence", "label": "Paper Evidence"},
+    "paper_warrant": {"tone": "warrant", "label": "Paper Warrant"},
+    "paper_limitation": {"tone": "limitation", "label": "Paper Limitation"},
+}
+ROLE_BADGE_ALLOWLIST = {
+    ("question", "framing"): {"key": "question_role", "label": "Framing", "tone": "question"},
+    ("question", "primary"): {"key": "question_role", "label": "Primary", "tone": "question"},
+    ("question", "validation"): {"key": "question_role", "label": "Validation", "tone": "question"},
+    ("claim", "central thesis"): {"key": "claim_role", "label": "Central Thesis", "tone": "claim"},
+    ("claim", "geometry primitive"): {"key": "claim_role", "label": "Geometry Primitive", "tone": "claim"},
+    ("claim", "interaction primitive"): {"key": "claim_role", "label": "Interaction Primitive", "tone": "claim"},
+    ("claim", "mechanistic bridge"): {"key": "claim_role", "label": "Mechanistic Bridge", "tone": "claim"},
+}
 
 
 def build_workspace_graph_model(
@@ -328,10 +409,12 @@ def build_workspace_graph_model(
     if layer not in VALID_LAYERS[mode]:
         raise ValueError(f"unknown workspace graph layer for {mode}: {layer}")
     if mode == "understanding":
-        return _build_understanding(root, project_id, layer, focus_id, selected_id)
-    if mode == "literature":
-        return _build_literature(root, project_id, layer, focus_id, selected_id)
-    return _build_experiments(root, project_id, layer, focus_id, selected_id)
+        model = _build_understanding(root, project_id, layer, focus_id, selected_id)
+    elif mode == "literature":
+        model = _build_literature(root, project_id, layer, focus_id, selected_id)
+    else:
+        model = _build_experiments(root, project_id, layer, focus_id, selected_id)
+    return _finalize_payload(model)
 
 
 def _base_payload(project_id: str, mode: str, layer: str, focus_id: str = "", selected_id: str = "") -> dict[str, Any]:
@@ -360,6 +443,44 @@ def _json_loads(value: Any, fallback: Any) -> Any:
         return json.loads(str(value or ""))
     except (TypeError, json.JSONDecodeError):
         return fallback
+
+
+def _display_for_entity(entity_type: str, metadata: dict[str, Any] | None = None) -> dict[str, Any]:
+    metadata = metadata if isinstance(metadata, dict) else {}
+    entity = ENTITY_DISPLAY.get(entity_type, {"tone": "unknown", "label": entity_type or "Node"})
+    badges = [{"key": "entity_type", "label": entity["label"], "tone": entity["tone"]}]
+    warnings = []
+    raw_role = str(metadata.get("role") or "").strip().lower()
+    if raw_role:
+        role_badge = ROLE_BADGE_ALLOWLIST.get((entity_type, raw_role))
+        if role_badge:
+            badges.append(role_badge)
+        else:
+            warnings.append("Unsupported metadata.role was not rendered.")
+    return {"tone": entity["tone"], "badges": badges, "warnings": warnings}
+
+
+def _node_with_display(node: dict[str, Any], entity_type: str, metadata: dict[str, Any] | None = None) -> dict[str, Any]:
+    result = dict(node)
+    result["entity_type"] = entity_type
+    result["metadata"] = metadata if isinstance(metadata, dict) else result.get("metadata") or {}
+    result["display"] = _display_for_entity(entity_type, result["metadata"])
+    return result
+
+
+def _finalize_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    for node in payload.get("canvas", {}).get("nodes", []):
+        entity_type = str(node.get("entity_type") or "unknown")
+        metadata = node.get("metadata") if isinstance(node.get("metadata"), dict) else {}
+        node.setdefault("metadata", metadata)
+        node.setdefault("display", _display_for_entity(entity_type, metadata))
+        node["display"].setdefault("badges", [])
+        node["display"].setdefault("warnings", [])
+    payload.setdefault("warnings", [])
+    for node in payload.get("canvas", {}).get("nodes", []):
+        for warning in node.get("display", {}).get("warnings", []):
+            payload["warnings"].append({"node_id": node.get("id", ""), "message": warning})
+    return payload
 
 
 def _slug(value: Any) -> str:
@@ -397,7 +518,7 @@ def _strip_prefix(value: str, prefix: str) -> str:
 
 
 def _connection(root: Path) -> sqlite3.Connection:
-    path = dataset_path(root)
+    path = dataset_db_path(root)
     if not path.exists():
         raise ValueError("research-pilot.db not found")
     connection = sqlite3.connect(path)
@@ -467,20 +588,22 @@ def _understanding_node(node: dict[str, Any], *, selected_id: str = "") -> dict[
     inspector = {"selected_id": graph_id}
     if kind == "claim":
         drill = {"mode": "understanding", "layer": "claim_focus", "focus_id": graph_id}
-    return {
-        "id": graph_id,
-        "entity_type": kind,
-        "db_id": node.get("id", ""),
-        "local_id": local_id,
-        "label": node.get("label") or node.get("text") or local_id,
-        "subtitle": node.get("subtitle") or node.get("status") or "",
-        "status": node.get("status") or "",
-        "confidence": node.get("confidence") or "",
-        "drill": drill,
-        "inspector": inspector,
-        "selected": graph_id == selected_id,
-        "metadata": node.get("metadata") or {},
-    }
+    return _node_with_display(
+        {
+            "id": graph_id,
+            "db_id": node.get("id", ""),
+            "local_id": local_id,
+            "label": node.get("label") or node.get("text") or local_id,
+            "subtitle": node.get("subtitle") or node.get("status") or "",
+            "status": node.get("status") or "",
+            "confidence": node.get("confidence") or "",
+            "drill": drill,
+            "inspector": inspector,
+            "selected": graph_id == selected_id,
+        },
+        kind,
+        node.get("metadata") or {},
+    )
 
 
 def _question_claim_ids(graph: dict[str, Any]) -> dict[str, list[str]]:
@@ -1609,13 +1732,33 @@ const modeLabels = {
   experiments: "Experiments",
 };
 
+function nodeTone(node) {
+  return node?.data?.display?.tone || node?.data?.entity_type || "unknown";
+}
+
 function nodeColor(node) {
-  const type = node?.data?.entity_type || "";
-  if (type === "question") return "#8ec7ff";
-  if (type === "claim" || type === "evaluation_setting") return "#d6a84f";
-  if (type === "experiment" || type === "run") return "#70d6a3";
-  if (type === "source") return "#68c7d4";
+  const tone = nodeTone(node);
+  if (tone === "question") return "#8ec7ff";
+  if (tone === "claim") return "#d6a84f";
+  if (tone === "evidence") return "#70d6a3";
+  if (tone === "warrant") return "#bea0ff";
+  if (tone === "limitation") return "#e58b83";
+  if (tone === "source") return "#68c7d4";
+  if (tone === "run") return "#9bd7df";
   return "#8f98a8";
+}
+
+function DisplayBadges({ display }) {
+  const badges = Array.isArray(display?.badges) ? display.badges : [];
+  return (
+    <span className="workspace-node-badges">
+      {badges.map((badge) => (
+        <small key={`${badge.key}:${badge.label}`} data-tone={badge.tone || display?.tone || "unknown"}>
+          {badge.label}
+        </small>
+      ))}
+    </span>
+  );
 }
 
 function toFlowNode(node, index, onNodeAction) {
@@ -1629,9 +1772,11 @@ function toFlowNode(node, index, onNodeAction) {
           <span>{node.local_id || node.entity_type}</span>
           <strong>{node.label}</strong>
           {node.subtitle ? <em>{node.subtitle}</em> : null}
+          <DisplayBadges display={node.display} />
         </button>
       ),
       entity_type: node.entity_type,
+      display: node.display,
     },
     style: { width: node.entity_type === "source" ? 300 : 280, minHeight: 104 },
   };
@@ -1843,6 +1988,25 @@ Create `dashboard/workspace-island/src/workspace-island.css`:
   color: var(--text-muted);
   font-family: var(--mono);
   font-size: 12px;
+}
+
+.workspace-node-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.workspace-node-badges small {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0 8px;
+  color: var(--text-muted);
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 800;
 }
 
 @media (max-width: 900px) {
@@ -2075,6 +2239,11 @@ Append to `tests/test_related_work_lineage_dashboard.py`:
         self.assertIn("understanding", source)
         self.assertIn("literature", source)
         self.assertIn("experiments", source)
+        self.assertIn("DisplayBadges", source)
+        self.assertIn("node.display", source)
+        self.assertIn("display?.badges", source)
+        self.assertNotIn("metadata?.role", source)
+        self.assertNotIn("node.metadata.role", source)
         self.assertNotIn("run_detail", source)
 ```
 

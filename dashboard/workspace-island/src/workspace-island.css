@@ -294,10 +294,17 @@
 .workspace-argument-atom.tone-l { --node-tone: #e58b83; }
 
 .workspace-paper-source-node {
-  --node-tone: #68c7d4;
   border-style: dashed;
   cursor: pointer;
 }
+
+.workspace-paper-source-node.tone-q { --node-tone: #8ec7ff; }
+.workspace-paper-source-node.tone-c { --node-tone: #d6a84f; }
+.workspace-paper-source-node.tone-e { --node-tone: #70d6a3; }
+.workspace-paper-source-node.tone-w { --node-tone: #bea0ff; }
+.workspace-paper-source-node.tone-l { --node-tone: #e58b83; }
+.workspace-paper-source-node.tone-p { --node-tone: #68c7d4; }
+.workspace-paper-source-node.tone-r { --node-tone: #9bd7df; }
 
 .workspace-argument-atom span,
 .workspace-paper-source-node span {
@@ -335,6 +342,32 @@
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--node-tone) 16%, transparent), 0 18px 38px rgba(0, 0, 0, 0.24);
   outline: none;
   transform: translateY(-1px);
+}
+
+.workspace-node-badges {
+  display: flex;
+  flex-wrap: wrap;
+  grid-column: 2;
+  gap: 6px;
+  width: auto;
+  min-width: 0;
+  height: auto;
+  border: 0;
+  color: inherit;
+}
+
+.workspace-node-badges small {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0 8px;
+  color: var(--text-muted);
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
 }
 
 .workspace-edge {

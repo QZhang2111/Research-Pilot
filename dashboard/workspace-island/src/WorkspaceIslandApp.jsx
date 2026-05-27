@@ -44,9 +44,39 @@ function entityTone(entityType) {
   return "x";
 }
 
-function nodeColor(node) {
-  const tone = entityTone(node?.data?.entity_type || node?.data?.node?.entity_type);
+function displayTone(node) {
+  return node?.data?.node?.display?.tone || node?.data?.display?.tone || entityTone(node?.data?.entity_type || node?.data?.node?.entity_type);
+}
+
+function cssTone(tone) {
   return {
+    q: "q",
+    c: "c",
+    e: "e",
+    w: "w",
+    l: "l",
+    p: "p",
+    r: "r",
+    question: "q",
+    claim: "c",
+    evidence: "e",
+    warrant: "w",
+    limitation: "l",
+    source: "p",
+    run: "r",
+  }[tone] || "x";
+}
+
+function nodeColor(node) {
+  const tone = displayTone(node);
+  return {
+    question: "#8ec7ff",
+    claim: "#d6a84f",
+    evidence: "#70d6a3",
+    warrant: "#bea0ff",
+    limitation: "#e58b83",
+    source: "#68c7d4",
+    run: "#9bd7df",
     q: "#8ec7ff",
     c: "#d6a84f",
     e: "#70d6a3",
@@ -113,7 +143,7 @@ function toFlowNode(node, index, model, focusedIds, onNodeAction) {
     data: {
       node,
       entity_type: node.entity_type,
-      tone: entityTone(node.entity_type),
+      tone: cssTone(node.display?.tone || entityTone(node.entity_type)),
       focusClass,
       onNodeAction,
     },
@@ -166,6 +196,20 @@ function toFlowEdge(edge, model, focusedIds) {
   };
 }
 
+function DisplayBadges({ display }) {
+  const badges = Array.isArray(display?.badges) ? display.badges : [];
+  if (!badges.length) return null;
+  return (
+    <span className="workspace-node-badges">
+      {badges.map((badge) => (
+        <small key={`${badge.key || "badge"}:${badge.label}`} data-tone={badge.tone || display?.tone || "unknown"}>
+          {badge.label}
+        </small>
+      ))}
+    </span>
+  );
+}
+
 const WorkspaceKnowledgeNode = memo(function WorkspaceKnowledgeNode({ data }) {
   const node = data.node || {};
   const localId = node.local_id || node.subtitle || node.entity_type || "node";
@@ -182,7 +226,7 @@ const WorkspaceKnowledgeNode = memo(function WorkspaceKnowledgeNode({ data }) {
       <span>{localId}</span>
       <strong>{shortLabel(node.label, 150)}</strong>
       <em>{node.subtitle || node.status || node.entity_type || ""}</em>
-      {node.metadata?.role ? <small>{node.metadata.role}</small> : null}
+      <DisplayBadges display={node.display} />
       <Handle type="source" position={Position.Bottom} className="workspace-node-handle" />
     </>
   );
@@ -213,6 +257,7 @@ const WorkspaceArgumentAtomNode = memo(function WorkspaceArgumentAtomNode({ data
       <span>{node.local_id || node.subtitle || node.entity_type}</span>
       <strong>{shortLabel(node.label, 128)}</strong>
       <em>{node.subtitle || node.entity_type}</em>
+      <DisplayBadges display={node.display} />
     </article>
   );
 });
@@ -220,11 +265,12 @@ const WorkspaceArgumentAtomNode = memo(function WorkspaceArgumentAtomNode({ data
 const WorkspacePaperSourceNode = memo(function WorkspacePaperSourceNode({ data }) {
   const node = data.node || {};
   return (
-    <button type="button" className="workspace-paper-source-node" onClick={() => data.onNodeAction?.(node)}>
+    <button type="button" className={`workspace-paper-source-node tone-${data.tone || "x"}`} onClick={() => data.onNodeAction?.(node)}>
       <Handle type="target" position={Position.Left} className="workspace-node-handle" />
       <span>{node.local_id || node.source_id || "paper"}</span>
       <strong>{shortLabel(node.label, 96)}</strong>
       <em>{node.subtitle || "paper/source"}</em>
+      <DisplayBadges display={node.display} />
     </button>
   );
 });
@@ -498,7 +544,7 @@ function buildUnderstandingClaimFocusFlowModel(model, onNavigate) {
           zIndex: 3,
           data: {
             node,
-            tone: lane.tone,
+            tone: cssTone(node.display?.tone || lane.tone),
             onNodeAction: (item) => {
               const target = nodeNavigationTarget(item);
               if (!target) return;
@@ -523,7 +569,7 @@ function buildUnderstandingClaimFocusFlowModel(model, onNavigate) {
         targetPosition: Position.Left,
         style: { width: 310, minHeight: 104 },
         zIndex: 3,
-        data: { node, tone: lane.tone },
+        data: { node, tone: cssTone(node.display?.tone || lane.tone) },
       });
       edges.push({
         id: `claim-focus:${nodeId}:${claim.id}`,

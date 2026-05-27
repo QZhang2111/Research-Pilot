@@ -2,10 +2,11 @@ import json
 import shutil
 import tempfile
 import unittest
+from contextlib import closing
 from http import HTTPStatus
 from pathlib import Path
 
-from tools.research_dataset import initialize_dataset
+from tools.research_dataset import connect_dataset, initialize_dataset
 from tools.research_dataset_import import import_demo_visual_affordance
 from tools.research_browser_server import handle_workspace_graph_request
 from tools.workspace_graph_read_models import build_workspace_graph_model
@@ -26,6 +27,20 @@ class WorkspaceGraphReadModelsTest(unittest.TestCase):
 
     def tearDown(self):
         self.tmp.cleanup()
+
+    def assert_workspace_node_contract(self, node):
+        self.assertIn("id", node)
+        self.assertIn("entity_type", node)
+        self.assertIn("label", node)
+        self.assertIn("metadata", node)
+        self.assertIn("display", node)
+        self.assertIsInstance(node["metadata"], dict)
+        self.assertIsInstance(node["display"], dict)
+        self.assertIn("tone", node["display"])
+        self.assertIn("badges", node["display"])
+        self.assertIn("warnings", node["display"])
+        self.assertIsInstance(node["display"]["badges"], list)
+        self.assertIsInstance(node["display"]["warnings"], list)
 
     def test_understanding_project_overview_contract(self):
         model = build_workspace_graph_model(self.root, PROJECT_ID, mode="understanding", layer="project_overview")
@@ -59,6 +74,27 @@ class WorkspaceGraphReadModelsTest(unittest.TestCase):
         self.assertEqual("question_detail", model["inspector"]["kind"])
         self.assertEqual("question:Q1", model["selected_id"])
         self.assertTrue(any(section["kind"] == "linked_claims" for section in model["inspector"]["sections"]))
+
+    def test_workspace_payload_has_no_dashboard_owned_storage_fields(self):
+        model = build_workspace_graph_model(self.root, PROJECT_ID, mode="understanding", layer="project_overview")
+
+        self.assertEqual("research-pilot.db", model["source"])
+        self.assertNotIn("dashboard_db", model)
+        self.assertNotIn("dashboard_state", model)
+        self.assertNotIn("mutation", model)
+
+    def test_understanding_question_nodes_do_not_create_question_layer(self):
+        model = build_workspace_graph_model(
+            self.root,
+            PROJECT_ID,
+            mode="understanding",
+            layer="project_overview",
+            selected_id="question:Q2",
+        )
+
+        self.assertEqual("project_overview", model["layer"])
+        self.assertEqual("question_detail", model["inspector"]["kind"])
+        self.assertTrue(all(node.get("drill", {}).get("layer") != "question_focus" for node in model["canvas"]["nodes"] if node["entity_type"] == "question"))
 
     def test_understanding_claim_focus_contract(self):
         model = build_workspace_graph_model(
@@ -191,6 +227,21 @@ class WorkspaceGraphReadModelsTest(unittest.TestCase):
         impact = next(section for section in model["inspector"]["sections"] if section["kind"] == "project_understanding_impact")
         self.assertTrue(any(item["target_id"] == "claim:C4" for item in impact["items"]))
 
+    def test_experiment_run_is_terminal_inspector_selection(self):
+        model = build_workspace_graph_model(
+            self.root,
+            PROJECT_ID,
+            mode="experiments",
+            layer="experiment_design_focus",
+            focus_id="experiment:EXP3",
+            selected_id="run:RUN3",
+        )
+
+        run = next(node for node in model["canvas"]["nodes"] if node["id"] == "run:RUN3")
+        self.assertIsNone(run.get("drill"))
+        self.assertEqual({"selected_id": "run:RUN3"}, run["inspector"])
+        self.assertEqual("run_detail", model["inspector"]["kind"])
+
     def test_invalid_layer_raises_value_error(self):
         with self.assertRaises(ValueError):
             build_workspace_graph_model(self.root, PROJECT_ID, mode="experiments", layer="run_detail")
@@ -217,6 +268,128 @@ class WorkspaceGraphReadModelsTest(unittest.TestCase):
         data = json.loads(payload.decode("utf-8"))
         self.assertEqual("workspace-graph-error-v1", data["schema_version"])
         self.assertIn("unknown workspace graph layer", data["message"])
+
+    def test_workspace_graph_handler_defaults_to_understanding(self):
+        status, payload = handle_workspace_graph_request(
+            self.root,
+            "/api/workspace-graph?project=DemoVisualAffordance",
+        )
+
+        self.assertEqual(HTTPStatus.OK, status)
+        data = json.loads(payload.decode("utf-8"))
+        self.assertEqual("understanding", data["mode"])
+        self.assertEqual("project_overview", data["layer"])
+
+    def test_workspace_graph_handler_rejects_invalid_mode(self):
+        status, payload = handle_workspace_graph_request(
+            self.root,
+            "/api/workspace-graph?project=DemoVisualAffordance&mode=madeup",
+        )
+
+        self.assertEqual(HTTPStatus.BAD_REQUEST, status)
+        data = json.loads(payload.decode("utf-8"))
+        self.assertEqual("workspace-graph-error-v1", data["schema_version"])
+        self.assertIn("unknown workspace graph mode", data["message"])
+
+    def test_literature_empty_data_returns_payload_not_crash(self):
+        with closing(connect_dataset(self.root)) as connection:
+            with connection:
+                connection.execute("DELETE FROM literature_relations WHERE project_id = ?", (PROJECT_ID,))
+                connection.execute("DELETE FROM literature_items WHERE project_id = ?", (PROJECT_ID,))
+                connection.execute("DELETE FROM literature_lanes WHERE project_id = ?", (PROJECT_ID,))
+
+        model = build_workspace_graph_model(self.root, PROJECT_ID, mode="literature", layer="literature_overview")
+
+        self.assertEqual("literature_overview", model["layer"])
+        self.assertEqual([], model["canvas"]["nodes"])
+        self.assertEqual("overview", model["inspector"]["kind"])
+        self.assertIsNotNone(model["empty_state"])
+        self.assertIn("No literature structure", model["empty_state"]["message"])
+
+    def test_literature_empty_route_focus_still_rejects_unknown_route(self):
+        with closing(connect_dataset(self.root)) as connection:
+            with connection:
+                connection.execute("DELETE FROM literature_relations WHERE project_id = ?", (PROJECT_ID,))
+                connection.execute("DELETE FROM literature_items WHERE project_id = ?", (PROJECT_ID,))
+                connection.execute("DELETE FROM literature_lanes WHERE project_id = ?", (PROJECT_ID,))
+
+        with self.assertRaises(ValueError):
+            build_workspace_graph_model(
+                self.root,
+                PROJECT_ID,
+                mode="literature",
+                layer="literature_route_focus",
+                focus_id="literature_lane:missing",
+            )
+
+    def test_all_workspace_canvas_nodes_have_display_contract(self):
+        experiment_overview = build_workspace_graph_model(self.root, PROJECT_ID, mode="experiments", layer="evaluation_overview")
+        setting_id = next(node["id"] for node in experiment_overview["canvas"]["nodes"] if "AGD20K" in node["label"])
+        literature_overview = build_workspace_graph_model(self.root, PROJECT_ID, mode="literature", layer="literature_overview")
+        literature_route_id = next(node["id"] for node in literature_overview["canvas"]["nodes"] if node["entity_type"] == "literature_lane")
+        literature_paper_id = next(node["id"] for node in literature_overview["canvas"]["nodes"] if node["entity_type"] == "source")
+        cases = [
+            ("understanding", "project_overview", "", ""),
+            ("understanding", "claim_focus", "claim:C2", ""),
+            ("understanding", "paper_focus", "claim:C2", "source:paper:do2017-affordancenet"),
+            ("literature", "literature_overview", "", ""),
+            ("literature", "literature_route_focus", literature_route_id, ""),
+            ("literature", "literature_paper_focus", literature_paper_id, ""),
+            ("experiments", "evaluation_overview", "", ""),
+            ("experiments", "evaluation_setting_focus", setting_id, ""),
+            ("experiments", "experiment_design_focus", "experiment:EXP3", "run:RUN3"),
+        ]
+
+        for mode, layer, focus_id, selected_id in cases:
+            with self.subTest(mode=mode, layer=layer):
+                model = build_workspace_graph_model(
+                    self.root,
+                    PROJECT_ID,
+                    mode=mode,
+                    layer=layer,
+                    focus_id=focus_id,
+                    selected_id=selected_id,
+                )
+                self.assertTrue(model["canvas"]["nodes"])
+                for node in model["canvas"]["nodes"]:
+                    self.assert_workspace_node_contract(node)
+
+    def test_display_contract_maps_allowed_demo_roles(self):
+        model = build_workspace_graph_model(self.root, PROJECT_ID, mode="understanding", layer="project_overview")
+
+        q1 = next(node for node in model["canvas"]["nodes"] if node.get("local_id") == "Q1")
+        c2 = next(node for node in model["canvas"]["nodes"] if node.get("local_id") == "C2")
+        q1_badges = {(badge["key"], badge["label"]) for badge in q1["display"]["badges"]}
+        c2_badges = {(badge["key"], badge["label"]) for badge in c2["display"]["badges"]}
+
+        self.assertIn(("question_role", "Framing"), q1_badges)
+        self.assertIn(("claim_role", "Geometry Primitive"), c2_badges)
+        self.assertEqual([], q1["display"]["warnings"])
+
+    def test_display_contract_blocks_unknown_metadata_role(self):
+        with closing(connect_dataset(self.root)) as connection:
+            with connection:
+                connection.execute(
+                    """
+                    UPDATE understanding_nodes
+                    SET metadata_json = ?
+                    WHERE project_id = ? AND node_id = ?
+                    """,
+                    (
+                        json.dumps({"demo": True, "local_id": "Q1", "role": "agent invented role"}),
+                        PROJECT_ID,
+                        "project:DemoVisualAffordance:Q1",
+                    ),
+                )
+
+        model = build_workspace_graph_model(self.root, PROJECT_ID, mode="understanding", layer="project_overview")
+        q1 = next(node for node in model["canvas"]["nodes"] if node.get("local_id") == "Q1")
+        badge_labels = [badge["label"] for badge in q1["display"]["badges"]]
+
+        self.assertEqual("agent invented role", q1["metadata"]["role"])
+        self.assertNotIn("Agent Invented Role", badge_labels)
+        self.assertIn("Unsupported metadata.role was not rendered.", q1["display"]["warnings"])
+        self.assertTrue(any(item["node_id"] == "question:Q1" for item in model["warnings"]))
 
 
 if __name__ == "__main__":
