@@ -44,9 +44,20 @@ function entityTone(entityType) {
   return "x";
 }
 
+function displayTone(node) {
+  return node?.data?.node?.display?.tone || node?.data?.display?.tone || entityTone(node?.data?.entity_type || node?.data?.node?.entity_type);
+}
+
 function nodeColor(node) {
-  const tone = entityTone(node?.data?.entity_type || node?.data?.node?.entity_type);
+  const tone = displayTone(node);
   return {
+    question: "#8ec7ff",
+    claim: "#d6a84f",
+    evidence: "#70d6a3",
+    warrant: "#bea0ff",
+    limitation: "#e58b83",
+    source: "#68c7d4",
+    run: "#9bd7df",
     q: "#8ec7ff",
     c: "#d6a84f",
     e: "#70d6a3",
@@ -166,6 +177,20 @@ function toFlowEdge(edge, model, focusedIds) {
   };
 }
 
+function DisplayBadges({ display }) {
+  const badges = Array.isArray(display?.badges) ? display.badges : [];
+  if (!badges.length) return null;
+  return (
+    <span className="workspace-node-badges">
+      {badges.map((badge) => (
+        <small key={`${badge.key || "badge"}:${badge.label}`} data-tone={badge.tone || display?.tone || "unknown"}>
+          {badge.label}
+        </small>
+      ))}
+    </span>
+  );
+}
+
 const WorkspaceKnowledgeNode = memo(function WorkspaceKnowledgeNode({ data }) {
   const node = data.node || {};
   const localId = node.local_id || node.subtitle || node.entity_type || "node";
@@ -182,7 +207,7 @@ const WorkspaceKnowledgeNode = memo(function WorkspaceKnowledgeNode({ data }) {
       <span>{localId}</span>
       <strong>{shortLabel(node.label, 150)}</strong>
       <em>{node.subtitle || node.status || node.entity_type || ""}</em>
-      {node.metadata?.role ? <small>{node.metadata.role}</small> : null}
+      <DisplayBadges display={node.display} />
       <Handle type="source" position={Position.Bottom} className="workspace-node-handle" />
     </>
   );
@@ -213,6 +238,7 @@ const WorkspaceArgumentAtomNode = memo(function WorkspaceArgumentAtomNode({ data
       <span>{node.local_id || node.subtitle || node.entity_type}</span>
       <strong>{shortLabel(node.label, 128)}</strong>
       <em>{node.subtitle || node.entity_type}</em>
+      <DisplayBadges display={node.display} />
     </article>
   );
 });
@@ -225,6 +251,7 @@ const WorkspacePaperSourceNode = memo(function WorkspacePaperSourceNode({ data }
       <span>{node.local_id || node.source_id || "paper"}</span>
       <strong>{shortLabel(node.label, 96)}</strong>
       <em>{node.subtitle || "paper/source"}</em>
+      <DisplayBadges display={node.display} />
     </button>
   );
 });
