@@ -306,6 +306,22 @@ class WorkspaceGraphReadModelsTest(unittest.TestCase):
         self.assertIsNotNone(model["empty_state"])
         self.assertIn("No literature structure", model["empty_state"]["message"])
 
+    def test_literature_empty_route_focus_still_rejects_unknown_route(self):
+        with closing(connect_dataset(self.root)) as connection:
+            with connection:
+                connection.execute("DELETE FROM literature_relations WHERE project_id = ?", (PROJECT_ID,))
+                connection.execute("DELETE FROM literature_items WHERE project_id = ?", (PROJECT_ID,))
+                connection.execute("DELETE FROM literature_lanes WHERE project_id = ?", (PROJECT_ID,))
+
+        with self.assertRaises(ValueError):
+            build_workspace_graph_model(
+                self.root,
+                PROJECT_ID,
+                mode="literature",
+                layer="literature_route_focus",
+                focus_id="literature_lane:missing",
+            )
+
     def test_all_workspace_canvas_nodes_have_display_contract(self):
         experiment_overview = build_workspace_graph_model(self.root, PROJECT_ID, mode="experiments", layer="evaluation_overview")
         setting_id = next(node["id"] for node in experiment_overview["canvas"]["nodes"] if "AGD20K" in node["label"])
