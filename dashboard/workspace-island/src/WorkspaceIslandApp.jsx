@@ -196,8 +196,44 @@ const WorkspaceKnowledgeNode = memo(function WorkspaceKnowledgeNode({ data }) {
   );
 });
 
+const WorkspaceLaneFrameNode = memo(function WorkspaceLaneFrameNode({ data }) {
+  return (
+    <section className={`workspace-lane-frame tone-${data.tone || "x"}`}>
+      <strong>{data.title}</strong>
+      {data.subtitle ? <span>{data.subtitle}</span> : null}
+    </section>
+  );
+});
+
+const WorkspaceArgumentAtomNode = memo(function WorkspaceArgumentAtomNode({ data }) {
+  const node = data.node || {};
+  return (
+    <article className={`workspace-argument-atom tone-${data.tone || "x"}`}>
+      <Handle type="source" position={Position.Right} className="workspace-node-handle" />
+      <span>{node.local_id || node.subtitle || node.entity_type}</span>
+      <strong>{shortLabel(node.label, 128)}</strong>
+      <em>{node.subtitle || node.entity_type}</em>
+    </article>
+  );
+});
+
+const WorkspacePaperSourceNode = memo(function WorkspacePaperSourceNode({ data }) {
+  const node = data.node || {};
+  return (
+    <button type="button" className="workspace-paper-source-node" onClick={() => data.onNodeAction?.(node)}>
+      <Handle type="target" position={Position.Left} className="workspace-node-handle" />
+      <span>{node.local_id || node.source_id || "paper"}</span>
+      <strong>{shortLabel(node.label, 96)}</strong>
+      <em>{node.subtitle || "paper/source"}</em>
+    </button>
+  );
+});
+
 const workspaceNodeTypes = {
   workspaceKnowledgeNode: WorkspaceKnowledgeNode,
+  workspaceLaneFrameNode: WorkspaceLaneFrameNode,
+  workspaceArgumentAtomNode: WorkspaceArgumentAtomNode,
+  workspacePaperSourceNode: WorkspacePaperSourceNode,
 };
 
 function isTopLevelWorkspaceLayer(layer) {
@@ -336,10 +372,187 @@ function nodeNavigationTarget(node) {
   return null;
 }
 
-function WorkspaceGraphRenderer({ model, onNavigate, modeClass }) {
+function buildUnderstandingOverviewFlowModel(model, onNavigate) {
+  const rawNodes = model?.canvas?.nodes || [];
+  const rawEdges = model?.canvas?.edges || [];
+  const questions = rawNodes.filter((node) => node.entity_type === "question");
+  const claims = rawNodes.filter((node) => node.entity_type === "claim");
+  const questionWidth = 300;
+  const claimWidth = 360;
+  const gap = 36;
+  const questionFrameWidth = Math.max(questions.length * (questionWidth + gap) + 70, 720);
+  const claimFrameWidth = Math.max(claims.length * (claimWidth + gap) + 70, 980);
+  const focusedIds = focusedNodeIds(model);
+
+  const nodes = [
+    {
+      id: "frame:questions",
+      type: "workspaceLaneFrameNode",
+      position: { x: -40, y: -250 },
+      style: { width: questionFrameWidth, height: 220 },
+      draggable: false,
+      selectable: false,
+      zIndex: 0,
+      data: { title: "Questions", subtitle: `${questions.length} project questions`, tone: "q" },
+    },
+    {
+      id: "frame:claims",
+      type: "workspaceLaneFrameNode",
+      position: { x: -40, y: 20 },
+      style: { width: claimFrameWidth, height: 260 },
+      draggable: false,
+      selectable: false,
+      zIndex: 0,
+      data: { title: "Claims", subtitle: `${claims.length} project claims`, tone: "c" },
+    },
+    ...questions.map((node, index) =>
+      toFlowNode(
+        { ...node, position: { x: index * (questionWidth + gap), y: -180 } },
+        index,
+        model,
+        focusedIds,
+        (item) => {
+          const target = nodeNavigationTarget(item);
+          if (!target) return;
+          onNavigate?.(target);
+        },
+      ),
+    ),
+    ...claims.map((node, index) =>
+      toFlowNode(
+        { ...node, position: { x: index * (claimWidth + gap), y: 90 } },
+        index,
+        model,
+        focusedIds,
+        (item) => {
+          const target = nodeNavigationTarget(item);
+          if (!target) return;
+          onNavigate?.(target);
+        },
+      ),
+    ),
+  ];
+
+  const visibleIds = new Set(rawNodes.map((node) => node.id));
+  const edgeFocusIds = focusedIds.size ? focusedIds : visibleIds;
+  const edges = rawEdges
+    .filter((edge) => visibleIds.has(edge.source) && visibleIds.has(edge.target))
+    .map((edge) => toFlowEdge(edge, model, edgeFocusIds));
+
+  return { nodes, edges };
+}
+
+function buildUnderstandingClaimFocusFlowModel(model, onNavigate) {
+  const rawNodes = model?.canvas?.nodes || [];
+  const focusId = model?.focus_id || rawNodes.find((node) => node.entity_type === "claim")?.id || "";
+  const claim = rawNodes.find((node) => node.id === focusId) || rawNodes.find((node) => node.entity_type === "claim");
+  if (!claim) return { nodes: [], edges: [] };
+
+  const laneConfig = [
+    { key: "evidence", title: "Evidence / Grounds", tone: "e", x: 720, y: 20, relation: "supports" },
+    { key: "warrant", title: "Warrants / Bridges", tone: "w", x: 720, y: 310, relation: "qualifies" },
+    { key: "limitation", title: "Limitations / Boundaries", tone: "l", x: 1120, y: 165, relation: "bounds" },
+    { key: "source", title: "Source Papers", tone: "p", x: 1540, y: 20, relation: "cites" },
+  ];
+
+  const nodes = [
+    {
+      ...toFlowNode(
+        { ...claim, position: { x: 160, y: 190 } },
+        0,
+        model,
+        new Set([claim.id]),
+        () => {},
+      ),
+      sourcePosition: Position.Right,
+      targetPosition: Position.Left,
+      style: { width: 420, minHeight: 160 },
+      zIndex: 4,
+    },
+  ];
+  const edges = [];
+
+  laneConfig.forEach((lane) => {
+    const items = rawNodes.filter((node) => node.entity_type === lane.key);
+    const frameHeight = Math.max(190, items.length * 130 + 92);
+    nodes.push({
+      id: `frame:${lane.key}`,
+      type: "workspaceLaneFrameNode",
+      position: { x: lane.x - 28, y: lane.y - 52 },
+      style: { width: lane.key === "source" ? 340 : 360, height: frameHeight },
+      draggable: false,
+      selectable: false,
+      zIndex: 0,
+      data: { title: lane.title, subtitle: `${items.length} records`, tone: lane.tone },
+    });
+    items.forEach((node, index) => {
+      const nodeId = node.id;
+      if (lane.key === "source") {
+        nodes.push({
+          id: nodeId,
+          type: "workspacePaperSourceNode",
+          position: { x: lane.x, y: lane.y + index * 126 },
+          sourcePosition: Position.Right,
+          targetPosition: Position.Left,
+          style: { width: 286, minHeight: 96 },
+          zIndex: 3,
+          data: {
+            node,
+            tone: lane.tone,
+            onNodeAction: (item) => {
+              const target = nodeNavigationTarget(item);
+              if (!target) return;
+              onNavigate?.(target);
+            },
+          },
+        });
+        edges.push({
+          id: `claim-focus:${claim.id}:${nodeId}`,
+          source: claim.id,
+          target: nodeId,
+          relation: lane.relation,
+          label: lane.relation,
+        });
+        return;
+      }
+      nodes.push({
+        id: nodeId,
+        type: "workspaceArgumentAtomNode",
+        position: { x: lane.x, y: lane.y + index * 126 },
+        sourcePosition: Position.Right,
+        targetPosition: Position.Left,
+        style: { width: 310, minHeight: 104 },
+        zIndex: 3,
+        data: { node, tone: lane.tone },
+      });
+      edges.push({
+        id: `claim-focus:${nodeId}:${claim.id}`,
+        source: nodeId,
+        target: claim.id,
+        relation: lane.relation,
+        label: lane.relation,
+      });
+    });
+  });
+
+  return {
+    nodes,
+    edges: edges.map((edge) => toFlowEdge(edge, model, new Set([edge.source, edge.target, claim.id]))),
+  };
+}
+
+function buildUnderstandingFlowModel(model, onNavigate) {
+  if (model?.layer === "claim_focus") {
+    return buildUnderstandingClaimFocusFlowModel(model, onNavigate);
+  }
+  return buildUnderstandingOverviewFlowModel(model, onNavigate);
+}
+
+function WorkspaceGraphRenderer({ model, onNavigate, modeClass, providedNodes = null, providedEdges = null }) {
   const focusedIds = useMemo(() => focusedNodeIds(model), [model]);
   const nodes = useMemo(
     () =>
+      providedNodes ||
       (model?.canvas?.nodes || []).map((node, index) =>
         toFlowNode(node, index, model, focusedIds, (item) => {
           const target = nodeNavigationTarget(item);
@@ -347,9 +560,12 @@ function WorkspaceGraphRenderer({ model, onNavigate, modeClass }) {
           onNavigate?.(target);
         }),
       ),
-    [model, focusedIds, onNavigate],
+    [model, focusedIds, onNavigate, providedNodes],
   );
-  const edges = useMemo(() => (model?.canvas?.edges || []).map((edge) => toFlowEdge(edge, model, focusedIds)), [model, focusedIds]);
+  const edges = useMemo(
+    () => providedEdges || (model?.canvas?.edges || []).map((edge) => toFlowEdge(edge, model, focusedIds)),
+    [model, focusedIds, providedEdges],
+  );
   return (
     <div className={`workspace-knowledge-canvas ${modeClass || ""}`} aria-label="Workspace graph canvas">
       <WorkspaceBreadcrumb model={model} onNavigate={onNavigate} />
@@ -385,8 +601,17 @@ function WorkspaceGraphRenderer({ model, onNavigate, modeClass }) {
   );
 }
 
-function UnderstandingGraphRenderer(props) {
-  return <WorkspaceGraphRenderer {...props} modeClass="is-understanding" />;
+function UnderstandingGraphRenderer({ model, onNavigate }) {
+  const { nodes, edges } = useMemo(() => buildUnderstandingFlowModel(model, onNavigate), [model, onNavigate]);
+  return (
+    <WorkspaceGraphRenderer
+      model={model}
+      onNavigate={onNavigate}
+      modeClass="is-understanding"
+      providedNodes={nodes}
+      providedEdges={edges}
+    />
+  );
 }
 
 function LiteratureGraphRenderer(props) {
@@ -398,6 +623,7 @@ function ExperimentsGraphRenderer(props) {
 }
 
 function ModeGraphRenderer({ model, onNavigate }) {
+  if (model?.mode === "understanding") return <UnderstandingGraphRenderer model={model} onNavigate={onNavigate} />;
   if (model?.mode === "literature") return <LiteratureGraphRenderer model={model} onNavigate={onNavigate} />;
   if (model?.mode === "experiments") return <ExperimentsGraphRenderer model={model} onNavigate={onNavigate} />;
   return <UnderstandingGraphRenderer model={model} onNavigate={onNavigate} />;
