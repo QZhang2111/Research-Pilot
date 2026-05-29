@@ -208,6 +208,9 @@ tempCodeRunnerFile.py
 # Ruff stuff:
 .ruff_cache/
 
+# Playwright CLI local snapshots
+.playwright-cli/
+
 # PyPI configuration file
 .pypirc
 

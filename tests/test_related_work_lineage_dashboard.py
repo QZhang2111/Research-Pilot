@@ -27,8 +27,8 @@ class RelatedWorkLineageDashboardTest(unittest.TestCase):
         html = (ROOT / "dashboard" / "lineage.html").read_text(encoding="utf-8")
 
         self.assertIn('data-page="lineage"', html)
-        self.assertIn('href="./lineage-atlas.bundle.css?v=english-dashboard-20260523"', html)
-        self.assertIn('src="./lineage-atlas.bundle.js?v=english-dashboard-20260523"', html)
+        self.assertIn('href="./lineage-atlas.bundle.css?v=english-dashboard-20260529a"', html)
+        self.assertIn('src="./lineage-atlas.bundle.js?v=english-dashboard-20260529a"', html)
 
     def test_app_contains_lineage_page_hooks(self):
         app = (ROOT / "dashboard" / "app.js").read_text(encoding="utf-8")
@@ -55,8 +55,8 @@ class RelatedWorkLineageDashboardTest(unittest.TestCase):
         self.assertIn("/api/project-understanding", app)
         self.assertIn("Recent Understanding", app)
         self.assertIn("Next Moves", app)
-        self.assertIn("app.js?v=english-dashboard-20260523", project_html)
-        self.assertIn("project-graph.bundle.js?v=english-dashboard-20260523", project_html)
+        self.assertIn("app.js?v=english-dashboard-20260529a", project_html)
+        self.assertIn("project-graph.bundle.js?v=english-dashboard-20260529a", project_html)
 
     def test_dashboard_pages_cache_bust_static_assets(self):
         for path in (ROOT / "dashboard").glob("*.html"):
@@ -64,11 +64,11 @@ class RelatedWorkLineageDashboardTest(unittest.TestCase):
             self.assertNotIn('src="./app.js"', html, str(path))
             self.assertNotIn('href="./styles.css"', html, str(path))
             if "app.js" in html:
-                self.assertIn("app.js?v=english-dashboard-20260523", html, str(path))
+                self.assertIn("app.js?v=english-dashboard-20260529a", html, str(path))
             if "styles.css" in html:
-                self.assertIn("styles.css?v=english-dashboard-20260523", html, str(path))
+                self.assertIn("styles.css?v=english-dashboard-20260529a", html, str(path))
             self.assertNotIn('href="./index.html"', html, str(path))
-            self.assertIn('href="./index.html?v=english-dashboard-20260523"', html, str(path))
+            self.assertIn('href="./index.html?v=english-dashboard-20260529a"', html, str(path))
 
     def test_experiments_page_replaces_proposal_framing(self):
         app = (ROOT / "dashboard" / "app.js").read_text(encoding="utf-8")
@@ -108,7 +108,7 @@ class RelatedWorkLineageDashboardTest(unittest.TestCase):
     def test_dashboard_app_versions_page_urls(self):
         app = (ROOT / "dashboard" / "app.js").read_text(encoding="utf-8")
 
-        self.assertIn('const DASHBOARD_PAGE_VERSION = "english-dashboard-20260523";', app)
+        self.assertIn('const DASHBOARD_PAGE_VERSION = "english-dashboard-20260529a";', app)
         self.assertIn('function dashboardPageUrl(pageName, params = {})', app)
         self.assertIn('return `./${pageName}.html?${search.toString()}`;', app)
         self.assertNotIn("`./project.html?project=", app)
@@ -130,6 +130,7 @@ class RelatedWorkLineageDashboardTest(unittest.TestCase):
         app = (ROOT / "dashboard" / "app.js").read_text(encoding="utf-8")
 
         self.assertIn("function workspaceUrl(projectId, mode = \"understanding\")", app)
+        self.assertIn("function currentWorkspaceMode", app)
         self.assertIn("async function loadWorkspaceGraphFromApi", app)
         self.assertIn("async function renderWorkspacePage()", app)
         self.assertIn("ResearchBrowserWorkspaceIsland.mount", app)
@@ -138,6 +139,24 @@ class RelatedWorkLineageDashboardTest(unittest.TestCase):
         self.assertIn(">Papers</a>", app)
         self.assertNotIn(">Technical Lineage</a>", app)
         self.assertNotIn(">Experiments</a>", app)
+
+    def test_workspace_navigation_preserves_page_scroll(self):
+        app = (ROOT / "dashboard" / "app.js").read_text(encoding="utf-8")
+        styles = (ROOT / "dashboard" / "styles.css").read_text(encoding="utf-8")
+
+        self.assertIn("const scrollX = window.scrollX;", app)
+        self.assertIn("const scrollY = window.scrollY;", app)
+        self.assertIn("window.requestAnimationFrame(() => window.scrollTo(scrollX, scrollY));", app)
+        self.assertIn(".workspace-page-shell", styles)
+        self.assertIn("overflow-anchor: none;", styles)
+
+    def test_workspace_nav_preserves_current_mode_when_already_in_workspace(self):
+        app = (ROOT / "dashboard" / "app.js").read_text(encoding="utf-8")
+
+        self.assertIn("function currentWorkspaceMode", app)
+        self.assertIn('return normalizeToken(params().get("mode") || legacyWorkspaceModeForPage(page)) || "understanding";', app)
+        self.assertIn("const workspaceMode = currentWorkspaceMode(current);", app)
+        self.assertIn('workspaceUrl(project.id, workspaceMode)', app)
 
     def test_workspace_navigation_stays_workspace_and_papers_only(self):
         app = (ROOT / "dashboard" / "app.js").read_text(encoding="utf-8")
@@ -216,8 +235,8 @@ class RelatedWorkLineageDashboardTest(unittest.TestCase):
         package = json.loads((ROOT / "dashboard" / "package.json").read_text(encoding="utf-8"))
 
         self.assertIn('data-page="workspace"', html)
-        self.assertIn("workspace-island.bundle.js?v=english-dashboard-20260523", html)
-        self.assertIn("workspace-island.bundle.css?v=english-dashboard-20260523", html)
+        self.assertIn("workspace-island.bundle.js?v=english-dashboard-20260529a", html)
+        self.assertIn("workspace-island.bundle.css?v=english-dashboard-20260529a", html)
         self.assertEqual(
             "vite build --config workspace-island/vite.config.mjs",
             package["scripts"].get("build:workspace-island"),
@@ -275,15 +294,24 @@ class RelatedWorkLineageDashboardTest(unittest.TestCase):
         self.assertIn("if (!target) return", source)
         self.assertNotIn("item.drill || item.inspector || { selected_id: item.id }", source)
 
-    def test_workspace_island_renders_display_not_raw_metadata(self):
+    def test_workspace_island_omits_node_badges_and_raw_metadata(self):
         source = (ROOT / "dashboard" / "workspace-island" / "src" / "WorkspaceIslandApp.jsx").read_text(encoding="utf-8")
 
-        self.assertIn("function DisplayBadges", source)
-        self.assertIn("node.display", source)
-        self.assertIn("display?.badges", source)
-        self.assertIn("display?.tone", source)
+        self.assertNotIn("function DisplayBadges", source)
+        self.assertNotIn("<DisplayBadges", source)
+        self.assertNotIn("display?.badges", source)
         self.assertNotIn("metadata?.role", source)
         self.assertNotIn("node.metadata.role", source)
+
+    def test_workspace_paper_source_nodes_show_titles_only(self):
+        source = (ROOT / "dashboard" / "workspace-island" / "src" / "WorkspaceIslandApp.jsx").read_text(encoding="utf-8")
+        styles = (ROOT / "dashboard" / "workspace-island" / "src" / "workspace-island.css").read_text(encoding="utf-8")
+
+        self.assertIn('className="workspace-paper-source-title"', source)
+        self.assertNotIn("node.local_id || node.source_id", source)
+        self.assertNotIn('node.subtitle || "paper/source"', source)
+        self.assertIn(".workspace-paper-source-title", styles)
+        self.assertIn("grid-template-columns: minmax(0, 1fr);", styles)
 
     def test_workspace_island_has_understanding_specific_layout(self):
         source = (ROOT / "dashboard" / "workspace-island" / "src" / "WorkspaceIslandApp.jsx").read_text(encoding="utf-8")
@@ -292,10 +320,58 @@ class RelatedWorkLineageDashboardTest(unittest.TestCase):
         self.assertIn("function buildUnderstandingFlowModel", source)
         self.assertIn("function buildUnderstandingOverviewFlowModel", source)
         self.assertIn("function buildUnderstandingClaimFocusFlowModel", source)
+        self.assertIn("function buildUnderstandingPaperFocusFlowModel", source)
         self.assertIn("workspaceLaneFrameNode", source)
         self.assertIn("workspaceArgumentAtomNode", source)
         self.assertIn("workspacePaperSourceNode", source)
         self.assertIn("model?.mode === \"understanding\"", source)
+
+    def test_workspace_island_has_literature_route_timeline_layout(self):
+        source = (ROOT / "dashboard" / "workspace-island" / "src" / "WorkspaceIslandApp.jsx").read_text(encoding="utf-8")
+        styles = (ROOT / "dashboard" / "workspace-island" / "src" / "workspace-island.css").read_text(encoding="utf-8")
+
+        self.assertIn("function buildLiteratureOverviewFlowModel", source)
+        self.assertIn("sortLiteraturePapersByTime", source)
+        self.assertIn("routeColorIndex", source)
+        self.assertIn("workspaceTimelinePaperNode", source)
+        self.assertIn("edges: [],", source)
+        self.assertNotIn("visiblePaperIds.has(edge.source) && visiblePaperIds.has(edge.target)", source)
+        self.assertIn(".workspace-timeline-paper-node", styles)
+
+    def test_literature_paper_focus_uses_shared_paper_graph_layout(self):
+        source = (ROOT / "dashboard" / "workspace-island" / "src" / "WorkspaceIslandApp.jsx").read_text(encoding="utf-8")
+
+        self.assertIn('if (model?.layer === "paper_focus" || model?.layer === "literature_paper_focus")', source)
+        self.assertIn("buildUnderstandingPaperFocusFlowModel(model, onNavigate)", source)
+
+    def test_workspace_island_has_experiments_specific_layout(self):
+        source = (ROOT / "dashboard" / "workspace-island" / "src" / "WorkspaceIslandApp.jsx").read_text(encoding="utf-8")
+        styles = (ROOT / "dashboard" / "workspace-island" / "src" / "workspace-island.css").read_text(encoding="utf-8")
+
+        self.assertIn("function buildExperimentsOverviewFlowModel", source)
+        self.assertIn("function buildExperimentsSettingFocusFlowModel", source)
+        self.assertIn("function buildExperimentsDesignFocusFlowModel", source)
+        self.assertIn("workspaceExperimentSettingNode", source)
+        self.assertIn("workspaceExperimentEntityNode", source)
+        self.assertIn("function toExperimentEdge", source)
+        self.assertIn('model?.layer === "experiment_design_focus"', source)
+        self.assertIn('const graphKey = `${model?.mode || ""}:${model?.layer || ""}:${model?.focus_id || ""}`;', source)
+        self.assertIn("key={graphKey}", source)
+        self.assertIn(".workspace-experiment-setting-node", styles)
+        self.assertIn(".workspace-experiment-entity-node", styles)
+
+    def test_workspace_island_reuses_root_and_supports_immersive_focus(self):
+        source = (ROOT / "dashboard" / "workspace-island" / "src" / "WorkspaceIslandApp.jsx").read_text(encoding="utf-8")
+        styles = (ROOT / "dashboard" / "workspace-island" / "src" / "workspace-island.css").read_text(encoding="utf-8")
+
+        self.assertIn("previous.render(<WorkspaceIslandApp {...props} />);", source)
+        self.assertNotIn("if (previous) previous.unmount();", source)
+        self.assertIn("workspace-island-focus-button", source)
+        self.assertIn("workspace-island-immersive-active", source)
+        self.assertIn("isImmersive ? \"Exit\" : \"Focus\"", source)
+        self.assertIn(".workspace-island-shell.is-immersive", styles)
+        self.assertIn("position: fixed;", styles)
+        self.assertIn("body.workspace-island-immersive-active", styles)
 
     def test_workspace_claim_focus_stacks_argument_lanes(self):
         source = (ROOT / "dashboard" / "workspace-island" / "src" / "WorkspaceIslandApp.jsx").read_text(encoding="utf-8")
@@ -303,6 +379,13 @@ class RelatedWorkLineageDashboardTest(unittest.TestCase):
         self.assertIn("function claimFocusFrameHeight", source)
         self.assertIn("function buildClaimFocusLaneLayout", source)
         self.assertIn("leftStackY += evidenceHeight + laneGap;", source)
+
+    def test_workspace_claim_focus_argument_atoms_are_inspector_buttons(self):
+        source = (ROOT / "dashboard" / "workspace-island" / "src" / "WorkspaceIslandApp.jsx").read_text(encoding="utf-8")
+
+        self.assertIn("const canInspect = Boolean(node.inspector);", source)
+        self.assertIn("className={`workspace-argument-atom tone-${data.tone || \"x\"}`}", source)
+        self.assertIn("onClick={() => data.onNodeAction?.(node)}", source)
         self.assertIn('frameHeight: claimFocusFrameHeight((nodeCounts.get("warrant") || 0))', source)
         self.assertNotIn('{ key: "warrant", title: "Warrants / Bridges", tone: "w", x: 720, y: 310', source)
 
