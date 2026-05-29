@@ -145,7 +145,22 @@ class WorkspaceGraphReadModelsTest(unittest.TestCase):
         ]
         self.assertTrue(terminal_nodes)
         self.assertTrue(all(not node.get("drill") for node in terminal_nodes))
-        self.assertTrue(all(not node.get("inspector") for node in terminal_nodes))
+        self.assertTrue(all(node.get("inspector") == {"selected_id": node["id"]} for node in terminal_nodes))
+
+    def test_understanding_claim_focus_terminal_selection_updates_inspector(self):
+        model = build_workspace_graph_model(
+            self.root,
+            PROJECT_ID,
+            mode="understanding",
+            layer="claim_focus",
+            focus_id="claim:C2",
+            selected_id="evidence:E1",
+        )
+
+        self.assertEqual("argument_atom_detail", model["inspector"]["kind"])
+        self.assertEqual("E1", model["inspector"]["title"])
+        self.assertIn("geometric awareness", model["inspector"]["summary"])
+        self.assertTrue(any(section["kind"] == "source_refs" for section in model["inspector"]["sections"]))
 
     def test_understanding_paper_focus_contract(self):
         model = build_workspace_graph_model(
@@ -162,7 +177,10 @@ class WorkspaceGraphReadModelsTest(unittest.TestCase):
         self.assertEqual("source:paper:do2017-affordancenet", model["selected_id"])
         self.assertEqual("paper_layer", model["inspector"]["kind"])
         self.assertTrue(any(node["entity_type"] == "paper_claim" for node in model["canvas"]["nodes"]))
+        self.assertTrue(any(node["entity_type"] == "paper_question" for node in model["canvas"]["nodes"]))
+        self.assertTrue(any(node["entity_type"] == "paper_evidence" for node in model["canvas"]["nodes"]))
         self.assertTrue(any(node["entity_type"] == "project_claim_anchor" for node in model["canvas"]["nodes"]))
+        self.assertTrue(any(edge["relation"] == "translation" for edge in model["canvas"]["edges"]))
         self.assertEqual(
             [
                 {"label": "Workspace", "mode": "understanding", "layer": "project_overview", "focus_id": ""},
@@ -180,6 +198,47 @@ class WorkspaceGraphReadModelsTest(unittest.TestCase):
         self.assertTrue(any(node["entity_type"] == "literature_lane" for node in model["canvas"]["nodes"]))
         self.assertTrue(any(node["entity_type"] == "source" for node in model["canvas"]["nodes"]))
         self.assertTrue(all(len(node["label"]) <= 120 for node in model["canvas"]["nodes"]))
+        route_nodes = [node for node in model["canvas"]["nodes"] if node["entity_type"] == "literature_lane"]
+        paper_nodes = [node for node in model["canvas"]["nodes"] if node["entity_type"] == "source"]
+        self.assertTrue(all(node["display"]["tone"].startswith("route-") for node in route_nodes))
+        self.assertTrue(all(node["metadata"].get("route_key") for node in paper_nodes))
+        self.assertTrue(all("sort_year" in node["metadata"] for node in paper_nodes))
+
+    def test_literature_paper_focus_reuses_deep_read_paper_graph(self):
+        model = build_workspace_graph_model(
+            self.root,
+            PROJECT_ID,
+            mode="literature",
+            layer="literature_paper_focus",
+            focus_id="source:paper:do2017-affordancenet",
+        )
+
+        self.assertEqual("paper_layer", model["inspector"]["kind"])
+        self.assertEqual("literature_paper_focus", model["layer"])
+        self.assertTrue(any(node["entity_type"] == "paper_question" for node in model["canvas"]["nodes"]))
+        self.assertTrue(any(node["entity_type"] == "paper_claim" for node in model["canvas"]["nodes"]))
+        self.assertTrue(any(node["entity_type"] == "paper_evidence" for node in model["canvas"]["nodes"]))
+        self.assertTrue(any(edge["relation"] == "supports" for edge in model["canvas"]["edges"]))
+        self.assertTrue(any(section["kind"] == "translation_bridge" for section in model["inspector"]["sections"]))
+
+    def test_literature_paper_focus_without_deep_read_stays_in_literature_mode(self):
+        model = build_workspace_graph_model(
+            self.root,
+            PROJECT_ID,
+            mode="literature",
+            layer="literature_paper_focus",
+            focus_id="source:hassanin2018-visual-affordance-survey",
+        )
+
+        self.assertEqual("paper_detail", model["inspector"]["kind"])
+        self.assertEqual("source:hassanin2018-visual-affordance-survey", model["selected_id"])
+        self.assertEqual(
+            [
+                {"label": "Workspace", "mode": "literature", "layer": "literature_overview", "focus_id": ""},
+                {"label": "Literature", "mode": "literature", "layer": "literature_overview", "focus_id": ""},
+            ],
+            model["breadcrumb"],
+        )
 
     def test_experiments_evaluation_overview_uses_settings_not_claims(self):
         model = build_workspace_graph_model(self.root, PROJECT_ID, mode="experiments", layer="evaluation_overview")
@@ -193,6 +252,16 @@ class WorkspaceGraphReadModelsTest(unittest.TestCase):
         self.assertIn("AGD20K", setting_labels)
         self.assertIn("UMD", setting_labels)
         self.assertNotIn("C2", setting_labels)
+
+    def test_experiments_overview_inspector_uses_human_readable_setting_items(self):
+        model = build_workspace_graph_model(self.root, PROJECT_ID, mode="experiments", layer="evaluation_overview")
+        section = next(section for section in model["inspector"]["sections"] if section["kind"] == "evaluation_setting_list")
+
+        self.assertTrue(section["items"])
+        self.assertTrue(all("evaluation_setting:" not in str(item.get("id", "")) for item in section["items"]))
+        self.assertTrue(all(item.get("label") for item in section["items"]))
+        self.assertTrue(all(item.get("subtitle") for item in section["items"]))
+        self.assertTrue(all("experiments" in item.get("impact", "") and "runs" in item.get("impact", "") for item in section["items"]))
 
     def test_experiments_setting_focus_excludes_run_nodes(self):
         overview = build_workspace_graph_model(self.root, PROJECT_ID, mode="experiments", layer="evaluation_overview")
@@ -214,6 +283,12 @@ class WorkspaceGraphReadModelsTest(unittest.TestCase):
         self.assertIn("metric_family", entity_types)
         self.assertIn("experiment", entity_types)
         self.assertNotIn("run", entity_types)
+        self.assertEqual("Workspace", model["breadcrumb"][0]["label"])
+        self.assertEqual("Experiments", model["breadcrumb"][1]["label"])
+        self.assertEqual("experiments", model["breadcrumb"][1]["mode"])
+        self.assertEqual("evaluation_overview", model["breadcrumb"][1]["layer"])
+        self.assertNotIn("evaluation_setting:", model["breadcrumb"][-1]["label"])
+        self.assertIn("AGD20K", model["breadcrumb"][-1]["label"])
 
     def test_experiments_design_focus_and_run_selection(self):
         model = build_workspace_graph_model(

@@ -1,5 +1,5 @@
 const STATUS_ORDER = ["inbox", "candidate", "reading", "summarized", "approved", "rejected", "archived"];
-const DASHBOARD_PAGE_VERSION = "english-dashboard-20260523";
+const DASHBOARD_PAGE_VERSION = "english-dashboard-20260529a";
 const STATUS_LABELS = {
   inbox: "Inbox",
   candidate: "Candidate",
@@ -480,16 +480,6 @@ function lineageUrl(projectId, roundName) {
   return dashboardPageUrl("lineage", { project: projectId, round: roundName });
 }
 
-function renderProjectNav(project, current = state.page) {
-  if (!el.projectNav || !project) return;
-  const workspaceCurrent = current === "workspace" || ["project", "lineage", "experiments"].includes(current) ? ' aria-current="page"' : "";
-  const papersCurrent = ["papers", "round", "paper", "deep-reads"].includes(current) ? ' aria-current="page"' : "";
-  el.projectNav.innerHTML = `
-    <a href="${escapeAttr(workspaceUrl(project.id))}"${workspaceCurrent}>Workspace</a>
-    <a href="${escapeAttr(papersUrl(project.id))}"${papersCurrent}>Papers</a>
-  `;
-}
-
 function renderProjectsIndex() {
   setHeader("Project", "Project", "Select a project to inspect project papers, search status, and graph state.");
   el.content.innerHTML = `
@@ -527,13 +517,28 @@ function legacyWorkspaceModeForPage(page = state.page) {
   return "understanding";
 }
 
+function currentWorkspaceMode(page = state.page) {
+  return normalizeToken(params().get("mode") || legacyWorkspaceModeForPage(page)) || "understanding";
+}
+
+function renderProjectNav(project, current = state.page) {
+  if (!el.projectNav || !project) return;
+  const workspaceMode = currentWorkspaceMode(current);
+  const workspaceCurrent = current === "workspace" || ["project", "lineage", "experiments"].includes(current) ? ' aria-current="page"' : "";
+  const papersCurrent = ["papers", "round", "paper", "deep-reads"].includes(current) ? ' aria-current="page"' : "";
+  el.projectNav.innerHTML = `
+    <a href="${escapeAttr(workspaceUrl(project.id, workspaceMode))}"${workspaceCurrent}>Workspace</a>
+    <a href="${escapeAttr(papersUrl(project.id))}"${papersCurrent}>Papers</a>
+  `;
+}
+
 async function renderWorkspacePage() {
   const project = projectById();
   if (!project) {
     renderProjectsIndex();
     return;
   }
-  const mode = normalizeToken(params().get("mode") || legacyWorkspaceModeForPage(state.page)) || "understanding";
+  const mode = currentWorkspaceMode(state.page);
   setHeader("Workspace", displayProjectTitle(project), "Project understanding, literature, and experiments.");
   renderProjectNav(project, "workspace");
   el.content.innerHTML = `
@@ -553,6 +558,8 @@ async function renderWorkspacePage() {
   try {
     let currentModel = await loadWorkspaceGraphFromApi(project.id, { mode });
     const navigate = async (target = {}) => {
+      const scrollX = window.scrollX;
+      const scrollY = window.scrollY;
       const modeChanged = target.mode && target.mode !== currentModel.mode;
       const nextMode = target.mode || currentModel.mode || "understanding";
       const nextLayer = modeChanged ? "" : (target.layer !== undefined ? target.layer : currentModel.layer || "");
@@ -566,6 +573,7 @@ async function renderWorkspacePage() {
       });
       currentModel = nextModel;
       mountWorkspaceIsland(root, { model: currentModel, onNavigate: navigate });
+      window.requestAnimationFrame(() => window.scrollTo(scrollX, scrollY));
     };
     mountWorkspaceIsland(root, { model: currentModel, onNavigate: navigate });
   } catch (error) {
