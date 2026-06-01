@@ -78,16 +78,6 @@ def _interaction(scene: dict[str, Any], entity: dict[str, Any], role: str) -> di
                 "focus_id": entity["canonical_id"],
             },
         }
-    if _can_drill_to_source_focus(entity, capabilities):
-        return {
-            "kind": "drill",
-            "target": {
-                "mode": "understanding",
-                "layer": "understanding.paper_focus",
-                "focus_id": scene.get("focus_id", ""),
-                "selected_id": entity["canonical_id"],
-            },
-        }
     if "inspectable" in capabilities:
         return {"kind": "inspect", "inspector_id": entity["canonical_id"]}
     return {"kind": "none"}
@@ -99,10 +89,6 @@ def _can_drill_to_claim_focus(scene: dict[str, Any], entity: dict[str, Any], cap
         and entity["entity_type"] == "claim"
         and scene["layer"] == "understanding.project_overview"
     )
-
-
-def _can_drill_to_source_focus(entity: dict[str, Any], capabilities: set[str]) -> bool:
-    return "drillable" in capabilities and entity["entity_type"] == "source"
 
 
 def _portal_target(scene: dict[str, Any], entity: dict[str, Any]) -> dict[str, str]:

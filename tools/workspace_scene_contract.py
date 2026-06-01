@@ -30,9 +30,13 @@ DEFAULT_V1_LAYERS: dict[str, str] = {
 
 SCENE_FORBIDDEN_FIELDS = {"canvas", "drill", "position", "display", "nodeTypes", "edgeTypes"}
 ENTITY_FORBIDDEN_FIELDS = {"canvas", "drill", "position", "display", "style", "className"}
+RELATION_FORBIDDEN_FIELDS = ENTITY_FORBIDDEN_FIELDS
+GROUP_FORBIDDEN_FIELDS = ENTITY_FORBIDDEN_FIELDS
+PORTAL_FORBIDDEN_FIELDS = ENTITY_FORBIDDEN_FIELDS
 VALID_CAPABILITIES = {"inspectable", "drillable", "portalable", "none"}
 VALID_PROJECTED_INTERACTIONS = {"none", "inspect", "drill", "portal"}
 VALID_PROJECTED_ROLES = {"anchor", "entity", "terminal", "portal"}
+VALID_SOURCE_KINDS = {"db_row", "derived"}
 
 
 def normalize_workspace_layer(mode: str, layer: str = "") -> str:
@@ -94,17 +98,23 @@ def validate_workspace_scene(scene: dict[str, Any]) -> dict[str, Any]:
         capabilities = set(entity.get("capabilities") or [])
         if not capabilities <= VALID_CAPABILITIES:
             raise ValueError("WorkspaceScene entity has invalid capability")
-        source = entity.get("source") or {}
-        if source.get("kind") not in {"db_row", "derived"}:
-            raise ValueError("WorkspaceScene entity source.kind must be db_row or derived")
+        _validate_source_kind(entity.get("source") or {}, "WorkspaceScene entity")
     for relation in scene.get("relations", []):
+        _reject_forbidden_contract_fields(relation, RELATION_FORBIDDEN_FIELDS, "WorkspaceScene relation")
         for key in ("canonical_id", "relation_type", "source_id", "target_id", "source"):
             if key not in relation:
                 raise ValueError(f"WorkspaceScene relation missing required field: {key}")
+        _validate_source_kind(relation.get("source") or {}, "WorkspaceScene relation")
     for group in scene.get("groups", []):
+        _reject_forbidden_contract_fields(group, GROUP_FORBIDDEN_FIELDS, "WorkspaceScene group")
         source = group.get("source") or {}
         if source.get("kind") != "derived":
             raise ValueError("WorkspaceScene groups must be derived")
+    for portal in scene.get("portals", []):
+        _reject_forbidden_contract_fields(portal, PORTAL_FORBIDDEN_FIELDS, "WorkspaceScene portal")
+        if "source" not in portal:
+            raise ValueError("WorkspaceScene portal missing required field: source")
+        _validate_source_kind(portal.get("source") or {}, "WorkspaceScene portal")
     return scene
 
 
@@ -128,16 +138,31 @@ def validate_projected_graph(projected: dict[str, Any]) -> dict[str, Any]:
         for key in ("projected_id", "semantic_id", "visual_kind", "title", "display_id", "source"):
             if key not in node:
                 raise ValueError(f"ProjectedGraph node missing required field: {key}")
+        _validate_source_kind(node.get("source") or {}, "ProjectedGraph node")
     for edge in projected.get("edges", []):
         if edge.get("aggregation") and not edge.get("member_relation_ids"):
             raise ValueError("aggregated projected edges must retain member_relation_ids")
         if edge.get("source_id") not in projected_node_ids or edge.get("target_id") not in projected_node_ids:
             raise ValueError("projected edge references missing node")
+        _validate_source_kind(edge.get("source") or {}, "ProjectedGraph edge")
     for frame in projected.get("frames", []):
         for member_node_id in frame.get("member_node_ids") or []:
             if member_node_id not in projected_node_ids:
                 raise ValueError("projected frame references missing node")
+        _validate_source_kind(frame.get("source") or {}, "ProjectedGraph frame")
     for portal in projected.get("portals", []):
         if portal.get("from_node_id") not in projected_node_ids:
             raise ValueError("projected portal references missing node")
+        _validate_source_kind(portal.get("source") or {}, "ProjectedGraph portal")
     return projected
+
+
+def _validate_source_kind(source: dict[str, Any], label: str) -> None:
+    if source.get("kind") not in VALID_SOURCE_KINDS:
+        raise ValueError(f"{label} source.kind must be db_row or derived")
+
+
+def _reject_forbidden_contract_fields(payload: dict[str, Any], forbidden_fields: set[str], label: str) -> None:
+    forbidden = forbidden_fields & set(payload)
+    if forbidden:
+        raise ValueError(f"{label} must not contain UI field: {sorted(forbidden)[0]}")

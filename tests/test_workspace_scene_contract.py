@@ -99,6 +99,58 @@ class WorkspaceSceneContractTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "WorkspaceScene must not contain UI field"):
             validate_workspace_scene(scene)
 
+    def test_scene_validator_rejects_relation_source_without_provenance(self):
+        scene = build_workspace_scene(WORKSPACE_ROOT, PROJECT_ID, mode="understanding", layer="claim_focus", focus_id="claim:C2")
+        scene["relations"][0]["source"] = {"kind": "runtime"}
+
+        with self.assertRaisesRegex(ValueError, "WorkspaceScene relation source.kind must be db_row or derived"):
+            validate_workspace_scene(scene)
+
+    def test_scene_validator_rejects_relation_ui_payload_fields(self):
+        scene = build_workspace_scene(WORKSPACE_ROOT, PROJECT_ID, mode="understanding", layer="claim_focus", focus_id="claim:C2")
+        scene["relations"][0]["drill"] = {"mode": "understanding"}
+
+        with self.assertRaisesRegex(ValueError, "WorkspaceScene relation must not contain UI field"):
+            validate_workspace_scene(scene)
+
+    def test_scene_validator_rejects_group_ui_payload_fields(self):
+        scene = build_workspace_scene(WORKSPACE_ROOT, PROJECT_ID, mode="understanding", layer="claim_focus", focus_id="claim:C2")
+        scene["groups"][0]["position"] = {"x": 0, "y": 0}
+
+        with self.assertRaisesRegex(ValueError, "WorkspaceScene group must not contain UI field"):
+            validate_workspace_scene(scene)
+
+    def test_scene_validator_rejects_portal_ui_payload_fields(self):
+        scene = build_workspace_scene(WORKSPACE_ROOT, PROJECT_ID, mode="understanding", layer="claim_focus", focus_id="claim:C2")
+        scene["portals"].append(
+            {
+                "canonical_id": "portal:demo",
+                "from_id": scene["entities"][0]["canonical_id"],
+                "title": "Demo portal",
+                "target": {"mode": "understanding", "layer": "understanding.claim_focus"},
+                "source": {"kind": "derived", "rule": "test", "inputs": []},
+                "display": {"tone": "demo"},
+            }
+        )
+
+        with self.assertRaisesRegex(ValueError, "WorkspaceScene portal must not contain UI field"):
+            validate_workspace_scene(scene)
+
+    def test_scene_validator_rejects_portal_source_without_provenance(self):
+        scene = build_workspace_scene(WORKSPACE_ROOT, PROJECT_ID, mode="understanding", layer="claim_focus", focus_id="claim:C2")
+        scene["portals"].append(
+            {
+                "canonical_id": "portal:demo",
+                "from_id": scene["entities"][0]["canonical_id"],
+                "title": "Demo portal",
+                "target": {"mode": "understanding", "layer": "understanding.claim_focus"},
+                "source": {"kind": "runtime"},
+            }
+        )
+
+        with self.assertRaisesRegex(ValueError, "WorkspaceScene portal source.kind must be db_row or derived"):
+            validate_workspace_scene(scene)
+
     def test_projection_validator_rejects_terminal_drill(self):
         projected = {
             "schema_version": "workspace-projection-v1",
@@ -129,6 +181,77 @@ class WorkspaceSceneContractTest(unittest.TestCase):
         }
 
         with self.assertRaisesRegex(ValueError, "terminal projected nodes must not drill"):
+            validate_projected_graph(projected)
+
+    def test_projected_validator_rejects_node_source_without_provenance(self):
+        projected = self._minimal_projected_graph()
+        projected["nodes"][0]["source"] = {"kind": "runtime"}
+
+        with self.assertRaisesRegex(ValueError, "ProjectedGraph node source.kind must be db_row or derived"):
+            validate_projected_graph(projected)
+
+    def test_projected_validator_rejects_edge_source_without_provenance(self):
+        projected = self._minimal_projected_graph()
+        projected["nodes"].append(
+            {
+                "projected_id": "node:claim:C2",
+                "semantic_id": "claim:C2",
+                "role": "entity",
+                "visual_kind": "claim",
+                "title": "Claim 2",
+                "display_id": "C2",
+                "interaction": {"kind": "inspect", "inspector_id": "claim:C2"},
+                "source": {"kind": "derived", "rule": "test", "inputs": []},
+                "layout_hints": {},
+            }
+        )
+        projected["edges"].append(
+            {
+                "projected_id": "edge:R1",
+                "relation_type": "supports",
+                "source_id": "node:claim:C1",
+                "target_id": "node:claim:C2",
+                "label": "supports",
+                "member_relation_ids": ["R1"],
+                "aggregation": None,
+                "source": {"kind": "runtime"},
+            }
+        )
+
+        with self.assertRaisesRegex(ValueError, "ProjectedGraph edge source.kind must be db_row or derived"):
+            validate_projected_graph(projected)
+
+    def test_projected_validator_rejects_frame_source_without_provenance(self):
+        projected = self._minimal_projected_graph()
+        projected["frames"].append(
+            {
+                "projected_id": "frame:F1",
+                "semantic_id": "frame:F1",
+                "frame_kind": "lane",
+                "title": "Frame",
+                "member_entity_ids": ["claim:C1"],
+                "member_node_ids": ["node:claim:C1"],
+                "interaction": {"kind": "none"},
+                "source": {"kind": "runtime"},
+            }
+        )
+
+        with self.assertRaisesRegex(ValueError, "ProjectedGraph frame source.kind must be db_row or derived"):
+            validate_projected_graph(projected)
+
+    def test_projected_validator_rejects_portal_source_without_provenance(self):
+        projected = self._minimal_projected_graph()
+        projected["portals"].append(
+            {
+                "projected_id": "portal:P1",
+                "from_node_id": "node:claim:C1",
+                "label": "Portal",
+                "target": {"mode": "understanding", "layer": "understanding.claim_focus"},
+                "source": {"kind": "runtime"},
+            }
+        )
+
+        with self.assertRaisesRegex(ValueError, "ProjectedGraph portal source.kind must be db_row or derived"):
             validate_projected_graph(projected)
 
     def test_projected_validator_rejects_missing_edge_endpoint(self):
@@ -392,15 +515,37 @@ class WorkspaceSceneContractTest(unittest.TestCase):
         self.assertTrue(all(edge["member_relation_ids"] for edge in projected["edges"]))
         self.assertTrue(all(edge["source"]["kind"] in {"db_row", "derived"} for edge in projected["edges"]))
 
-    def test_projected_claim_focus_source_drill_preserves_claim_focus_id(self):
+    def test_projected_claim_focus_source_is_inspect_only_until_paper_focus_v2_exists(self):
         scene = build_workspace_scene(WORKSPACE_ROOT, PROJECT_ID, mode="understanding", layer="claim_focus", focus_id="claim:C2")
         projected = build_projected_graph(scene)
 
         source = next(node for node in projected["nodes"] if node["visual_kind"] == "source")
-        self.assertEqual("drill", source["interaction"]["kind"])
-        self.assertEqual("understanding.paper_focus", source["interaction"]["target"]["layer"])
-        self.assertEqual("understanding:project:DemoVisualAffordance:claim:C2", source["interaction"]["target"]["focus_id"])
-        self.assertEqual(source["semantic_id"], source["interaction"]["target"]["selected_id"])
+        self.assertEqual("inspect", source["interaction"]["kind"])
+        self.assertEqual(source["semantic_id"], source["interaction"]["inspector_id"])
+
+    def test_projected_drill_targets_are_scene_v2_reachable(self):
+        scenes = [
+            build_workspace_scene(WORKSPACE_ROOT, PROJECT_ID, mode="understanding", layer="project_overview"),
+            build_workspace_scene(WORKSPACE_ROOT, PROJECT_ID, mode="understanding", layer="claim_focus", focus_id="claim:C2"),
+        ]
+
+        for scene in scenes:
+            projected = build_projected_graph(scene)
+            drill_targets = [
+                node["interaction"]["target"]
+                for node in projected["nodes"]
+                if node["interaction"]["kind"] == "drill"
+            ]
+            for target in drill_targets:
+                with self.subTest(layer=scene["layer"], target=target):
+                    build_workspace_scene(
+                        WORKSPACE_ROOT,
+                        PROJECT_ID,
+                        mode=target["mode"],
+                        layer=target["layer"],
+                        focus_id=target.get("focus_id", ""),
+                        selected_id=target.get("selected_id", ""),
+                    )
 
     def test_projected_graph_rejects_dangling_relation_endpoint(self):
         scene = build_workspace_scene(WORKSPACE_ROOT, PROJECT_ID, mode="understanding", layer="claim_focus", focus_id="claim:C2")
