@@ -84,6 +84,7 @@ def _interaction(scene: dict[str, Any], entity: dict[str, Any], role: str) -> di
             "target": {
                 "mode": "understanding",
                 "layer": "understanding.paper_focus",
+                "focus_id": scene.get("focus_id", ""),
                 "selected_id": entity["canonical_id"],
             },
         }
@@ -125,11 +126,15 @@ def _layout_hints(scene: dict[str, Any], entity: dict[str, Any], role: str) -> d
 def _project_edge(relation: dict[str, Any], semantic_to_projected: dict[str, str]) -> dict[str, Any]:
     _reject_forbidden_fields(relation, f"relation {relation.get('canonical_id', '')}")
     member_id = relation["canonical_id"]
+    source_id = relation["source_id"]
+    target_id = relation["target_id"]
+    _require_projected_ref(source_id, semantic_to_projected, f"projected relation references missing entity: {member_id}")
+    _require_projected_ref(target_id, semantic_to_projected, f"projected relation references missing entity: {member_id}")
     return {
         "projected_id": f"edge:{member_id}",
         "relation_type": relation["relation_type"],
-        "source_id": semantic_to_projected.get(relation["source_id"], relation["source_id"]),
-        "target_id": semantic_to_projected.get(relation["target_id"], relation["target_id"]),
+        "source_id": semantic_to_projected[source_id],
+        "target_id": semantic_to_projected[target_id],
         "label": relation["relation_type"],
         "member_relation_ids": [member_id],
         "aggregation": None,
@@ -140,13 +145,15 @@ def _project_edge(relation: dict[str, Any], semantic_to_projected: dict[str, str
 def _project_frame(group: dict[str, Any], semantic_to_projected: dict[str, str]) -> dict[str, Any]:
     _reject_forbidden_fields(group, f"group {group.get('canonical_id', '')}")
     member_entity_ids = list(group.get("member_ids") or [])
+    for member_id in member_entity_ids:
+        _require_projected_ref(member_id, semantic_to_projected, f"projected frame references missing entity: {group['canonical_id']}")
     return {
         "projected_id": f"frame:{group['canonical_id']}",
         "semantic_id": group["canonical_id"],
         "frame_kind": group.get("group_type") or "frame",
         "title": group["title"],
         "member_entity_ids": member_entity_ids,
-        "member_node_ids": [semantic_to_projected[member_id] for member_id in member_entity_ids if member_id in semantic_to_projected],
+        "member_node_ids": [semantic_to_projected[member_id] for member_id in member_entity_ids],
         "interaction": {"kind": "none"},
         "source": group["source"],
     }
@@ -196,3 +203,8 @@ def _reject_forbidden_fields(payload: dict[str, Any], label: str) -> None:
     forbidden = FORBIDDEN_PAYLOAD_FIELDS & set(payload)
     if forbidden:
         raise ValueError(f"ProjectedGraph must not contain UI field: {sorted(forbidden)[0]} in {label}")
+
+
+def _require_projected_ref(semantic_id: str, semantic_to_projected: dict[str, str], message: str) -> None:
+    if semantic_id not in semantic_to_projected:
+        raise ValueError(message)

@@ -297,6 +297,30 @@ class WorkspaceSceneContractTest(unittest.TestCase):
         self.assertTrue(all(edge["member_relation_ids"] for edge in projected["edges"]))
         self.assertTrue(all(edge["source"]["kind"] in {"db_row", "derived"} for edge in projected["edges"]))
 
+    def test_projected_claim_focus_source_drill_preserves_claim_focus_id(self):
+        scene = build_workspace_scene(WORKSPACE_ROOT, PROJECT_ID, mode="understanding", layer="claim_focus", focus_id="claim:C2")
+        projected = build_projected_graph(scene)
+
+        source = next(node for node in projected["nodes"] if node["visual_kind"] == "source")
+        self.assertEqual("drill", source["interaction"]["kind"])
+        self.assertEqual("understanding.paper_focus", source["interaction"]["target"]["layer"])
+        self.assertEqual("understanding:project:DemoVisualAffordance:claim:C2", source["interaction"]["target"]["focus_id"])
+        self.assertEqual(source["semantic_id"], source["interaction"]["target"]["selected_id"])
+
+    def test_projected_graph_rejects_dangling_relation_endpoint(self):
+        scene = build_workspace_scene(WORKSPACE_ROOT, PROJECT_ID, mode="understanding", layer="claim_focus", focus_id="claim:C2")
+        scene["relations"][0]["source_id"] = "understanding:project:DemoVisualAffordance:evidence:missing"
+
+        with self.assertRaisesRegex(ValueError, "projected relation references missing entity"):
+            build_projected_graph(scene)
+
+    def test_projected_graph_rejects_dangling_frame_member(self):
+        scene = build_workspace_scene(WORKSPACE_ROOT, PROJECT_ID, mode="understanding", layer="claim_focus", focus_id="claim:C2")
+        scene["groups"][0]["member_ids"].append("understanding:project:DemoVisualAffordance:evidence:missing")
+
+        with self.assertRaisesRegex(ValueError, "projected frame references missing entity"):
+            build_projected_graph(scene)
+
 
 if __name__ == "__main__":
     unittest.main()
