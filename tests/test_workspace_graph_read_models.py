@@ -362,6 +362,10 @@ class WorkspaceGraphReadModelsTest(unittest.TestCase):
         self.assertEqual("workspace-scene-v2", data["schema_version"])
         self.assertNotIn("canvas", data)
         self.assertEqual("understanding.project_overview", data["layer"])
+        self.assertIn("entities", data)
+        self.assertTrue(data["entities"])
+        serialized = json.dumps(data)
+        self.assertNotIn('"drill"', serialized)
 
     def test_workspace_graph_api_projection_v1_schema(self):
         status, payload = handle_workspace_graph_request(
@@ -375,6 +379,11 @@ class WorkspaceGraphReadModelsTest(unittest.TestCase):
         self.assertEqual("understanding.claim_focus", data["layer"])
         self.assertIn("frames", data)
         self.assertIn("nodes", data)
+        self.assertNotIn("canvas", data)
+        atoms = [node for node in data["nodes"] if node["visual_kind"] in {"evidence", "warrant", "limitation"}]
+        self.assertTrue(atoms)
+        self.assertTrue(all(node["role"] == "terminal" for node in atoms))
+        self.assertTrue(all(node["interaction"]["kind"] == "inspect" for node in atoms))
 
     def test_workspace_graph_handler_rejects_invalid_layer(self):
         status, payload = handle_workspace_graph_request(
