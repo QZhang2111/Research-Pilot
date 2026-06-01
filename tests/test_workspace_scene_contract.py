@@ -10,6 +10,7 @@ from tools.workspace_scene_contract import (
     validate_workspace_scene,
 )
 from tools.workspace_scene_builders import build_workspace_scene
+from tools.workspace_graph_projection import build_projected_graph
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -260,6 +261,41 @@ class WorkspaceSceneContractTest(unittest.TestCase):
 
         source_ids = {entity["canonical_id"] for entity in scene["entities"] if entity["entity_type"] == "source"}
         self.assertIn("source:paper:canonical-paper-only", source_ids)
+
+    def test_projected_understanding_overview_has_frames_and_interactions(self):
+        scene = build_workspace_scene(WORKSPACE_ROOT, PROJECT_ID, mode="understanding", layer="project_overview")
+        projected = build_projected_graph(scene)
+
+        validate_projected_graph(projected)
+        self.assertEqual("workspace-projection-v1", projected["schema_version"])
+        self.assertEqual("understanding.project_overview", projected["layer"])
+        self.assertTrue(projected["frames"])
+        c2 = next(node for node in projected["nodes"] if node["display_id"] == "C2")
+        self.assertEqual("entity", c2["role"])
+        self.assertEqual("drill", c2["interaction"]["kind"])
+        self.assertEqual("understanding.claim_focus", c2["interaction"]["target"]["layer"])
+        q1 = next(node for node in projected["nodes"] if node["display_id"] == "Q1")
+        self.assertEqual("inspect", q1["interaction"]["kind"])
+
+    def test_projected_claim_focus_argument_atoms_are_terminal_inspect_only(self):
+        scene = build_workspace_scene(WORKSPACE_ROOT, PROJECT_ID, mode="understanding", layer="claim_focus", focus_id="claim:C2")
+        projected = build_projected_graph(scene)
+
+        validate_projected_graph(projected)
+        atoms = [node for node in projected["nodes"] if node["visual_kind"] in {"evidence", "warrant", "limitation"}]
+        self.assertTrue(atoms)
+        self.assertTrue(all(node["role"] == "terminal" for node in atoms))
+        self.assertTrue(all(node["interaction"]["kind"] == "inspect" for node in atoms))
+        self.assertFalse(any(node["interaction"]["kind"] == "drill" for node in atoms))
+
+    def test_projected_edges_retain_relation_provenance(self):
+        scene = build_workspace_scene(WORKSPACE_ROOT, PROJECT_ID, mode="understanding", layer="claim_focus", focus_id="claim:C2")
+        projected = build_projected_graph(scene)
+
+        validate_projected_graph(projected)
+        self.assertTrue(projected["edges"])
+        self.assertTrue(all(edge["member_relation_ids"] for edge in projected["edges"]))
+        self.assertTrue(all(edge["source"]["kind"] in {"db_row", "derived"} for edge in projected["edges"]))
 
 
 if __name__ == "__main__":
