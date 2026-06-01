@@ -338,8 +338,18 @@ class WorkspaceSceneContractTest(unittest.TestCase):
             build_projected_graph(scene)
 
     def test_scene_v2_rejects_unimplemented_non_understanding_layers_explicitly(self):
-        with self.assertRaisesRegex(ValueError, "workspace-scene-v2 not implemented"):
-            build_workspace_scene(WORKSPACE_ROOT, PROJECT_ID, mode="experiments", layer="evaluation_overview")
+        cases = [
+            ("literature", "literature_overview"),
+            ("literature", "literature_route_focus"),
+            ("literature", "literature_paper_focus"),
+            ("experiments", "evaluation_overview"),
+            ("experiments", "evaluation_setting_focus"),
+            ("experiments", "experiment_design_focus"),
+        ]
+        for mode, layer in cases:
+            with self.subTest(mode=mode, layer=layer):
+                with self.assertRaisesRegex(ValueError, "workspace-scene-v2 not implemented"):
+                    build_workspace_scene(WORKSPACE_ROOT, PROJECT_ID, mode=mode, layer=layer)
 
     def test_scene_entities_all_have_db_or_derived_sources(self):
         scene = build_workspace_scene(WORKSPACE_ROOT, PROJECT_ID, mode="understanding", layer="claim_focus", focus_id="claim:C2")
