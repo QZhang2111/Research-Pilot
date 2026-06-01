@@ -31,6 +31,20 @@ class WorkspaceSceneContractTest(unittest.TestCase):
         self.assertEqual("experiments.evaluation_setting_focus", normalize_workspace_layer("experiments", "evaluation_setting_focus"))
         self.assertEqual("experiments.experiment_design_focus", normalize_workspace_layer("experiments", "experiment_design_focus"))
 
+    def test_normalize_workspace_layer_rejects_dotted_layer_with_unknown_mode(self):
+        with self.assertRaisesRegex(ValueError, "unknown workspace mode"):
+            normalize_workspace_layer("madeup", "understanding.project_overview")
+
+    def test_normalize_workspace_layer_rejects_dotted_layer_prefix_mismatch(self):
+        with self.assertRaisesRegex(ValueError, "workspace layer mode mismatch"):
+            normalize_workspace_layer("literature", "understanding.project_overview")
+
+    def test_normalize_workspace_layer_accepts_valid_dotted_layer(self):
+        self.assertEqual(
+            "understanding.project_overview",
+            normalize_workspace_layer("understanding", "understanding.project_overview"),
+        )
+
     def test_v1_to_v2_mapping_covers_current_workspace_layers(self):
         self.assertEqual(
             {
@@ -116,6 +130,86 @@ class WorkspaceSceneContractTest(unittest.TestCase):
 
         with self.assertRaisesRegex(ValueError, "terminal projected nodes must not drill"):
             validate_projected_graph(projected)
+
+    def test_projected_validator_rejects_missing_edge_endpoint(self):
+        projected = self._minimal_projected_graph()
+        projected["edges"].append(
+            {
+                "projected_id": "edge:R1",
+                "relation_type": "supports",
+                "source_id": "node:missing",
+                "target_id": "node:claim:C1",
+                "label": "supports",
+                "member_relation_ids": ["R1"],
+                "aggregation": None,
+                "source": {"kind": "derived", "rule": "test", "inputs": []},
+            }
+        )
+
+        with self.assertRaisesRegex(ValueError, "projected edge references missing node"):
+            validate_projected_graph(projected)
+
+    def test_projected_validator_rejects_missing_frame_member(self):
+        projected = self._minimal_projected_graph()
+        projected["frames"].append(
+            {
+                "projected_id": "frame:F1",
+                "semantic_id": "frame:F1",
+                "frame_kind": "lane",
+                "title": "Frame",
+                "member_entity_ids": ["claim:C1", "missing"],
+                "member_node_ids": ["node:claim:C1", "node:missing"],
+                "interaction": {"kind": "none"},
+                "source": {"kind": "derived", "rule": "test", "inputs": []},
+            }
+        )
+
+        with self.assertRaisesRegex(ValueError, "projected frame references missing node"):
+            validate_projected_graph(projected)
+
+    def test_projected_validator_rejects_missing_portal_source(self):
+        projected = self._minimal_projected_graph()
+        projected["portals"].append(
+            {
+                "projected_id": "portal:P1",
+                "from_node_id": "node:missing",
+                "label": "Portal",
+                "target": {"mode": "understanding", "layer": "understanding.paper_focus"},
+                "source": {"kind": "derived", "rule": "test", "inputs": []},
+            }
+        )
+
+        with self.assertRaisesRegex(ValueError, "projected portal references missing node"):
+            validate_projected_graph(projected)
+
+    def _minimal_projected_graph(self):
+        return {
+            "schema_version": "workspace-projection-v1",
+            "project_id": "DemoVisualAffordance",
+            "mode": "understanding",
+            "layer": "understanding.project_overview",
+            "focus_id": "",
+            "breadcrumb": [],
+            "nodes": [
+                {
+                    "projected_id": "node:claim:C1",
+                    "semantic_id": "claim:C1",
+                    "role": "entity",
+                    "visual_kind": "claim",
+                    "title": "Claim",
+                    "display_id": "C1",
+                    "interaction": {"kind": "inspect", "inspector_id": "claim:C1"},
+                    "source": {"kind": "derived", "rule": "test", "inputs": []},
+                    "layout_hints": {},
+                }
+            ],
+            "edges": [],
+            "frames": [],
+            "portals": [],
+            "inspector_default_id": "",
+            "layout": {"kind": "layered"},
+            "warnings": [],
+        }
 
     def test_understanding_project_overview_scene_has_semantic_entities_not_canvas(self):
         scene = build_workspace_scene(

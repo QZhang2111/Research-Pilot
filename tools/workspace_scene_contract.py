@@ -37,8 +37,15 @@ VALID_PROJECTED_ROLES = {"anchor", "entity", "terminal", "portal"}
 
 def normalize_workspace_layer(mode: str, layer: str = "") -> str:
     normalized_mode = str(mode or "understanding").strip()
+    if normalized_mode not in DEFAULT_V1_LAYERS:
+        raise ValueError(f"unknown workspace mode: {normalized_mode}")
     normalized_layer = str(layer or DEFAULT_V1_LAYERS.get(normalized_mode, "")).strip()
     if "." in normalized_layer:
+        layer_mode = normalized_layer.split(".", 1)[0]
+        if layer_mode != normalized_mode:
+            raise ValueError(f"workspace layer mode mismatch: {normalized_mode}/{normalized_layer}")
+        if normalized_layer not in set(V1_TO_V2_LAYER.values()):
+            raise ValueError(f"unknown workspace layer: {normalized_mode}/{normalized_layer}")
         return normalized_layer
     try:
         return V1_TO_V2_LAYER[(normalized_mode, normalized_layer)]
@@ -107,6 +114,7 @@ def validate_projected_graph(projected: dict[str, Any]) -> dict[str, Any]:
     for key in ("project_id", "mode", "layer", "nodes", "edges", "frames", "portals", "layout", "warnings"):
         if key not in projected:
             raise ValueError(f"ProjectedGraph missing required field: {key}")
+    projected_node_ids = {str(node.get("projected_id") or "") for node in projected.get("nodes", [])}
     for node in projected.get("nodes", []):
         role = node.get("role")
         if role not in VALID_PROJECTED_ROLES:
@@ -123,4 +131,13 @@ def validate_projected_graph(projected: dict[str, Any]) -> dict[str, Any]:
     for edge in projected.get("edges", []):
         if edge.get("aggregation") and not edge.get("member_relation_ids"):
             raise ValueError("aggregated projected edges must retain member_relation_ids")
+        if edge.get("source_id") not in projected_node_ids or edge.get("target_id") not in projected_node_ids:
+            raise ValueError("projected edge references missing node")
+    for frame in projected.get("frames", []):
+        for member_node_id in frame.get("member_node_ids") or []:
+            if member_node_id not in projected_node_ids:
+                raise ValueError("projected frame references missing node")
+    for portal in projected.get("portals", []):
+        if portal.get("from_node_id") not in projected_node_ids:
+            raise ValueError("projected portal references missing node")
     return projected

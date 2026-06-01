@@ -367,6 +367,17 @@ class WorkspaceGraphReadModelsTest(unittest.TestCase):
         serialized = json.dumps(data)
         self.assertNotIn('"drill"', serialized)
 
+    def test_workspace_graph_api_scene_v2_rejects_dotted_layer_prefix_mismatch(self):
+        status, payload = handle_workspace_graph_request(
+            self.root,
+            "/api/workspace-graph?project=DemoVisualAffordance&mode=literature&layer=understanding.project_overview&schema=scene-v2",
+        )
+
+        self.assertEqual(HTTPStatus.BAD_REQUEST, status)
+        data = json.loads(payload.decode("utf-8"))
+        self.assertEqual("workspace-graph-error-v1", data["schema_version"])
+        self.assertIn("workspace layer mode mismatch", data["message"])
+
     def test_workspace_graph_api_projection_v1_schema(self):
         status, payload = handle_workspace_graph_request(
             self.root,
