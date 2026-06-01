@@ -321,6 +321,21 @@ class WorkspaceSceneContractTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "projected frame references missing entity"):
             build_projected_graph(scene)
 
+    def test_projected_graph_rejects_dangling_portal_from_id(self):
+        scene = build_workspace_scene(WORKSPACE_ROOT, PROJECT_ID, mode="understanding", layer="claim_focus", focus_id="claim:C2")
+        scene["portals"].append(
+            {
+                "canonical_id": "portal:missing-source",
+                "from_id": "understanding:project:DemoVisualAffordance:evidence:missing",
+                "title": "Missing source portal",
+                "target": {"mode": "understanding", "layer": "understanding.paper_focus"},
+                "source": {"kind": "derived", "rule": "test portal", "inputs": []},
+            }
+        )
+
+        with self.assertRaisesRegex(ValueError, "projected portal references missing entity"):
+            build_projected_graph(scene)
+
 
 if __name__ == "__main__":
     unittest.main()

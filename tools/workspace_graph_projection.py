@@ -162,9 +162,10 @@ def _project_frame(group: dict[str, Any], semantic_to_projected: dict[str, str])
 def _project_portal(portal: dict[str, Any], semantic_to_projected: dict[str, str]) -> dict[str, Any]:
     _reject_forbidden_fields(portal, f"portal {portal.get('canonical_id', '')}")
     from_id = portal.get("from_id", "")
+    _require_projected_ref(from_id, semantic_to_projected, f"projected portal references missing entity: {portal['canonical_id']}")
     return {
         "projected_id": portal["canonical_id"],
-        "from_node_id": semantic_to_projected.get(from_id, from_id),
+        "from_node_id": semantic_to_projected[from_id],
         "label": portal.get("title") or "",
         "target": portal.get("target") or {},
         "source": portal["source"],
