@@ -1,3 +1,4 @@
+import json
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -335,6 +336,29 @@ class WorkspaceSceneContractTest(unittest.TestCase):
 
         with self.assertRaisesRegex(ValueError, "projected portal references missing entity"):
             build_projected_graph(scene)
+
+    def test_scene_v2_rejects_unimplemented_non_understanding_layers_explicitly(self):
+        with self.assertRaisesRegex(ValueError, "workspace-scene-v2 not implemented"):
+            build_workspace_scene(WORKSPACE_ROOT, PROJECT_ID, mode="experiments", layer="evaluation_overview")
+
+    def test_scene_entities_all_have_db_or_derived_sources(self):
+        scene = build_workspace_scene(WORKSPACE_ROOT, PROJECT_ID, mode="understanding", layer="claim_focus", focus_id="claim:C2")
+
+        for entity in scene["entities"]:
+            self.assertIn(entity["source"]["kind"], {"db_row", "derived"})
+            if entity["source"]["kind"] == "db_row":
+                self.assertTrue(entity["source"].get("table"))
+                self.assertTrue(entity["source"].get("primary_key"))
+
+    def test_projection_does_not_emit_canvas_or_frontend_node_type_fields(self):
+        scene = build_workspace_scene(WORKSPACE_ROOT, PROJECT_ID, mode="understanding", layer="claim_focus", focus_id="claim:C2")
+        projected = build_projected_graph(scene)
+        serialized = json.dumps(projected)
+
+        self.assertNotIn('"canvas"', serialized)
+        self.assertNotIn('"nodeTypes"', serialized)
+        self.assertNotIn('"edgeTypes"', serialized)
+        self.assertNotIn('"className"', serialized)
 
 
 if __name__ == "__main__":
