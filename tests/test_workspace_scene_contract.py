@@ -1,4 +1,5 @@
 import unittest
+from pathlib import Path
 
 from tools.workspace_scene_contract import (
     V1_TO_V2_LAYER,
@@ -7,6 +8,12 @@ from tools.workspace_scene_contract import (
     validate_projected_graph,
     validate_workspace_scene,
 )
+from tools.workspace_scene_builders import build_workspace_scene
+
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+WORKSPACE_ROOT = REPO_ROOT / "examples" / "workspaces"
+PROJECT_ID = "DemoVisualAffordance"
 
 
 class WorkspaceSceneContractTest(unittest.TestCase):
@@ -106,6 +113,70 @@ class WorkspaceSceneContractTest(unittest.TestCase):
 
         with self.assertRaisesRegex(ValueError, "terminal projected nodes must not drill"):
             validate_projected_graph(projected)
+
+    def test_understanding_project_overview_scene_has_semantic_entities_not_canvas(self):
+        scene = build_workspace_scene(
+            WORKSPACE_ROOT,
+            PROJECT_ID,
+            mode="understanding",
+            layer="project_overview",
+        )
+
+        validate_workspace_scene(scene)
+        self.assertEqual("workspace-scene-v2", scene["schema_version"])
+        self.assertEqual("understanding.project_overview", scene["layer"])
+        self.assertNotIn("canvas", scene)
+        self.assertNotIn("breadcrumb", scene)
+        entity_types = {entity["entity_type"] for entity in scene["entities"]}
+        self.assertEqual({"question", "claim"}, entity_types)
+        c2 = next(entity for entity in scene["entities"] if entity["display_id"] == "C2")
+        self.assertEqual("understanding:project:DemoVisualAffordance:claim:C2", c2["canonical_id"])
+        self.assertEqual({"inspectable", "drillable"}, set(c2["capabilities"]))
+        self.assertEqual(
+            {"kind": "db_row", "table": "understanding_nodes", "primary_key": "project:DemoVisualAffordance:C2"},
+            c2["source"],
+        )
+
+    def test_understanding_claim_focus_scene_keeps_argument_atoms_terminal_by_capability(self):
+        scene = build_workspace_scene(
+            WORKSPACE_ROOT,
+            PROJECT_ID,
+            mode="understanding",
+            layer="claim_focus",
+            focus_id="claim:C2",
+        )
+
+        validate_workspace_scene(scene)
+        self.assertEqual("understanding.claim_focus", scene["layer"])
+        self.assertEqual("understanding:project:DemoVisualAffordance:claim:C2", scene["focus_id"])
+        entity_types = {entity["entity_type"] for entity in scene["entities"]}
+        self.assertIn("claim", entity_types)
+        self.assertIn("evidence", entity_types)
+        self.assertIn("warrant", entity_types)
+        self.assertIn("limitation", entity_types)
+        self.assertIn("source", entity_types)
+        atoms = [entity for entity in scene["entities"] if entity["entity_type"] in {"evidence", "warrant", "limitation"}]
+        self.assertTrue(atoms)
+        self.assertTrue(all(entity["capabilities"] == ["inspectable"] for entity in atoms))
+        self.assertTrue(all("drill" not in entity for entity in atoms))
+
+    def test_understanding_claim_focus_scene_groups_are_derived(self):
+        scene = build_workspace_scene(
+            WORKSPACE_ROOT,
+            PROJECT_ID,
+            mode="understanding",
+            layer="claim_focus",
+            focus_id="claim:C2",
+        )
+
+        validate_workspace_scene(scene)
+        group_types = {group["group_type"] for group in scene["groups"]}
+        self.assertGreaterEqual(group_types, {"lane"})
+        titles = {group["title"] for group in scene["groups"]}
+        self.assertIn("Evidence / Grounds", titles)
+        self.assertIn("Warrants / Bridges", titles)
+        self.assertIn("Limitations / Boundaries", titles)
+        self.assertTrue(all(group["source"]["kind"] == "derived" for group in scene["groups"]))
 
 
 if __name__ == "__main__":
