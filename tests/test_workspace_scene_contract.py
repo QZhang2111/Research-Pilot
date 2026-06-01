@@ -1,5 +1,6 @@
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from tools.workspace_scene_contract import (
     V1_TO_V2_LAYER,
@@ -177,6 +178,88 @@ class WorkspaceSceneContractTest(unittest.TestCase):
         self.assertIn("Warrants / Bridges", titles)
         self.assertIn("Limitations / Boundaries", titles)
         self.assertTrue(all(group["source"]["kind"] == "derived" for group in scene["groups"]))
+
+    def test_understanding_claim_focus_scene_preserves_warrant_and_limitation_relations(self):
+        scene = build_workspace_scene(
+            WORKSPACE_ROOT,
+            PROJECT_ID,
+            mode="understanding",
+            layer="claim_focus",
+            focus_id="claim:C2",
+        )
+
+        relation_keys = {
+            (relation["relation_type"], relation["source_id"], relation["target_id"], relation["source"]["primary_key"])
+            for relation in scene["relations"]
+        }
+        c2 = "understanding:project:DemoVisualAffordance:claim:C2"
+        self.assertIn(("warrants", "understanding:project:DemoVisualAffordance:warrant:W2", c2, "project:DemoVisualAffordance:RL1"), relation_keys)
+        self.assertIn(("limits", "understanding:project:DemoVisualAffordance:limitation:L1", c2, "project:DemoVisualAffordance:RL1"), relation_keys)
+
+    def test_understanding_claim_focus_scene_sources_include_link_refs_and_canonical_source_refs(self):
+        graph = {
+            "nodes": [
+                {
+                    "id": "project:Demo:C10",
+                    "kind": "claim",
+                    "label": "Focused claim",
+                    "subtitle": "C10",
+                    "status": "active",
+                    "confidence": "medium",
+                    "source_refs": [],
+                    "metadata": {"local_id": "C10"},
+                },
+                {
+                    "id": "project:Demo:E10",
+                    "kind": "evidence",
+                    "label": "Evidence",
+                    "subtitle": "E10",
+                    "status": "active",
+                    "confidence": "medium",
+                    "source_refs": [],
+                    "metadata": {"local_id": "E10"},
+                },
+            ],
+            "links": [
+                {
+                    "id": "project:Demo:RL10",
+                    "relation": "supports",
+                    "premises": ["project:Demo:E10"],
+                    "target": ["project:Demo:C10"],
+                    "warrant": [],
+                    "limitations": [],
+                    "source_refs": ["canonical-paper-only"],
+                }
+            ],
+        }
+        sources = {
+            "sources": [
+                {
+                    "source_id": "paper:canonical-paper-only",
+                    "title": "Canonical Paper",
+                    "locator": "wiki/projects/Demo/papers/canonical-paper-only/index.md",
+                    "url": "",
+                    "doi": "",
+                    "arxiv_id": "",
+                    "reading_status": "deep_read",
+                    "short_summary": "",
+                }
+            ]
+        }
+
+        with (
+            mock.patch("tools.workspace_scene_builders.understanding_scene.build_project_graph_model", return_value=graph),
+            mock.patch("tools.workspace_scene_builders.understanding_scene.build_sources_model", return_value=sources),
+            mock.patch(
+                "tools.workspace_scene_builders.understanding_scene._source_metadata_by_source_id",
+                create=True,
+                return_value={"paper:canonical-paper-only": {"canonical_source_ref": "canonical-paper-only"}},
+            ),
+        ):
+            scene = build_workspace_scene(WORKSPACE_ROOT, "Demo", mode="understanding", layer="claim_focus", focus_id="claim:C10")
+
+        source_ids = {entity["canonical_id"] for entity in scene["entities"] if entity["entity_type"] == "source"}
+        self.assertIn("source:paper:canonical-paper-only", source_ids)
 
 
 if __name__ == "__main__":

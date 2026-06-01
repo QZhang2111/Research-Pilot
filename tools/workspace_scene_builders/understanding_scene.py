@@ -3,9 +3,11 @@
 
 from __future__ import annotations
 
+from contextlib import closing
 from pathlib import Path
 from typing import Any
 
+from tools.research_dataset import connect_dataset, json_loads
 from tools.research_dataset_read_models import build_project_graph_model, build_sources_model
 from tools.workspace_scene_builders.provenance import db_row, derived
 from tools.workspace_scene_contract import (
@@ -87,8 +89,9 @@ def _claim_focus_scene(root: Path, project_id: str, graph: dict[str, Any], *, fo
 
     focus_canonical_id = _entity_id(project_id, claim)
     scene = _base_scene(project_id, "understanding.claim_focus", focus_canonical_id)
-    related_nodes = _claim_related_nodes(graph, claim)
-    source_entities = _source_entities_for_nodes(root, project_id, [claim, *related_nodes])
+    related_links = _claim_related_links(graph, claim)
+    related_nodes = _claim_related_nodes(graph, claim, related_links)
+    source_entities = _source_entities_for_nodes(root, project_id, [claim, *related_nodes], related_links)
     scene["entities"] = [
         _understanding_entity(project_id, claim, force_capabilities=["inspectable"]),
         *[
@@ -156,39 +159,56 @@ def _understanding_entity(project_id: str, node: dict[str, Any], force_capabilit
     }
 
 
-def _source_entities_for_nodes(root: Path, project_id: str, nodes: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def _source_entities_for_nodes(
+    root: Path,
+    project_id: str,
+    nodes: list[dict[str, Any]],
+    links: list[dict[str, Any]] | None = None,
+) -> list[dict[str, Any]]:
     sources = build_sources_model(root, project_id).get("sources", [])
+    source_metadata = _source_metadata_by_source_id(root, project_id)
     by_key: dict[str, dict[str, Any]] = {}
     for source in sources:
+        metadata = source_metadata.get(str(source.get("source_id") or ""), {})
+        if metadata:
+            source["metadata"] = metadata
         for key in (source.get("source_id"), source.get("locator"), source.get("title"), source.get("url"), source.get("doi"), source.get("arxiv_id")):
             if key:
                 by_key[str(key)] = source
+        canonical_ref = metadata.get("canonical_source_ref")
+        if canonical_ref:
+            by_key[str(canonical_ref)] = source
 
     result = []
     seen: set[str] = set()
+    source_refs = []
     for node in nodes:
-        for ref in node.get("source_refs") or []:
-            source = by_key.get(str(ref))
-            if not source:
-                continue
-            source_id = str(source.get("source_id") or "")
-            if not source_id or source_id in seen:
-                continue
-            seen.add(source_id)
-            result.append(
-                {
-                    "canonical_id": canonical_source_id(source_id),
-                    "display_id": source_id,
-                    "entity_type": "source",
-                    "title": source.get("title") or source_id,
-                    "summary": source.get("short_summary") or "",
-                    "status": source.get("reading_status") or "",
-                    "confidence": "",
-                    "capabilities": ["inspectable", "drillable"],
-                    "source": db_row("sources", source_id),
-                    "metadata": source,
-                }
-            )
+        source_refs.extend(node.get("source_refs") or [])
+    for link in links or []:
+        source_refs.extend(link.get("source_refs") or [])
+
+    for ref in source_refs:
+        source = by_key.get(str(ref))
+        if not source:
+            continue
+        source_id = str(source.get("source_id") or "")
+        if not source_id or source_id in seen:
+            continue
+        seen.add(source_id)
+        result.append(
+            {
+                "canonical_id": canonical_source_id(source_id),
+                "display_id": source_id,
+                "entity_type": "source",
+                "title": source.get("title") or source_id,
+                "summary": source.get("short_summary") or "",
+                "status": source.get("reading_status") or "",
+                "confidence": "",
+                "capabilities": ["inspectable", "drillable"],
+                "source": db_row("sources", source_id),
+                "metadata": source,
+            }
+        )
     return result
 
 
@@ -198,32 +218,60 @@ def _understanding_relations(project_id: str, graph: dict[str, Any]) -> list[dic
     for link in graph.get("links", []):
         relation_type = str(link.get("relation") or "related")
         targets = link.get("target") or []
-        sources = link.get("premises") or link.get("source") or []
-        for source_db_id in sources:
-            for target_db_id in targets:
-                source = by_db_id.get(source_db_id)
-                target = by_db_id.get(target_db_id)
-                if not source or not target:
-                    continue
-                relations.append(
-                    {
-                        "canonical_id": f"relation:project:{project_id}:{_local_id_from_value(link.get('id'))}:{_local_id(source)}:{_local_id(target)}",
-                        "relation_type": relation_type,
-                        "source_id": _entity_id(project_id, source),
-                        "target_id": _entity_id(project_id, target),
-                        "direction": "forward",
-                        "weight": 1,
-                        "source": db_row("understanding_links", str(link.get("id") or "")),
-                    }
-                )
+        relations.extend(_relations_for_role(project_id, by_db_id, link, "premise", link.get("premises") or link.get("source") or [], targets, relation_type))
+        relations.extend(_relations_for_role(project_id, by_db_id, link, "warrant", link.get("warrant") or [], targets, "warrants"))
+        relations.extend(_relations_for_role(project_id, by_db_id, link, "limitation", link.get("limitations") or [], targets, "limits"))
     return relations
 
 
-def _claim_related_nodes(graph: dict[str, Any], claim: dict[str, Any]) -> list[dict[str, Any]]:
+def _relations_for_role(
+    project_id: str,
+    by_db_id: dict[str, dict[str, Any]],
+    link: dict[str, Any],
+    role: str,
+    source_ids: list[str],
+    target_ids: list[str],
+    relation_type: str,
+) -> list[dict[str, Any]]:
+    relations = []
+    link_id = str(link.get("id") or "")
+    link_local_id = str(link.get("local_id") or _local_id_from_value(link_id))
+    for source_db_id in source_ids:
+        for target_db_id in target_ids:
+            source = by_db_id.get(source_db_id)
+            target = by_db_id.get(target_db_id)
+            if not source or not target:
+                continue
+            relations.append(
+                {
+                    "canonical_id": f"relation:project:{project_id}:{link_local_id}:{role}:{_local_id(source)}:{_local_id(target)}",
+                    "relation_type": relation_type,
+                    "source_id": _entity_id(project_id, source),
+                    "target_id": _entity_id(project_id, target),
+                    "direction": "forward",
+                    "weight": 1,
+                    "source": db_row("understanding_links", link_id),
+                }
+            )
+    return relations
+
+
+def _claim_related_links(graph: dict[str, Any], claim: dict[str, Any]) -> list[dict[str, Any]]:
+    claim_db_id = claim.get("id")
+    result = []
+    for link in graph.get("links", []):
+        targets = set(link.get("target") or [])
+        sources = set(link.get("premises") or link.get("source") or [])
+        if claim_db_id in targets or claim_db_id in sources:
+            result.append(link)
+    return result
+
+
+def _claim_related_nodes(graph: dict[str, Any], claim: dict[str, Any], links: list[dict[str, Any]]) -> list[dict[str, Any]]:
     by_db_id = {node["id"]: node for node in graph.get("nodes", [])}
     claim_db_id = claim.get("id")
     related_ids: set[str] = set()
-    for link in graph.get("links", []):
+    for link in links:
         targets = set(link.get("target") or [])
         sources = set(link.get("premises") or link.get("source") or [])
         warrants = set(link.get("warrant") or [])
@@ -233,6 +281,21 @@ def _claim_related_nodes(graph: dict[str, Any], claim: dict[str, Any]) -> list[d
         if claim_db_id in sources:
             related_ids.update(targets | warrants | limitations)
     return [by_db_id[node_id] for node_id in sorted(related_ids) if node_id in by_db_id and node_id != claim_db_id]
+
+
+def _source_metadata_by_source_id(root: Path, project_id: str) -> dict[str, dict[str, Any]]:
+    with closing(connect_dataset(root)) as connection:
+        return {
+            str(row["source_id"]): json_loads(row["metadata_json"], {})
+            for row in connection.execute(
+                """
+                SELECT source_id, metadata_json
+                FROM sources
+                WHERE project_id = ?
+                """,
+                (project_id,),
+            )
+        }
 
 
 def _derived_group(layer: str, slug: str, title: str, member_ids: list[str], focus_id: str = "") -> dict[str, Any]:
