@@ -35,7 +35,7 @@ function shortLabel(value, limit = 116) {
 function entityTone(entityType) {
   const type = String(entityType || "").toLowerCase();
   if (type === "question") return "q";
-  if (type === "claim" || type === "evaluation_setting") return "c";
+  if (type === "claim" || type === "evaluation_arena" || type === "evaluation_setting") return "c";
   if (type === "evidence" || type === "experiment") return "e";
   if (type === "warrant") return "w";
   if (type === "limitation") return "l";
@@ -125,7 +125,7 @@ function workspaceNodePosition(node, index, model) {
     return { x: 360 + (sameTypeIndex % 4) * 340, y: Math.floor(sameTypeIndex / 4) * 170 };
   }
   if (mode === "experiments") {
-    if (type === "evaluation_setting") return { x: sameTypeIndex * 410, y: -40 };
+    if (type === "evaluation_arena" || type === "evaluation_setting") return { x: sameTypeIndex * 410, y: -40 };
     if (type === "experiment") return { x: sameTypeIndex * 380, y: 210 };
     if (type === "run") return { x: sameTypeIndex * 340, y: 430 };
   }
@@ -134,7 +134,7 @@ function workspaceNodePosition(node, index, model) {
 
 function workspaceNodeWidth(node, model) {
   if (model?.mode === "literature") return node.entity_type === "literature_lane" ? 300 : 330;
-  if (model?.mode === "experiments") return node.entity_type === "evaluation_setting" ? 360 : 330;
+  if (model?.mode === "experiments") return node.entity_type === "evaluation_arena" || node.entity_type === "evaluation_setting" ? 360 : 330;
   return node.entity_type === "claim" ? 360 : 300;
 }
 
@@ -301,6 +301,52 @@ const WorkspaceTimelinePaperNode = memo(function WorkspaceTimelinePaperNode({ da
   );
 });
 
+function experimentOriginLabel(value) {
+  return {
+    imported_paper: "Imported Paper",
+    local: "Local",
+    replication: "Replication",
+    external: "External",
+  }[value] || shortLabel(value || "Run", 36);
+}
+
+const WorkspaceExperimentArenaNode = memo(function WorkspaceExperimentArenaNode({ data }) {
+  const node = data.node || {};
+  const metadata = node.metadata || {};
+  const metric = (metadata.metric_families || []).slice(0, 2).join(" + ");
+  const counts = node.subtitle || `${metadata.experiment_count || 0} experiments / ${metadata.run_count || 0} runs`;
+  const content = (
+    <>
+      <Handle type="target" position={Position.Left} className="workspace-node-handle" />
+      <strong>{shortLabel(node.label || "Evaluation Arena", 96)}</strong>
+      <span>{shortLabel(node.metadata?.summary || node.summary || "", 110)}</span>
+      {metric ? <em>{shortLabel(metric, 70)}</em> : null}
+      <small>{counts}</small>
+      <Handle type="source" position={Position.Right} className="workspace-node-handle" />
+    </>
+  );
+  return (
+    <button type="button" className="workspace-experiment-arena-node" onClick={() => data.onNodeAction?.(node)}>
+      {content}
+    </button>
+  );
+});
+
+const WorkspaceRunResultNode = memo(function WorkspaceRunResultNode({ data }) {
+  const node = data.node || {};
+  const origin = experimentOriginLabel(node.metadata?.origin_type);
+  const metricText = (node.metadata?.metrics || []).slice(0, 3).map((metric) => `${metric.name} ${metric.value}`).join(" / ");
+  return (
+    <button type="button" className={`workspace-run-result-node tone-${data.tone || "r"}`} onClick={() => data.onNodeAction?.(node)}>
+      <Handle type="target" position={Position.Left} className="workspace-node-handle" />
+      <span>{node.local_id || node.entity_type}</span>
+      <strong>{shortLabel(node.label, 72)}</strong>
+      <em>{shortLabel(metricText || node.subtitle || "", 92)}</em>
+      <small>{origin}</small>
+    </button>
+  );
+});
+
 const WorkspaceExperimentSettingNode = memo(function WorkspaceExperimentSettingNode({ data }) {
   const node = data.node || {};
   const metadata = node.metadata || {};
@@ -354,6 +400,8 @@ const workspaceNodeTypes = {
   workspaceArgumentAtomNode: WorkspaceArgumentAtomNode,
   workspacePaperSourceNode: WorkspacePaperSourceNode,
   workspaceTimelinePaperNode: WorkspaceTimelinePaperNode,
+  workspaceExperimentArenaNode: WorkspaceExperimentArenaNode,
+  workspaceRunResultNode: WorkspaceRunResultNode,
   workspaceExperimentSettingNode: WorkspaceExperimentSettingNode,
   workspaceExperimentEntityNode: WorkspaceExperimentEntityNode,
 };
@@ -453,21 +501,41 @@ function WorkspaceInspector({ inspector }) {
       <p className="eyebrow">{inspector?.kind || "Inspector"}</p>
       <h2>{inspector?.title || "Workspace"}</h2>
       {inspector?.summary ? <p>{inspector.summary}</p> : null}
-      {sections.map((section, index) => (
-        <section key={`${section.kind || "section"}:${index}`}>
-          <h3>{section.title || section.kind || "Section"}</h3>
-          <div className="workspace-inspector-list">
-            {(section.items || []).map((item, itemIndex) => (
-              <article key={item.id || item.local_id || item.label || itemIndex}>
-                <span>{item.local_id || item.id || item.kind || ""}</span>
-                <strong>{item.label || item.title || item.text || item.target_id || ""}</strong>
-                {item.subtitle || item.impact ? <em>{item.subtitle || item.impact}</em> : null}
-              </article>
-            ))}
-            {!section.items?.length ? <em>No records.</em> : null}
-          </div>
-        </section>
-      ))}
+      {sections.map((section, index) => {
+        const title = section.title || {
+          paper_brief: "Paper Brief",
+          paper_node_list: "Paper Argument Nodes",
+        }[section.kind] || section.kind || "Section";
+        if (section.kind === "paper_brief") {
+          return (
+            <section key={`${section.kind || "section"}:${index}`} className="workspace-inspector-section workspace-paper-brief-section">
+              <h3>{title}</h3>
+              {(section.items || []).map((item, itemIndex) => (
+                <article key={item.id || item.local_id || item.label || itemIndex} className="workspace-paper-brief-item">
+                  <strong>{item.label || item.title || item.kind || "Brief"}</strong>
+                  <p>{item.text || item.subtitle || item.impact || ""}</p>
+                </article>
+              ))}
+              {!section.items?.length ? <em>No records.</em> : null}
+            </section>
+          );
+        }
+        return (
+          <section key={`${section.kind || "section"}:${index}`} className={`workspace-inspector-section workspace-inspector-section-${relationClass(section.kind || "section")}`}>
+            <h3>{title}</h3>
+            <div className="workspace-inspector-list">
+              {(section.items || []).map((item, itemIndex) => (
+                <article key={item.id || item.local_id || item.label || itemIndex}>
+                  <span>{item.local_id || item.id || item.kind || ""}</span>
+                  <strong>{item.label || item.title || item.text || item.target_id || ""}</strong>
+                  {item.subtitle || item.impact ? <em>{item.subtitle || item.impact}</em> : null}
+                </article>
+              ))}
+              {!section.items?.length ? <em>No records.</em> : null}
+            </div>
+          </section>
+        );
+      })}
       {Array.isArray(inspector?.actions) && inspector.actions.length ? (
         <section>
           <h3>Actions</h3>
@@ -1001,6 +1069,7 @@ function toExperimentEdge(edge) {
   const relation = relationClass(edge.relation || edge.label);
   const color = {
     defines: "#d6a84f",
+    uses: "#d6a84f",
     "measured-by": "#68c7d4",
     "used-by": "#70d6a3",
     produces: "#70d6a3",
@@ -1039,15 +1108,15 @@ function compactExperimentGroupNode(key, title, items, tone) {
   };
 }
 
-function buildExperimentsOverviewFlowModel(model, onNavigate) {
-  const settings = model?.canvas?.nodes || [];
-  const cardWidth = 430;
-  const cardHeight = 156;
-  const gapX = 72;
-  const gapY = 56;
-  const nodes = settings.map((node, index) => ({
+function buildExperimentsArenaOverviewFlowModel(model, onNavigate) {
+  const arenas = model?.canvas?.nodes || [];
+  const cardWidth = 500;
+  const cardHeight = 172;
+  const gapX = 80;
+  const gapY = 64;
+  const nodes = arenas.map((node, index) => ({
     id: node.id,
-    type: "workspaceExperimentSettingNode",
+    type: "workspaceExperimentArenaNode",
     position: { x: (index % 2) * (cardWidth + gapX), y: Math.floor(index / 2) * (cardHeight + gapY) },
     sourcePosition: Position.Right,
     targetPosition: Position.Left,
@@ -1061,74 +1130,89 @@ function buildExperimentsOverviewFlowModel(model, onNavigate) {
   return { nodes, edges: [] };
 }
 
-function buildExperimentsSettingFocusFlowModel(model, onNavigate) {
+function buildExperimentsArenaFocusFlowModel(model, onNavigate) {
   const rawNodes = model?.canvas?.nodes || [];
   const rawEdges = model?.canvas?.edges || [];
-  const setting = rawNodes.find((node) => node.entity_type === "evaluation_setting");
-  const supportNodes = rawNodes.filter((node) => ["dataset", "benchmark", "metric_family"].includes(node.entity_type));
+  const arena = rawNodes.find((node) => node.entity_type === "evaluation_arena" || node.entity_type === "evaluation_setting");
+  const contextNodes = rawNodes.filter((node) => ["dataset", "benchmark", "metric_family"].includes(node.entity_type));
   const experimentNodes = rawNodes.filter((node) => node.entity_type === "experiment");
+  const runNodes = rawNodes.filter((node) => node.entity_type === "run");
   const focusedIds = focusedNodeIds(model);
   const nodes = [
     {
-      id: "frame:experiment-setting",
+      id: "frame:arena-context",
       type: "workspaceLaneFrameNode",
-      position: { x: 430, y: 10 },
-      style: { width: 410, height: 190 },
+      position: { x: 36, y: -60 },
+      style: { width: 430, height: Math.max(300, contextNodes.length * 104 + 92) },
       draggable: false,
       selectable: false,
       zIndex: 0,
-      data: { title: "Selected Setting", subtitle: "benchmark + dataset + metric", tone: "c" },
+      data: { title: "Dataset / Benchmark / Metric", subtitle: `${contextNodes.length} context records`, tone: "p" },
     },
     {
-      id: "frame:experiment-context",
+      id: "frame:arena-designs",
       type: "workspaceLaneFrameNode",
-      position: { x: 32, y: -54 },
-      style: { width: 350, height: Math.max(360, supportNodes.length * 112 + 84) },
-      draggable: false,
-      selectable: false,
-      zIndex: 0,
-      data: { title: "Benchmark / Dataset / Metric", subtitle: `${supportNodes.length} context records`, tone: "p" },
-    },
-    {
-      id: "frame:experiment-designs",
-      type: "workspaceLaneFrameNode",
-      position: { x: 430, y: 230 },
-      style: { width: 410, height: Math.max(190, experimentNodes.length * 116 + 82) },
+      position: { x: 520, y: -60 },
+      style: { width: 430, height: Math.max(300, experimentNodes.length * 124 + 92) },
       draggable: false,
       selectable: false,
       zIndex: 0,
       data: { title: "Experiment Designs", subtitle: `${experimentNodes.length} designs`, tone: "e" },
     },
+    {
+      id: "frame:arena-runs",
+      type: "workspaceLaneFrameNode",
+      position: { x: 1000, y: -60 },
+      style: { width: 430, height: Math.max(300, runNodes.length * 112 + 92) },
+      draggable: false,
+      selectable: false,
+      zIndex: 0,
+      data: { title: "Runs / Results", subtitle: `${runNodes.length} runs`, tone: "r" },
+    },
   ];
-  if (setting) {
+  if (arena) {
     nodes.push({
-      id: setting.id,
-      type: "workspaceExperimentSettingNode",
-      position: { x: 470, y: 68 },
+      id: arena.id,
+      type: "workspaceExperimentArenaNode",
+      position: { x: 520, y: -230 },
       sourcePosition: Position.Right,
       targetPosition: Position.Left,
-      style: { width: 330, minHeight: 128 },
+      style: { width: 430, minHeight: 148 },
       zIndex: 4,
-      data: { node: setting, onNodeAction: experimentsNodeAction(onNavigate) },
+      data: { node: arena, onNodeAction: experimentsNodeAction(onNavigate) },
     });
   }
-  supportNodes.forEach((node, index) => {
+  contextNodes.forEach((node, index) => {
     nodes.push(
       toExperimentEntityNode(node, index, model, focusedIds, onNavigate, {
-        position: { x: 66, y: 12 + index * 112 },
-        width: 280,
-        minHeight: 92,
+        position: { x: 76, y: 16 + index * 104 },
+        width: 350,
+        minHeight: 88,
+        tone: entityTone(node.entity_type),
       }),
     );
   });
   experimentNodes.forEach((node, index) => {
     nodes.push(
       toExperimentEntityNode(node, index, model, focusedIds, onNavigate, {
-        position: { x: 470, y: 296 + index * 116 },
-        width: 330,
-        minHeight: 96,
+        position: { x: 560, y: 16 + index * 124 },
+        width: 350,
+        minHeight: 98,
+        tone: "e",
       }),
     );
+  });
+  runNodes.forEach((node, index) => {
+    nodes.push({
+      id: node.id,
+      type: "workspaceRunResultNode",
+      position: { x: 1040, y: 16 + index * 112 },
+      sourcePosition: Position.Right,
+      targetPosition: Position.Left,
+      style: { width: 350, minHeight: 94 },
+      zIndex: 4,
+      data: { node, tone: "r", onNodeAction: experimentsNodeAction(onNavigate) },
+    });
   });
   const visibleIds = new Set(rawNodes.map((node) => node.id));
   return {
@@ -1137,6 +1221,14 @@ function buildExperimentsSettingFocusFlowModel(model, onNavigate) {
       .filter((edge) => visibleIds.has(edge.source) && visibleIds.has(edge.target))
       .map((edge) => toExperimentEdge(edge)),
   };
+}
+
+function buildExperimentsOverviewFlowModel(model, onNavigate) {
+  return buildExperimentsArenaOverviewFlowModel(model, onNavigate);
+}
+
+function buildExperimentsSettingFocusFlowModel(model, onNavigate) {
+  return buildExperimentsArenaFocusFlowModel(model, onNavigate);
 }
 
 function buildExperimentsDesignFocusFlowModel(model, onNavigate) {
@@ -1200,14 +1292,16 @@ function buildExperimentsDesignFocusFlowModel(model, onNavigate) {
     );
   });
   runNodes.forEach((node, index) => {
-    nodes.push(
-      toExperimentEntityNode(node, index, model, focusedIds, onNavigate, {
-        position: { x: 84, y: 486 + index * 96 },
-        width: 296,
-        minHeight: 82,
-        tone: "e",
-      }),
-    );
+    nodes.push({
+      id: node.id,
+      type: "workspaceRunResultNode",
+      position: { x: 84, y: 486 + index * 106 },
+      sourcePosition: Position.Right,
+      targetPosition: Position.Left,
+      style: { width: 296, minHeight: 88 },
+      zIndex: 4,
+      data: { node, tone: "r", onNodeAction: experimentsNodeAction(onNavigate) },
+    });
   });
   const edges = [];
   if (experiment) {
@@ -1235,8 +1329,8 @@ function buildExperimentsDesignFocusFlowModel(model, onNavigate) {
 }
 
 function buildExperimentsFlowModel(model, onNavigate) {
-  if (model?.layer === "evaluation_overview") return buildExperimentsOverviewFlowModel(model, onNavigate);
-  if (model?.layer === "evaluation_setting_focus") return buildExperimentsSettingFocusFlowModel(model, onNavigate);
+  if (model?.layer === "evaluation_overview") return buildExperimentsArenaOverviewFlowModel(model, onNavigate);
+  if (model?.layer === "evaluation_arena_focus" || model?.layer === "evaluation_setting_focus") return buildExperimentsArenaFocusFlowModel(model, onNavigate);
   if (model?.layer === "experiment_design_focus") return buildExperimentsDesignFocusFlowModel(model, onNavigate);
   return { nodes: [], edges: [] };
 }

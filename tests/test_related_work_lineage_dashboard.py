@@ -254,6 +254,11 @@ class RelatedWorkLineageDashboardTest(unittest.TestCase):
         self.assertIn("understanding", source)
         self.assertIn("literature", source)
         self.assertIn("experiments", source)
+        self.assertIn("WorkspaceExperimentArenaNode", source)
+        self.assertIn("buildExperimentsArenaOverviewFlowModel", source)
+        self.assertIn("buildExperimentsArenaFocusFlowModel", source)
+        self.assertIn("evaluation_arena", source)
+        self.assertIn("Evaluation Arena", source)
         self.assertNotIn("run_detail", source)
 
     def test_workspace_island_uses_mode_specific_renderers_and_breadcrumb(self):
@@ -269,6 +274,19 @@ class RelatedWorkLineageDashboardTest(unittest.TestCase):
         self.assertIn("nodeTypes={workspaceNodeTypes}", source)
         self.assertIn("fitViewOptions={{ padding: 0.1, maxZoom: 1.12 }}", source)
         self.assertIn("maskColor=\"var(--workspace-minimap-mask)\"", source)
+
+    def test_workspace_island_shared_paper_focus_and_experiment_arena_copy(self):
+        source = (ROOT / "dashboard" / "workspace-island" / "src" / "WorkspaceIslandApp.jsx").read_text(encoding="utf-8")
+        styles = (ROOT / "dashboard" / "workspace-island" / "src" / "workspace-island.css").read_text(encoding="utf-8")
+
+        self.assertIn("Paper Brief", source)
+        self.assertIn("Paper Argument Nodes", source)
+        self.assertIn("Evaluation Arena", source)
+        self.assertIn("Runs / Results", source)
+        self.assertIn("Imported Paper", source)
+        self.assertIn("workspace-experiment-arena-node", source)
+        self.assertIn("workspace-run-result-node", source)
+        self.assertIn("overflow-y: auto;", styles)
 
     def test_workspace_island_synthesizes_current_breadcrumb_layer(self):
         source = (ROOT / "dashboard" / "workspace-island" / "src" / "WorkspaceIslandApp.jsx").read_text(encoding="utf-8")

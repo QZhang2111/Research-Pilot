@@ -177,6 +177,8 @@ body.workspace-island-immersive-active {
 .react-flow__node-workspaceArgumentAtomNode,
 .react-flow__node-workspacePaperSourceNode,
 .react-flow__node-workspaceTimelinePaperNode,
+.react-flow__node-workspaceExperimentArenaNode,
+.react-flow__node-workspaceRunResultNode,
 .react-flow__node-workspaceExperimentSettingNode,
 .react-flow__node-workspaceExperimentEntityNode {
   border: 0;
@@ -325,6 +327,8 @@ body.workspace-island-immersive-active {
 .workspace-argument-atom,
 .workspace-paper-source-node,
 .workspace-timeline-paper-node,
+.workspace-experiment-arena-node,
+.workspace-run-result-node,
 .workspace-experiment-setting-node,
 .workspace-experiment-entity-node {
   --node-tone: #8f98a8;
@@ -428,6 +432,59 @@ button.workspace-argument-atom {
   color: color-mix(in srgb, var(--node-tone) 72%, var(--text-muted));
 }
 
+.workspace-experiment-arena-node,
+.workspace-run-result-node {
+  width: 100%;
+  min-height: inherit;
+  border: 1px solid color-mix(in srgb, var(--node-tone, #d6a84f) 72%, var(--border));
+  border-radius: 8px;
+  background:
+    radial-gradient(circle at 12% 10%, color-mix(in srgb, var(--node-tone, #d6a84f) 18%, transparent), transparent 38%),
+    linear-gradient(180deg, color-mix(in srgb, var(--surface-2) 86%, transparent), color-mix(in srgb, #020409 80%, transparent));
+  color: var(--text-main);
+  display: grid;
+  gap: 10px;
+  padding: 22px 24px;
+  text-align: left;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.24);
+  cursor: pointer;
+}
+
+.workspace-experiment-arena-node {
+  --node-tone: #d6a84f;
+}
+
+.workspace-run-result-node {
+  --node-tone: #9bd7df;
+}
+
+.workspace-experiment-arena-node strong,
+.workspace-run-result-node strong {
+  color: var(--text-main);
+  font-size: 18px;
+  line-height: 1.16;
+}
+
+.workspace-experiment-arena-node span,
+.workspace-experiment-arena-node em,
+.workspace-experiment-arena-node small,
+.workspace-run-result-node span,
+.workspace-run-result-node em,
+.workspace-run-result-node small {
+  color: var(--text-muted);
+  font-family: var(--mono);
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 800;
+  letter-spacing: 0;
+  line-height: 1.35;
+  text-transform: uppercase;
+}
+
+.workspace-run-result-node small {
+  color: var(--accent);
+}
+
 .workspace-experiment-setting-node {
   --node-tone: #d6a84f;
   grid-template-columns: minmax(0, 1fr);
@@ -527,6 +584,10 @@ button.workspace-argument-atom {
 .workspace-paper-source-node:focus-visible,
 .workspace-timeline-paper-node:hover,
 .workspace-timeline-paper-node:focus-visible,
+.workspace-experiment-arena-node:hover,
+.workspace-experiment-arena-node:focus-visible,
+.workspace-run-result-node:hover,
+.workspace-run-result-node:focus-visible,
 .workspace-experiment-setting-node:hover,
 .workspace-experiment-setting-node:focus-visible,
 .workspace-experiment-entity-node:hover,
@@ -697,6 +758,32 @@ button.workspace-argument-atom:focus-visible {
   border-top: 1px solid var(--border);
   margin-top: 16px;
   padding-top: 16px;
+}
+
+.workspace-paper-brief-section {
+  display: grid;
+  gap: 12px;
+}
+
+.workspace-paper-brief-item {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--surface-2) 82%, transparent);
+  padding: 14px 16px;
+}
+
+.workspace-paper-brief-item strong {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--text-main);
+  font-size: 14px;
+}
+
+.workspace-paper-brief-item p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.5;
 }
 
 .workspace-inspector-list {

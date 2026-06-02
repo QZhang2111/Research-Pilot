@@ -28,7 +28,8 @@ class WorkspaceSceneContractTest(unittest.TestCase):
         self.assertEqual("literature.route_focus", normalize_workspace_layer("literature", "literature_route_focus"))
         self.assertEqual("literature.paper_focus", normalize_workspace_layer("literature", "literature_paper_focus"))
         self.assertEqual("experiments.evaluation_overview", normalize_workspace_layer("experiments", "evaluation_overview"))
-        self.assertEqual("experiments.evaluation_setting_focus", normalize_workspace_layer("experiments", "evaluation_setting_focus"))
+        self.assertEqual("experiments.evaluation_arena_focus", normalize_workspace_layer("experiments", "evaluation_arena_focus"))
+        self.assertEqual("experiments.evaluation_arena_focus", normalize_workspace_layer("experiments", "evaluation_setting_focus"))
         self.assertEqual("experiments.experiment_design_focus", normalize_workspace_layer("experiments", "experiment_design_focus"))
 
     def test_normalize_workspace_layer_rejects_dotted_layer_with_unknown_mode(self):
@@ -55,6 +56,7 @@ class WorkspaceSceneContractTest(unittest.TestCase):
                 ("literature", "literature_route_focus"),
                 ("literature", "literature_paper_focus"),
                 ("experiments", "evaluation_overview"),
+                ("experiments", "evaluation_arena_focus"),
                 ("experiments", "evaluation_setting_focus"),
                 ("experiments", "experiment_design_focus"),
             },
@@ -582,6 +584,7 @@ class WorkspaceSceneContractTest(unittest.TestCase):
             ("literature", "literature_route_focus"),
             ("literature", "literature_paper_focus"),
             ("experiments", "evaluation_overview"),
+            ("experiments", "evaluation_arena_focus"),
             ("experiments", "evaluation_setting_focus"),
             ("experiments", "experiment_design_focus"),
         ]
