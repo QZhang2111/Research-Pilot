@@ -340,6 +340,62 @@ class WorkspaceGraphReadModelsTest(unittest.TestCase):
         self.assertEqual("experiments", data["mode"])
         self.assertEqual("evaluation_overview", data["layer"])
 
+    def test_workspace_graph_api_default_schema_remains_v1(self):
+        status, payload = handle_workspace_graph_request(
+            self.root,
+            "/api/workspace-graph?project=DemoVisualAffordance&mode=understanding&layer=project_overview",
+        )
+
+        self.assertEqual(HTTPStatus.OK, status)
+        data = json.loads(payload.decode("utf-8"))
+        self.assertEqual("workspace-graph-v1", data["schema_version"])
+        self.assertIn("canvas", data)
+
+    def test_workspace_graph_api_scene_v2_schema(self):
+        status, payload = handle_workspace_graph_request(
+            self.root,
+            "/api/workspace-graph?project=DemoVisualAffordance&mode=understanding&layer=project_overview&schema=scene-v2",
+        )
+
+        self.assertEqual(HTTPStatus.OK, status)
+        data = json.loads(payload.decode("utf-8"))
+        self.assertEqual("workspace-scene-v2", data["schema_version"])
+        self.assertNotIn("canvas", data)
+        self.assertEqual("understanding.project_overview", data["layer"])
+        self.assertIn("entities", data)
+        self.assertTrue(data["entities"])
+        serialized = json.dumps(data)
+        self.assertNotIn('"drill"', serialized)
+
+    def test_workspace_graph_api_scene_v2_rejects_dotted_layer_prefix_mismatch(self):
+        status, payload = handle_workspace_graph_request(
+            self.root,
+            "/api/workspace-graph?project=DemoVisualAffordance&mode=literature&layer=understanding.project_overview&schema=scene-v2",
+        )
+
+        self.assertEqual(HTTPStatus.BAD_REQUEST, status)
+        data = json.loads(payload.decode("utf-8"))
+        self.assertEqual("workspace-graph-error-v1", data["schema_version"])
+        self.assertIn("workspace layer mode mismatch", data["message"])
+
+    def test_workspace_graph_api_projection_v1_schema(self):
+        status, payload = handle_workspace_graph_request(
+            self.root,
+            "/api/workspace-graph?project=DemoVisualAffordance&mode=understanding&layer=claim_focus&focus_id=claim:C2&schema=projection-v1",
+        )
+
+        self.assertEqual(HTTPStatus.OK, status)
+        data = json.loads(payload.decode("utf-8"))
+        self.assertEqual("workspace-projection-v1", data["schema_version"])
+        self.assertEqual("understanding.claim_focus", data["layer"])
+        self.assertIn("frames", data)
+        self.assertIn("nodes", data)
+        self.assertNotIn("canvas", data)
+        atoms = [node for node in data["nodes"] if node["visual_kind"] in {"evidence", "warrant", "limitation"}]
+        self.assertTrue(atoms)
+        self.assertTrue(all(node["role"] == "terminal" for node in atoms))
+        self.assertTrue(all(node["interaction"]["kind"] == "inspect" for node in atoms))
+
     def test_workspace_graph_handler_rejects_invalid_layer(self):
         status, payload = handle_workspace_graph_request(
             self.root,

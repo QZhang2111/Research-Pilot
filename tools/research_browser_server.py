@@ -29,7 +29,9 @@ from tools.research_dataset_read_models import (
     project_exists_in_dataset,
 )
 from tools.understanding_store import build_project_understanding
+from tools.workspace_graph_projection import build_projected_graph
 from tools.workspace_graph_read_models import build_workspace_graph_model
+from tools.workspace_scene_builders import build_workspace_scene
 
 
 DEFAULT_INDEX_PATH = ".dashboard/index.json"
@@ -403,15 +405,38 @@ def handle_workspace_graph_request(root: Path, request_path: str) -> Tuple[int, 
     layer = query.get("layer", [""])[0].strip()
     focus_id = query.get("focus_id", [""])[0].strip()
     selected_id = query.get("selected_id", [""])[0].strip()
+    schema = query.get("schema", [""])[0].strip()
     try:
-        model = build_workspace_graph_model(
-            root.resolve(),
-            project_id,
-            mode=mode,
-            layer=layer,
-            focus_id=focus_id,
-            selected_id=selected_id,
-        )
+        if schema == "scene-v2":
+            model = build_workspace_scene(
+                root.resolve(),
+                project_id,
+                mode=mode,
+                layer=layer,
+                focus_id=focus_id,
+                selected_id=selected_id,
+            )
+        elif schema == "projection-v1":
+            scene = build_workspace_scene(
+                root.resolve(),
+                project_id,
+                mode=mode,
+                layer=layer,
+                focus_id=focus_id,
+                selected_id=selected_id,
+            )
+            model = build_projected_graph(scene)
+        elif schema:
+            raise ValueError(f"unknown workspace graph schema: {schema}")
+        else:
+            model = build_workspace_graph_model(
+                root.resolve(),
+                project_id,
+                mode=mode,
+                layer=layer,
+                focus_id=focus_id,
+                selected_id=selected_id,
+            )
     except (ValueError, sqlite3.Error, json.JSONDecodeError) as exc:
         return json_response(
             {
