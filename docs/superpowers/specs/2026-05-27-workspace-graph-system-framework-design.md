@@ -736,6 +736,18 @@ Each mode/layer must declare its expected objects.
 - Projected question interaction: `inspect`
 - Projected claim interaction: `drill -> understanding.claim_focus`
 
+Locked display contract, accepted from DemoVisualAffordance dashboard review:
+
+- Graph shows only project question nodes and project claim nodes.
+- Question and claim nodes live in separate visual frames.
+- Inspector shows only the project question list.
+- Inspector does not show Recent Understanding, raw IDs, debug metrics, or paper/experiment detail.
+- Clicking a question does not leave Understanding mode.
+- Clicking a question updates the canvas focus to that question and its linked claims.
+- Clicking a question updates inspector to the selected question and linked claims.
+- Question focus remains a shallow inspection state, not a new deep drill layer.
+- Claim evidence, warrants, limitations, papers, and experiments stay hidden until claim focus or paper focus.
+
 `understanding.claim_focus`
 
 - Anchor: one claim
@@ -746,6 +758,22 @@ Each mode/layer must declare its expected objects.
 - Relations: `supports`, `qualifies`, `bounds`, `cites`
 - Projected source paper interaction: `drill -> understanding.paper_focus` or `portal -> literature.paper_focus`, depending available data
 
+Locked display contract, accepted from DemoVisualAffordance dashboard review:
+
+- Graph centers one selected project claim as anchor.
+- Graph does not show unrelated project claims as active content.
+- Evidence, warrants, limitations, and source papers are separated into visible frames.
+- Evidence/grounds frame contains evidence atoms.
+- Warrants/bridges frame contains warrant atoms.
+- Limitations/boundaries frame contains limitation atoms.
+- Source papers frame contains paper/source terminal or portal nodes.
+- Edge density is acceptable when it explains how atom/source relations support, qualify, bound, or cite the selected claim.
+- Default claim inspector shows rich claim detail and all surrounding evidence, warrants, limitations, and source papers.
+- Clicking an evidence, warrant, or limitation atom updates inspector only.
+- Atom click does not create another breadcrumb layer and does not drill deeper.
+- Atom inspector can show atom text, source refs, and related source papers.
+- Evidence, warrant, and limitation atoms are terminal nodes unless they point to a concrete paper/source portal.
+
 `understanding.paper_focus`
 
 - Anchor: project claim
@@ -753,6 +781,26 @@ Each mode/layer must declare its expected objects.
 - Groups: paper argument lanes and translation bridge
 - Relations: paper argument links, translation links
 - Inspector: paper node detail or paper overview
+
+Locked display contract, accepted from DemoVisualAffordance dashboard review:
+
+- Graph uses a fixed paper argument template beside the selected project claim.
+- Fixed lanes are Paper Questions, Paper Claims, Paper Evidence, Paper Warrants, and Paper Limitations.
+- Lane presence and lane height are data-driven.
+- Adding paper evidence adds cards inside Paper Evidence.
+- Adding paper limitations adds cards inside Paper Limitations.
+- Adding paper questions, claims, or warrants follows the same lane rule.
+- Empty lanes may be hidden.
+- Paper argument nodes are terminal inspect nodes by default.
+- Paper argument nodes do not create deeper breadcrumb layers.
+- Inspector shows paper focus detail, including paper brief, argument nodes, and translation bridge.
+- This layer represents the selected paper's internal argument projected beside the selected project claim.
+- This layer does not replace the project claim focus graph and does not show the project's complete evidence graph.
+
+Understanding mode frontend is locked:
+
+- `understanding.project_overview`, `understanding.claim_focus`, and `understanding.paper_focus` are accepted as the frontend display contract.
+- Future changes should preserve these graph frames, inspector roles, and drill/inspect boundaries unless this document is revised.
 
 ### 12.2 Literature
 
@@ -765,6 +813,18 @@ Each mode/layer must declare its expected objects.
 - Projected route interaction: `drill -> literature.route_focus`
 - Projected paper interaction: `drill -> literature.paper_focus`
 
+Locked display contract, accepted from DemoVisualAffordance dashboard review:
+
+- Graph shows literature routes as large colored route frames.
+- Each route frame contains readable paper/source cards.
+- Route frame color separates literature lines.
+- Paper/source cards show paper title and year when available.
+- Inspector shows route list only.
+- Inspector does not show project Understanding detail, experiment detail, raw debug state, or paper argument detail.
+- Clicking a route frame drills to `literature.route_focus`.
+- Clicking a paper/source card drills to `literature.paper_focus`.
+- Literature overview is a paper-only lineage surface that supports but does not replace Project Understanding.
+
 `literature.route_focus`
 
 - Anchor: selected route
@@ -773,12 +833,39 @@ Each mode/layer must declare its expected objects.
 - Relations: route sequence and explicit literature relations
 - Inspector: route explanation and papers
 
+Locked display contract, accepted from DemoVisualAffordance dashboard review:
+
+- Graph shows one selected literature route frame.
+- Graph shows only papers inside that selected route.
+- Route focus preserves the same route color and visual style from literature overview.
+- Inspector shows route detail, route explanation, and papers in the route.
+- Clicking a paper/source card drills to `literature.paper_focus`.
+- Route focus does not show unrelated literature routes.
+- Route focus does not show project claim evidence/warrant/limitation frames.
+
 `literature.paper_focus`
 
 - Anchor: selected source paper
 - Entities: source metadata, optional paper understanding nodes
 - Groups: optional paper argument group
 - Portals: Paper detail page, Understanding nodes if linked
+
+Locked display contract, accepted from DemoVisualAffordance dashboard review:
+
+- Graph reuses the fixed paper argument template.
+- Fixed lanes are Paper Questions, Paper Claims, Paper Evidence, Paper Warrants, and Paper Limitations.
+- Lane presence and lane height are data-driven.
+- Paper argument nodes are terminal inspect nodes by default.
+- Paper argument nodes do not create deeper breadcrumb layers.
+- Inspector shows paper focus detail and paper brief.
+- Literature paper focus and Understanding paper focus share the same paper argument visual grammar.
+- Literature paper focus is reached from a literature route or paper card, not from a selected project claim.
+- This layer represents one source paper's internal argument, not the whole literature route.
+
+Literature mode frontend is locked:
+
+- `literature.overview`, `literature.route_focus`, and `literature.paper_focus` are accepted as the frontend display contract.
+- Future changes should preserve these route frames, paper card roles, paper focus grammar, inspector roles, and drill/inspect boundaries unless this document is revised.
 
 ### 12.3 Experiments
 
