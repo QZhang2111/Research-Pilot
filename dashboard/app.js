@@ -1,5 +1,5 @@
 const STATUS_ORDER = ["inbox", "candidate", "reading", "summarized", "approved", "rejected", "archived"];
-const DASHBOARD_PAGE_VERSION = "english-dashboard-20260529a";
+const DASHBOARD_PAGE_VERSION = "english-dashboard-20260603a";
 const STATUS_LABELS = {
   inbox: "Inbox",
   candidate: "Candidate",

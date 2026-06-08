@@ -30,7 +30,12 @@ DEFAULT_LAYERS = {
 VALID_LAYERS = {
     "understanding": {"project_overview", "claim_focus", "paper_focus"},
     "literature": {"literature_overview", "literature_route_focus", "literature_paper_focus"},
-    "experiments": {"evaluation_overview", "evaluation_setting_focus", "experiment_design_focus"},
+    "experiments": {"evaluation_overview", "evaluation_arena_focus", "evaluation_setting_focus", "experiment_design_focus"},
+}
+MODE_ROOT_LABELS = {
+    "understanding": "Understanding",
+    "literature": "Literature",
+    "experiments": "Experiments",
 }
 ENTITY_DISPLAY = {
     "question": {"tone": "question", "label": "Question"},
@@ -42,6 +47,7 @@ ENTITY_DISPLAY = {
     "paper": {"tone": "source", "label": "Paper"},
     "literature_lane": {"tone": "source", "label": "Literature Lane"},
     "evaluation_setting": {"tone": "claim", "label": "Evaluation Setting"},
+    "evaluation_arena": {"tone": "claim", "label": "Evaluation Arena"},
     "experiment": {"tone": "evidence", "label": "Experiment"},
     "run": {"tone": "run", "label": "Run"},
     "dataset": {"tone": "source", "label": "Dataset"},
@@ -84,6 +90,8 @@ def build_workspace_graph_model(
     layer = (layer or DEFAULT_LAYERS[mode]).strip()
     if layer not in VALID_LAYERS[mode]:
         raise ValueError(f"unknown workspace graph layer for {mode}: {layer}")
+    if mode == "experiments" and layer == "evaluation_setting_focus":
+        layer = "evaluation_arena_focus"
     if mode == "understanding":
         model = _build_understanding(root, project_id, layer, focus_id, selected_id)
     elif mode == "literature":
@@ -102,7 +110,7 @@ def _base_payload(project_id: str, mode: str, layer: str, focus_id: str = "", se
         "layer": layer,
         "focus_id": focus_id,
         "selected_id": selected_id,
-        "breadcrumb": [{"label": "Workspace", "mode": mode, "layer": DEFAULT_LAYERS[mode], "focus_id": ""}],
+        "breadcrumb": [_mode_root_crumb(mode)],
         "canvas": {"layout_hint": "island", "nodes": [], "edges": []},
         "inspector": {"kind": "overview", "title": "", "summary": "", "sections": [], "actions": []},
         "available_layers": sorted(VALID_LAYERS[mode]),
@@ -110,6 +118,14 @@ def _base_payload(project_id: str, mode: str, layer: str, focus_id: str = "", se
         "empty_state": None,
         "warnings": [],
     }
+
+
+def _mode_root_crumb(mode: str) -> dict[str, Any]:
+    return {"label": MODE_ROOT_LABELS.get(mode, mode.title()), "mode": mode, "layer": DEFAULT_LAYERS[mode], "focus_id": ""}
+
+
+def _breadcrumb(mode: str, *crumbs: dict[str, Any]) -> list[dict[str, Any]]:
+    return [_mode_root_crumb(mode), *crumbs]
 
 
 def _json_loads(value: Any, fallback: Any) -> Any:
@@ -195,6 +211,17 @@ def _run_graph_id(run_id: str) -> str:
 def _strip_prefix(value: str, prefix: str) -> str:
     text = str(value or "")
     return text[len(prefix) :] if text.startswith(prefix) else text
+
+
+def _display_title(*records: dict[str, Any] | None, fallback: str = "Item") -> str:
+    for record in records:
+        if not isinstance(record, dict):
+            continue
+        for key in ("title", "label", "name", "run_label", "id"):
+            value = str(record.get(key) or "").strip()
+            if value:
+                return value
+    return fallback
 
 
 def _connection(root: Path) -> sqlite3.Connection:
@@ -555,20 +582,78 @@ def _paper_layer_edges(source_id: str, paper_graph: dict[str, Any], claim_id: st
     return edges
 
 
+PAPER_BRIEF_SECTION_MAP = {
+    "core contribution": "Core Contribution",
+    "evidence relevant to demo pug": "Evidence Boundary",
+    "limitations / what not to infer": "What Not To Overlearn",
+    "5. method mechanism": "Method View",
+    "6. experiment logic": "Experiment Logic",
+    "8. position for the target project": "Project Consequence",
+    "9. what not to learn": "What Not To Overlearn",
+}
+
+
+def _markdown_sections(text: str) -> dict[str, str]:
+    sections: dict[str, list[str]] = {}
+    current = ""
+    for line in text.splitlines():
+        if line.startswith("### "):
+            current = line[4:].strip().lower()
+            sections.setdefault(current, [])
+            continue
+        if current:
+            sections[current].append(line)
+    return {key: "\n".join(value).strip() for key, value in sections.items() if "\n".join(value).strip()}
+
+
+def _paper_dossier_brief(root: Path, source: dict[str, Any]) -> list[dict[str, str]]:
+    locator = source.get("locator") or source.get("path") or ""
+    if not locator:
+        return []
+    root_path = Path(root).resolve()
+    locator_path = Path(str(locator))
+    if locator_path.is_absolute():
+        return []
+    path = (root_path / locator_path).resolve()
+    try:
+        path.relative_to(root_path)
+    except ValueError:
+        return []
+    if not path.exists():
+        return []
+    sections = _markdown_sections(path.read_text(encoding="utf-8"))
+    brief = []
+    seen_labels: set[str] = set()
+    for source_heading, label in PAPER_BRIEF_SECTION_MAP.items():
+        text = sections.get(source_heading, "")
+        if not text or label in seen_labels:
+            continue
+        seen_labels.add(label)
+        brief.append({"label": label, "text": text})
+    return brief
+
+
 def _paper_layer_inspector(
+    root: Path,
     paper_graph: dict[str, Any],
     source: dict[str, Any],
     source_id: str,
     summary: str,
     extra_sections: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
-    sections = [
-        {"title": "Paper Nodes", "kind": "paper_node_list", "items": paper_graph.get("nodes", [])},
-        {"title": "Translation Bridge", "kind": "translation_bridge", "items": paper_graph.get("translations", [])},
-    ]
+    brief_items = _paper_dossier_brief(root, source)
+    sections = []
+    if brief_items:
+        sections.append({"title": "Paper Brief", "kind": "paper_brief", "items": brief_items})
     sections.extend(extra_sections or [])
+    sections.extend(
+        [
+            {"title": "Paper Argument Nodes", "kind": "paper_node_list", "items": paper_graph.get("nodes", [])},
+            {"title": "Translation Bridge", "kind": "translation_bridge", "items": paper_graph.get("translations", [])},
+        ]
+    )
     return {
-        "kind": "paper_layer",
+        "kind": "paper_focus",
         "title": paper_graph.get("title") or source.get("title") or source_id,
         "summary": summary,
         "sections": sections,
@@ -603,6 +688,16 @@ def _build_understanding(root: Path, project_id: str, layer: str, focus_id: str,
         if not claim:
             raise ValueError(f"unknown claim focus: {claim_id}")
         payload["focus_id"] = claim_id
+        payload["breadcrumb"] = _breadcrumb(
+            "understanding",
+            {
+                "label": _node_local_id(claim) or claim_id,
+                "mode": "understanding",
+                "layer": "claim_focus",
+                "focus_id": claim_id,
+                "selected_id": "",
+            },
+        )
         canvas_related_nodes = [node for node in related_nodes if node.get("kind") != "claim"]
         payload["canvas"]["nodes"] = [
             _understanding_node(claim, selected_id=claim_id),
@@ -627,8 +722,8 @@ def _build_understanding(root: Path, project_id: str, layer: str, focus_id: str,
             raise ValueError(f"unknown claim focus: {claim_id}")
         payload["focus_id"] = claim_id
         payload["selected_id"] = selected_id
-        payload["breadcrumb"] = [
-            {"label": "Workspace", "mode": "understanding", "layer": "project_overview", "focus_id": ""},
+        payload["breadcrumb"] = _breadcrumb(
+            "understanding",
             {
                 "label": _node_local_id(claim) or claim_id,
                 "mode": "understanding",
@@ -636,7 +731,14 @@ def _build_understanding(root: Path, project_id: str, layer: str, focus_id: str,
                 "focus_id": claim_id,
                 "selected_id": "",
             },
-        ]
+            {
+                "label": _display_title(paper_graph, source, fallback=source_id),
+                "mode": "understanding",
+                "layer": "paper_focus",
+                "focus_id": claim_id,
+                "selected_id": selected_id,
+            },
+        )
         payload["canvas"]["nodes"] = [
             {
                 "id": claim_id,
@@ -655,6 +757,7 @@ def _build_understanding(root: Path, project_id: str, layer: str, focus_id: str,
         ]
         payload["canvas"]["edges"] = _paper_layer_edges(source_id, paper_graph, claim_id)
         payload["inspector"] = _paper_layer_inspector(
+            root,
             paper_graph,
             source,
             source_id,
@@ -718,6 +821,40 @@ def _literature_paper_lookup(papers: list[dict[str, Any]]) -> dict[str, dict[str
 
 def _literature_paper_route_key(paper: dict[str, Any]) -> str:
     return str(paper.get("route") or _local_id(str(paper.get("lane_id") or "")) or paper.get("lane_id") or "")
+
+
+def _literature_route_for_paper(paper: dict[str, Any], routes: list[dict[str, Any]]) -> dict[str, Any] | None:
+    paper_route_key = _literature_paper_route_key(paper)
+    route_ids = {str(value) for value in (paper.get("route_ids") or []) if str(value).strip()}
+    for route in routes:
+        route_key = _literature_route_key(route)
+        route_local_id = _literature_route_local_id(route)
+        if paper_route_key == route_key or route_local_id in route_ids:
+            return route
+    return None
+
+
+def _literature_route_crumb(route: dict[str, Any]) -> dict[str, Any]:
+    route_raw_id = _literature_route_raw_id(route)
+    graph_id = _literature_node_id("literature_lane", route_raw_id)
+    return {
+        "label": _display_title(route, fallback=_literature_route_local_id(route) or "Route"),
+        "mode": "literature",
+        "layer": "literature_route_focus",
+        "focus_id": graph_id,
+        "selected_id": "",
+    }
+
+
+def _literature_paper_crumb(paper: dict[str, Any], source: dict[str, Any] | None, focus_id: str) -> dict[str, Any]:
+    source_key = _strip_prefix(focus_id, "source:")
+    return {
+        "label": _display_title(paper, source, fallback=source_key),
+        "mode": "literature",
+        "layer": "literature_paper_focus",
+        "focus_id": focus_id,
+        "selected_id": focus_id,
+    }
 
 
 def _literature_paper_sort_year(paper: dict[str, Any]) -> int:
@@ -871,6 +1008,7 @@ def _build_literature(root: Path, project_id: str, layer: str, focus_id: str, se
         route_metadata["route_key"] = route_key
         route_metadata["route_index"] = route_index
         payload["focus_id"] = focus_id
+        payload["breadcrumb"] = _breadcrumb("literature", _literature_route_crumb(route))
         payload["canvas"]["nodes"] = [
             {
                 "id": focus_id,
@@ -904,17 +1042,20 @@ def _build_literature(root: Path, project_id: str, layer: str, focus_id: str, se
             raise ValueError(f"unknown literature paper: {focus_id}")
         sources_model = build_sources_model(root, project_id)
         source = next((item for item in sources_model.get("sources", []) if item.get("source_id") == source_key), None)
+        route = _literature_route_for_paper(paper, routes)
+        paper_crumbs = []
+        if route:
+            paper_crumbs.append(_literature_route_crumb(route))
+        paper_crumbs.append(_literature_paper_crumb(paper, source, focus_id))
         if source and source.get("locator"):
             paper_graph = build_paper_graph_model(root, root / source["locator"])
             payload["focus_id"] = focus_id
             payload["selected_id"] = selected_id or focus_id
-            payload["breadcrumb"] = [
-                {"label": "Workspace", "mode": "literature", "layer": "literature_overview", "focus_id": ""},
-                {"label": "Literature", "mode": "literature", "layer": "literature_overview", "focus_id": ""},
-            ]
+            payload["breadcrumb"] = _breadcrumb("literature", *paper_crumbs)
             payload["canvas"]["nodes"] = [_paper_layer_node(source_key, node) for node in paper_graph.get("nodes", [])]
             payload["canvas"]["edges"] = _paper_layer_edges(source_key, paper_graph)
             payload["inspector"] = _paper_layer_inspector(
+                root,
                 paper_graph,
                 source,
                 source_key,
@@ -924,10 +1065,7 @@ def _build_literature(root: Path, project_id: str, layer: str, focus_id: str, se
             return payload
         payload["focus_id"] = focus_id
         payload["selected_id"] = selected_id or focus_id
-        payload["breadcrumb"] = [
-            {"label": "Workspace", "mode": "literature", "layer": "literature_overview", "focus_id": ""},
-            {"label": "Literature", "mode": "literature", "layer": "literature_overview", "focus_id": ""},
-        ]
+        payload["breadcrumb"] = _breadcrumb("literature", *paper_crumbs)
         payload["canvas"]["nodes"] = [_literature_paper_node(paper, drill=False, route_indexes=route_indexes)]
         payload["inspector"] = {
             "kind": "paper_detail",
@@ -1101,14 +1239,200 @@ def _experiment_setting_inspector_item(setting: dict[str, Any]) -> dict[str, Any
     }
 
 
-def _experiments_breadcrumb(current: dict[str, Any] | None = None) -> list[dict[str, Any]]:
-    crumbs = [
-        {"label": "Workspace", "mode": "experiments", "layer": "evaluation_overview", "focus_id": ""},
-        {"label": "Experiments", "mode": "experiments", "layer": "evaluation_overview", "focus_id": ""},
+def _experiment_metric_families(experiment: dict[str, Any], runs: list[dict[str, Any]]) -> list[str]:
+    names = [str(metric.get("name") or "") for run in runs for metric in run.get("metrics", [])]
+    family = _metric_family_from_names(names) or _planned_metric_family(experiment)
+    return [item.strip() for item in family.split("+") if item.strip()]
+
+
+def _canonical_experiment_datasets(experiment: dict[str, Any]) -> list[str]:
+    text = " ".join(
+        [
+            str(experiment.get("dataset") or ""),
+            str(experiment.get("dataset_name") or ""),
+            _metadata_text(experiment, "dataset"),
+        ]
+    ).lower()
+    datasets: list[str] = []
+    if "agd20k" in text:
+        datasets.append("AGD20K")
+    if "umd" in text:
+        datasets.append("UMD")
+    return datasets or [str(experiment.get("dataset") or experiment.get("dataset_name") or "Unspecified dataset")]
+
+
+def _canonical_experiment_tasks(experiment: dict[str, Any]) -> list[str]:
+    text = " ".join(
+        [
+            str(experiment.get("benchmark") or ""),
+            str(experiment.get("benchmark_name") or ""),
+            str(experiment.get("title") or ""),
+            _metadata_text(experiment, "benchmark"),
+        ]
+    ).lower()
+    tasks: list[str] = []
+    if "heatmap" in text or "zero-shot" in text:
+        tasks.append("affordance heatmap estimation")
+    if "segmentation" in text or "miou" in text:
+        tasks.append("affordance segmentation")
+    if "qualitative" in text or "validation" in text:
+        tasks.append("affordance localization qualitative validation")
+    if "semantic assimilation" in text or "control" in text:
+        tasks.append("semantic assimilation control")
+    return tasks or [str(experiment.get("benchmark") or experiment.get("benchmark_name") or "Unspecified benchmark")]
+
+
+def _canonical_experiment_metrics(experiment: dict[str, Any], runs: list[dict[str, Any]]) -> list[str]:
+    names = [str(metric.get("name") or "") for run in runs for metric in run.get("metrics", [])]
+    names.extend(_metadata_list(experiment, "metrics"))
+    text = " ".join(names).lower()
+    metrics: list[str] = []
+    for label, aliases in [
+        ("KLD", ["kld"]),
+        ("SIM", ["sim"]),
+        ("NSS", ["nss"]),
+        ("mIoU", ["miou", "m iou"]),
+        ("linear-probe separability", ["linear-probe", "linear probe", "separability"]),
+        ("part-level PCA coherence", ["pca"]),
+        ("qualitative contact-region alignment", ["qualitative", "contact-region", "contact region"]),
+        ("cosine similarity response", ["cosine"]),
+    ]:
+        if any(alias in text for alias in aliases):
+            metrics.append(label)
+    if not metrics:
+        metrics = _experiment_metric_families(experiment, runs)
+    return metrics
+
+
+def _experiment_arena_key(experiment: dict[str, Any], runs: list[dict[str, Any]]) -> str:
+    text = " ".join(
+        [
+            str(experiment.get("id") or ""),
+            str(experiment.get("title") or ""),
+            str(experiment.get("benchmark") or ""),
+            str(experiment.get("dataset") or ""),
+            " ".join(_experiment_metric_families(experiment, runs)),
+        ]
+    ).lower()
+    if "mug-handle" in text or "semantic assimilation" in text:
+        return "semantic_assimilation_control"
+    if "agd20k" in text and ("kld" in text or "heatmap" in text or "flux" in text or "quantitative" in text):
+        return "agd20k_affordance_localization"
+    if "umd" in text or "segmentation" in text or "miou" in text or "linear probe" in text:
+        return "umd_geometry_segmentation_probe"
+    if "agd20k" in text or "heatmap" in text or "flux" in text:
+        return "agd20k_affordance_localization"
+    return "other_experiment_arena"
+
+
+ARENA_DISPLAY = {
+    "agd20k_affordance_localization": {
+        "label": "AGD20K Affordance Localization",
+        "summary": "Verb-conditioned attention, geometry fusion, heatmap metrics, and qualitative localization evidence.",
+    },
+    "umd_geometry_segmentation_probe": {
+        "label": "UMD Geometry / Segmentation Probe",
+        "summary": "Geometry-aware VFM representations tested against object-part affordance segmentation evidence.",
+    },
+    "semantic_assimilation_control": {
+        "label": "Semantic Assimilation Control",
+        "summary": "Controls that bound whether apparent geometry evidence is pure shape or entangled with object semantics.",
+    },
+    "other_experiment_arena": {
+        "label": "Other Experiment Arena",
+        "summary": "Experiment designs not assigned to the primary demo arenas.",
+    },
+}
+
+
+def _experiment_arenas(model: dict[str, Any]) -> list[dict[str, Any]]:
+    runs_by_experiment = _runs_by_experiment(model)
+    arenas: dict[str, dict[str, Any]] = {}
+    for experiment in model.get("experiments", []):
+        experiment_runs = runs_by_experiment.get(experiment.get("id"), [])
+        arena_key = _experiment_arena_key(experiment, experiment_runs)
+        display = ARENA_DISPLAY[arena_key]
+        current = arenas.setdefault(
+            arena_key,
+            {
+                "id": f"evaluation_arena:{arena_key}",
+                "entity_type": "evaluation_arena",
+                "key": arena_key,
+                "label": display["label"],
+                "summary": display["summary"],
+                "experiment_ids": [],
+                "run_ids": [],
+                "datasets": set(),
+                "benchmarks": set(),
+                "metric_families": set(),
+                "origin_types": set(),
+            },
+        )
+        current["experiment_ids"].append(experiment["id"])
+        for dataset in _canonical_experiment_datasets(experiment):
+            current["datasets"].add(dataset)
+        for task in _canonical_experiment_tasks(experiment):
+            current["benchmarks"].add(task)
+        for family in _canonical_experiment_metrics(experiment, experiment_runs):
+            current["metric_families"].add(family)
+        for run in experiment_runs:
+            current["run_ids"].append(run["id"])
+            if run.get("origin_type"):
+                current["origin_types"].add(run["origin_type"])
+
+    result = []
+    order = [
+        "agd20k_affordance_localization",
+        "umd_geometry_segmentation_probe",
+        "semantic_assimilation_control",
+        "other_experiment_arena",
     ]
-    if current:
-        crumbs.append(current)
-    return crumbs
+    for key in order:
+        arena = arenas.get(key)
+        if not arena:
+            continue
+        arena["experiment_ids"] = sorted(set(arena["experiment_ids"]))
+        arena["run_ids"] = sorted(set(arena["run_ids"]))
+        arena["datasets"] = sorted(arena["datasets"])
+        arena["benchmarks"] = sorted(arena["benchmarks"])
+        arena["metric_families"] = sorted(arena["metric_families"])
+        arena["origin_types"] = sorted(arena["origin_types"])
+        arena["experiment_count"] = len(arena["experiment_ids"])
+        arena["run_count"] = len(arena["run_ids"])
+        result.append(arena)
+    return result
+
+
+def _arena_id_for_legacy_setting(model: dict[str, Any], focus_id: str, arenas: list[dict[str, Any]]) -> str:
+    if not str(focus_id or "").startswith("evaluation_setting:"):
+        return focus_id
+    settings = _evaluation_settings(model)
+    setting = next((item for item in settings if item["id"] == focus_id), None)
+    if not setting:
+        return focus_id
+    setting_experiments = set(setting.get("experiment_ids") or [])
+    if not setting_experiments:
+        return focus_id
+    ranked = sorted(
+        (
+            (len(setting_experiments & set(arena.get("experiment_ids") or [])), arena.get("id", ""))
+            for arena in arenas
+        ),
+        reverse=True,
+    )
+    overlap, arena_id = ranked[0] if ranked else (0, "")
+    return arena_id if overlap else focus_id
+
+
+def _experiments_breadcrumb(current: dict[str, Any] | None = None) -> list[dict[str, Any]]:
+    return _breadcrumb("experiments", *([current] if current else []))
+
+
+def _arena_for_experiment(experiment_id: str, arenas: list[dict[str, Any]]) -> dict[str, Any] | None:
+    matches = [arena for arena in arenas if experiment_id in set(arena.get("experiment_ids") or [])]
+    if not matches:
+        return None
+    return matches[0]
 
 
 def _claim_impacts(root: Path, project_id: str, run_id: str) -> list[dict[str, Any]]:
@@ -1159,6 +1483,33 @@ def _support_node(kind: str, experiment_id: str, index: int, value: str) -> dict
     }
 
 
+def _experiment_method_node(experiment: dict[str, Any], experiment_id: str) -> dict[str, Any]:
+    metadata = {
+        "experiment_id": experiment_id,
+        "models": _metadata_list(experiment, "models"),
+        "baselines": _metadata_list(experiment, "baselines"),
+        "protocol": experiment.get("protocol") or _metadata_list(experiment, "protocol"),
+        "ablations": _metadata_list(experiment, "ablations"),
+    }
+    counts = [
+        len(metadata["models"]),
+        len(metadata["baselines"]),
+        len(metadata["protocol"]),
+        len(metadata["ablations"]),
+    ]
+    return {
+        "id": f"experiment_method:{experiment_id}",
+        "entity_type": "experiment_method",
+        "label": "Design Method",
+        "subtitle": f"{sum(counts)} records / models, baselines, protocol",
+        "status": "",
+        "confidence": "",
+        "metadata": metadata,
+        "drill": None,
+        "inspector": {"selected_id": f"experiment_method:{experiment_id}"},
+    }
+
+
 def _run_inspector(root: Path, project_id: str, selected_id: str, runs: list[dict[str, Any]]) -> dict[str, Any]:
     run_id = _strip_prefix(selected_id, "run:")
     run = next((item for item in runs if item.get("id") == run_id), None)
@@ -1185,62 +1536,113 @@ def _run_inspector(root: Path, project_id: str, selected_id: str, runs: list[dic
     }
 
 
+def _experiment_inspector(experiment: dict[str, Any], run_nodes: list[dict[str, Any]]) -> dict[str, Any]:
+    experiment_id = experiment.get("id") or _local_id(experiment.get("entity_id")) or "experiment"
+    return {
+        "kind": "experiment_detail",
+        "title": experiment.get("title") or experiment_id,
+        "summary": experiment.get("question") or "",
+        "sections": [
+            {"title": "Hypothesis", "kind": "text", "items": [{"text": experiment.get("hypothesis") or ""}]},
+            {"title": "Expected Evidence", "kind": "text", "items": [{"text": _metadata_text(experiment, "expected_evidence")}]},
+            {"title": "Risks", "kind": "risk_list", "items": [{"text": item} for item in _metadata_list(experiment, "risks")]},
+            {"title": "Runs", "kind": "run_list", "items": run_nodes},
+        ],
+        "actions": [],
+    }
+
+
+def _experiment_method_inspector(experiment: dict[str, Any], selected_id: str) -> dict[str, Any]:
+    method_kind = selected_id.rsplit(":", 1)[-1]
+    metadata_key = {
+        "model": "models",
+        "baseline": "baselines",
+        "protocol": "protocol",
+        "ablation": "ablations",
+    }.get(method_kind, "")
+    title = {
+        "model": "Models",
+        "baseline": "Baselines",
+        "protocol": "Protocol",
+        "ablation": "Ablations",
+    }.get(method_kind, "Design Method")
+    values = experiment.get("protocol") if metadata_key == "protocol" else _metadata_list(experiment, metadata_key)
+    if isinstance(values, str):
+        values = [values]
+    items = [{"label": str(value)} for value in values or []]
+    return {
+        "kind": "experiment_method_detail",
+        "title": title,
+        "summary": f"{title} used by {experiment.get('id') or 'this experiment'}.",
+        "sections": [{"title": title, "kind": method_kind or "method", "items": items}],
+        "actions": [],
+    }
+
+
 def _build_experiments(root: Path, project_id: str, layer: str, focus_id: str, selected_id: str) -> dict[str, Any]:
     model = build_experiments_model(root, project_id)
     payload = _base_payload(project_id, "experiments", layer, focus_id, selected_id)
     experiments = _experiments_by_id(model)
     runs_by_experiment = _runs_by_experiment(model)
-    settings = _evaluation_settings(model)
+    arenas = _experiment_arenas(model)
 
     if layer == "evaluation_overview":
         payload["canvas"]["nodes"] = [
             {
-                "id": setting["id"],
-                "entity_type": "evaluation_setting",
-                "label": setting["label"],
-                "subtitle": f"{setting['experiment_count']} experiments / {setting['run_count']} runs",
+                "id": arena["id"],
+                "entity_type": "evaluation_arena",
+                "label": arena["label"],
+                "subtitle": f"{arena['experiment_count']} experiments / {arena['run_count']} runs",
                 "status": "",
                 "confidence": "",
-                "drill": {"mode": "experiments", "layer": "evaluation_setting_focus", "focus_id": setting["id"]},
-                "inspector": {"selected_id": setting["id"]},
-                "metadata": setting,
+                "drill": {"mode": "experiments", "layer": "evaluation_arena_focus", "focus_id": arena["id"]},
+                "inspector": {"selected_id": arena["id"]},
+                "metadata": arena,
             }
-            for setting in settings
+            for arena in arenas
         ]
+        narrative = model.get("narrative_summary") or {}
         payload["inspector"] = {
             "kind": "overview",
-            "title": "Evaluation Settings",
-            "summary": "Datasets, benchmarks/tasks, and metric families organize Experiments before claim impact.",
+            "title": "Evaluation Arenas",
+            "summary": narrative.get("strongest_current_evidence") or "Evaluation arenas organize experiments before claim impact.",
             "sections": [
                 {
-                    "title": "Evaluation Settings",
-                    "kind": "evaluation_setting_list",
-                    "items": [_experiment_setting_inspector_item(setting) for setting in settings],
-                }
+                    "title": "Evaluation Arenas",
+                    "kind": "evaluation_arena_list",
+                    "items": [
+                        {
+                            "id": arena["id"],
+                            "label": arena["label"],
+                            "subtitle": ", ".join(arena["metric_families"]) or "mixed metrics",
+                            "impact": f"{arena['experiment_count']} experiments / {arena['run_count']} runs",
+                        }
+                        for arena in arenas
+                    ],
+                },
+                {"title": "Next Moves", "kind": "next_move_list", "items": model.get("next_moves") or []},
             ],
             "actions": [],
         }
         return payload
 
-    if layer == "evaluation_setting_focus":
-        setting = next((item for item in settings if item["id"] == focus_id), None)
-        if not setting:
-            raise ValueError(f"unknown evaluation setting: {focus_id}")
+    if layer == "evaluation_arena_focus":
+        focus_id = _arena_id_for_legacy_setting(model, focus_id, arenas)
+        arena = next((item for item in arenas if item["id"] == focus_id), None)
+        if not arena:
+            raise ValueError(f"unknown evaluation arena: {focus_id}")
         payload["focus_id"] = focus_id
         payload["breadcrumb"] = _experiments_breadcrumb(
             {
-                "label": setting["benchmark"],
+                "label": arena["label"],
                 "mode": "experiments",
-                "layer": "evaluation_setting_focus",
+                "layer": "evaluation_arena_focus",
                 "focus_id": focus_id,
                 "selected_id": "",
             }
         )
-        metric_id = f"metric_family:{_slug(setting['metric_family'])}"
-        benchmark_id = f"benchmark:{_slug(setting['benchmark'])}"
-        dataset_id = f"dataset:{_slug(setting['dataset'])}"
         experiment_nodes = []
-        for experiment_id in setting["experiment_ids"]:
+        for experiment_id in arena["experiment_ids"]:
             experiment = experiments.get(experiment_id)
             if not experiment:
                 continue
@@ -1261,74 +1663,96 @@ def _build_experiments(root: Path, project_id: str, layer: str, focus_id: str, s
                     "metadata": experiment,
                 }
             )
-        payload["canvas"]["nodes"] = [
-            {
-                "id": setting["id"],
-                "entity_type": "evaluation_setting",
-                "label": setting["label"],
-                "subtitle": "selected setting",
-                "status": "",
-                "confidence": "",
-                "drill": None,
-                "inspector": {"selected_id": setting["id"]},
-                "metadata": setting,
+        context_node = {
+            "id": f"evaluation_context:{_strip_prefix(focus_id, 'evaluation_arena:')}",
+            "entity_type": "evaluation_context",
+            "label": "Dataset / Benchmark / Metrics",
+            "subtitle": (
+                f"{len(arena['datasets'])} datasets / "
+                f"{len(arena['benchmarks'])} benchmarks / "
+                f"{len(arena['metric_families'])} metric families"
+            ),
+            "status": "",
+            "confidence": "",
+            "metadata": {
+                "arena_id": focus_id,
+                "datasets": arena["datasets"],
+                "benchmarks": arena["benchmarks"],
+                "metric_families": arena["metric_families"],
             },
-            {
-                "id": dataset_id,
-                "entity_type": "dataset",
-                "label": setting["dataset"],
-                "subtitle": "dataset",
-                "status": "",
-                "confidence": "",
-                "metadata": setting,
-                "drill": None,
-                "inspector": {"selected_id": dataset_id},
-            },
-            {
-                "id": benchmark_id,
-                "entity_type": "benchmark",
-                "label": setting["benchmark"],
-                "subtitle": "benchmark/task",
-                "status": "",
-                "confidence": "",
-                "metadata": setting,
-                "drill": None,
-                "inspector": {"selected_id": benchmark_id},
-            },
-            {
-                "id": metric_id,
-                "entity_type": "metric_family",
-                "label": setting["metric_family"],
-                "subtitle": "metric family",
-                "status": "",
-                "confidence": "",
-                "metadata": setting,
-                "drill": None,
-                "inspector": {"selected_id": metric_id},
-            },
-            *experiment_nodes,
-        ]
+            "drill": None,
+            "inspector": {"selected_id": f"evaluation_context:{_strip_prefix(focus_id, 'evaluation_arena:')}"},
+        }
+        arena_node = {
+            "id": arena["id"],
+            "entity_type": "evaluation_arena",
+            "label": arena["label"],
+            "subtitle": f"{arena['experiment_count']} experiments / {arena['run_count']} runs",
+            "status": "",
+            "confidence": "",
+            "drill": None,
+            "inspector": {"selected_id": arena["id"]},
+            "metadata": arena,
+        }
+        payload["canvas"]["nodes"] = [arena_node, context_node, *experiment_nodes]
         payload["canvas"]["edges"] = [
-            {"id": f"setting-dataset:{focus_id}", "source": dataset_id, "target": focus_id, "relation": "defines", "label": "defines", "metadata": {}},
-            {"id": f"setting-benchmark:{focus_id}", "source": benchmark_id, "target": focus_id, "relation": "defines", "label": "defines", "metadata": {}},
-            {"id": f"setting-metric:{focus_id}", "source": metric_id, "target": focus_id, "relation": "measured_by", "label": "measured by", "metadata": {}},
+            {
+                "id": f"arena-context:{focus_id}:{context_node['id']}",
+                "source": context_node["id"],
+                "target": focus_id,
+                "relation": "defines",
+                "label": "defines",
+                "metadata": {},
+            },
             *[
-                {"id": f"setting-exp:{focus_id}:{node['id']}", "source": focus_id, "target": node["id"], "relation": "used_by", "label": "used by", "metadata": {}}
+                {
+                    "id": f"arena-exp:{focus_id}:{node['id']}",
+                    "source": focus_id,
+                    "target": node["id"],
+                    "relation": "uses",
+                    "label": "uses",
+                    "metadata": {},
+                }
                 for node in experiment_nodes
             ],
         ]
-        payload["inspector"] = {
-            "kind": "evaluation_setting_detail",
-            "title": setting["label"],
-            "summary": "This setting groups experiment designs by benchmark/task, dataset, and metric family.",
-            "sections": [
-                {"title": "Dataset", "kind": "dataset", "items": [{"label": setting["dataset"]}]},
-                {"title": "Benchmark / Task", "kind": "benchmark", "items": [{"label": setting["benchmark"]}]},
-                {"title": "Metric Family", "kind": "metric_family", "items": [{"label": setting["metric_family"]}]},
-                {"title": "Experiment Designs", "kind": "experiment_list", "items": experiment_nodes},
-            ],
-            "actions": [],
-        }
+        if selected_id.startswith("run:"):
+            payload["inspector"] = _run_inspector(root, project_id, selected_id, model.get("runs", []))
+        elif selected_id.startswith("experiment:"):
+            experiment_id = _strip_prefix(selected_id, "experiment:")
+            experiment = experiments.get(experiment_id)
+            if not experiment:
+                raise ValueError(f"unknown experiment: {selected_id}")
+            owned_runs = [
+                {
+                    "id": _run_graph_id(run["id"]),
+                    "entity_type": "run",
+                    "db_id": run["id"],
+                    "local_id": run["id"],
+                    "label": run.get("run_label") or run.get("id"),
+                    "subtitle": f"{run.get('origin_type', '')} / {run.get('status', '')}",
+                    "status": run.get("status") or "",
+                    "confidence": "",
+                    "drill": None,
+                    "inspector": {"selected_id": _run_graph_id(run["id"])},
+                    "metadata": run,
+                }
+                for run in runs_by_experiment.get(experiment_id, [])
+            ]
+            payload["inspector"] = _experiment_inspector(experiment, owned_runs)
+        else:
+            payload["inspector"] = {
+                "kind": "arena_detail",
+                "title": arena["label"],
+                "summary": arena["summary"],
+                "sections": [
+                    {"title": "Datasets", "kind": "dataset", "items": [{"label": item} for item in arena["datasets"]]},
+                    {"title": "Benchmarks / Tasks", "kind": "benchmark", "items": [{"label": item} for item in arena["benchmarks"]]},
+                    {"title": "Metric Families", "kind": "metric_family", "items": [{"label": item} for item in arena["metric_families"]]},
+                    {"title": "Experiment Designs", "kind": "experiment_list", "items": experiment_nodes},
+                ],
+                "actions": [],
+            }
         return payload
 
     if layer == "experiment_design_focus":
@@ -1338,15 +1762,28 @@ def _build_experiments(root: Path, project_id: str, layer: str, focus_id: str, s
             raise ValueError(f"unknown experiment: {focus_id}")
         runs = runs_by_experiment.get(experiment_id, [])
         payload["focus_id"] = _experiment_graph_id(experiment_id)
-        payload["breadcrumb"] = _experiments_breadcrumb(
-            {
-                "label": experiment.get("id") or experiment_id,
-                "mode": "experiments",
-                "layer": "experiment_design_focus",
-                "focus_id": _experiment_graph_id(experiment_id),
-                "selected_id": "",
-            }
-        )
+        experiment_crumb = {
+            "label": experiment.get("id") or experiment_id,
+            "mode": "experiments",
+            "layer": "experiment_design_focus",
+            "focus_id": _experiment_graph_id(experiment_id),
+            "selected_id": "",
+        }
+        parent_arena = _arena_for_experiment(experiment_id, arenas)
+        if parent_arena:
+            payload["breadcrumb"] = _breadcrumb(
+                "experiments",
+                {
+                    "label": parent_arena["label"],
+                    "mode": "experiments",
+                    "layer": "evaluation_arena_focus",
+                    "focus_id": parent_arena["id"],
+                    "selected_id": "",
+                },
+                experiment_crumb,
+            )
+        else:
+            payload["breadcrumb"] = _experiments_breadcrumb(experiment_crumb)
         run_nodes = [
             {
                 "id": _run_graph_id(run["id"]),
@@ -1376,21 +1813,17 @@ def _build_experiments(root: Path, project_id: str, layer: str, focus_id: str, s
             "inspector": {"selected_id": _experiment_graph_id(experiment_id)},
             "metadata": experiment,
         }
-        support_nodes = []
-        for kind, values in [
-            ("model", _metadata_list(experiment, "models")),
-            ("baseline", _metadata_list(experiment, "baselines")),
-            ("protocol", experiment.get("protocol") or _metadata_list(experiment, "protocol")),
-            ("metric_family", _metadata_list(experiment, "metrics")),
-        ]:
-            for index, value in enumerate(values, start=1):
-                support_nodes.append(_support_node(kind, experiment_id, index, value))
-        payload["canvas"]["nodes"] = [exp_node, *support_nodes, *run_nodes]
+        method_node = _experiment_method_node(experiment, experiment_id)
+        payload["canvas"]["nodes"] = [exp_node, method_node, *run_nodes]
         payload["canvas"]["edges"] = [
-            *[
-                {"id": f"exp-support:{node['id']}", "source": node["id"], "target": exp_node["id"], "relation": "defines", "label": "defines", "metadata": {}}
-                for node in support_nodes
-            ],
+            {
+                "id": f"exp-method:{experiment_id}",
+                "source": method_node["id"],
+                "target": exp_node["id"],
+                "relation": "defines",
+                "label": "defines",
+                "metadata": {},
+            },
             *[
                 {
                     "id": f"exp-run:{experiment_id}:{node['local_id']}",
@@ -1405,19 +1838,10 @@ def _build_experiments(root: Path, project_id: str, layer: str, focus_id: str, s
         ]
         if selected_id.startswith("run:"):
             payload["inspector"] = _run_inspector(root, project_id, selected_id, runs)
+        elif selected_id.startswith("experiment_method:"):
+            payload["inspector"] = _experiment_method_inspector(experiment, selected_id)
         else:
-            payload["inspector"] = {
-                "kind": "experiment_detail",
-                "title": experiment.get("title") or experiment_id,
-                "summary": experiment.get("question") or "",
-                "sections": [
-                    {"title": "Hypothesis", "kind": "text", "items": [{"text": experiment.get("hypothesis") or ""}]},
-                    {"title": "Expected Evidence", "kind": "text", "items": [{"text": _metadata_text(experiment, "expected_evidence")}]},
-                    {"title": "Risks", "kind": "risk_list", "items": [{"text": item} for item in _metadata_list(experiment, "risks")]},
-                    {"title": "Runs", "kind": "run_list", "items": run_nodes},
-                ],
-                "actions": [],
-            }
+            payload["inspector"] = _experiment_inspector(experiment, run_nodes)
         payload["selected_id"] = selected_id
         return payload
 

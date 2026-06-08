@@ -9,7 +9,7 @@ from contextlib import closing
 from pathlib import Path
 from typing import Any
 
-from tools.experiment_store import _legacy_proposals
+from tools.experiment_store import _legacy_proposals, build_project_experiments
 from tools.research_dataset import connect_dataset, dataset_db_path, json_loads
 
 
@@ -116,6 +116,7 @@ def build_project_graph_model(root: Path, project_id: str) -> dict[str, Any]:
 
 
 def build_experiments_model(root: Path, project_id: str) -> dict[str, Any]:
+    legacy_model = build_project_experiments(Path(root), project_id)
     with closing(_project_connection(root, project_id)) as connection:
         experiments = [_experiment_item(row) for row in _experiment_rows(connection, project_id)]
         runs = [_run_item(row) for row in _run_rows(connection, project_id)]
@@ -132,7 +133,8 @@ def build_experiments_model(root: Path, project_id: str) -> dict[str, Any]:
         "summary": _experiment_summary(experiments, runs),
         "experiments": experiments,
         "runs": runs,
-        "next_moves": [],
+        "narrative_summary": legacy_model.get("summary") or {},
+        "next_moves": legacy_model.get("next_moves") or [],
         "legacy_proposals": _legacy_proposals(Path(root), project_id),
     }
 

@@ -135,6 +135,11 @@ class ResearchDatasetReadModelsTest(unittest.TestCase):
         self.assertEqual("1.493", metrics["KLD"])
         self.assertEqual("0.326", metrics["SIM"])
         self.assertEqual("1.090", metrics["NSS"])
+        self.assertIn("narrative_summary", model)
+        self.assertIn("strongest_current_evidence", model["narrative_summary"])
+        self.assertIn("AGD20K evidence", model["narrative_summary"]["strongest_current_evidence"])
+        self.assertTrue(model["next_moves"])
+        self.assertTrue(any(move["type"] == "replicate" and move["linked_experiment"] == "EXP3" for move in model["next_moves"]))
 
     def test_literature_model_has_lanes_items_and_relations(self):
         model = build_literature_model(self.root, PROJECT_ID)

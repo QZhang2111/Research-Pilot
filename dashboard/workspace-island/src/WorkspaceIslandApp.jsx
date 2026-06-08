@@ -1,4 +1,4 @@
-import React, { memo, useEffect, useMemo, useState } from "react";
+import React, { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import {
   Background,
@@ -35,13 +35,14 @@ function shortLabel(value, limit = 116) {
 function entityTone(entityType) {
   const type = String(entityType || "").toLowerCase();
   if (type === "question") return "q";
-  if (type === "claim" || type === "evaluation_setting") return "c";
+  if (type === "claim" || type === "evaluation_arena" || type === "evaluation_setting") return "c";
   if (type === "evidence" || type === "experiment") return "e";
   if (type === "warrant") return "w";
   if (type === "limitation") return "l";
   if (type === "source" || type === "paper" || type === "literature_lane") return "p";
-  if (type === "dataset" || type === "benchmark" || type === "protocol") return "p";
+  if (type === "dataset" || type === "benchmark" || type === "evaluation_context" || type === "protocol") return "p";
   if (type === "model" || type === "metric_family") return "w";
+  if (type === "ablation") return "w";
   if (type === "baseline") return "l";
   if (type === "run") return "r";
   return "x";
@@ -125,7 +126,7 @@ function workspaceNodePosition(node, index, model) {
     return { x: 360 + (sameTypeIndex % 4) * 340, y: Math.floor(sameTypeIndex / 4) * 170 };
   }
   if (mode === "experiments") {
-    if (type === "evaluation_setting") return { x: sameTypeIndex * 410, y: -40 };
+    if (type === "evaluation_arena" || type === "evaluation_setting") return { x: sameTypeIndex * 410, y: -40 };
     if (type === "experiment") return { x: sameTypeIndex * 380, y: 210 };
     if (type === "run") return { x: sameTypeIndex * 340, y: 430 };
   }
@@ -134,7 +135,7 @@ function workspaceNodePosition(node, index, model) {
 
 function workspaceNodeWidth(node, model) {
   if (model?.mode === "literature") return node.entity_type === "literature_lane" ? 300 : 330;
-  if (model?.mode === "experiments") return node.entity_type === "evaluation_setting" ? 360 : 330;
+  if (model?.mode === "experiments") return node.entity_type === "evaluation_arena" || node.entity_type === "evaluation_setting" ? 360 : 330;
   return node.entity_type === "claim" ? 360 : 300;
 }
 
@@ -257,6 +258,16 @@ const WorkspaceLaneFrameNode = memo(function WorkspaceLaneFrameNode({ data }) {
   );
 });
 
+const WorkspaceRouteFrameNode = memo(function WorkspaceRouteFrameNode({ data }) {
+  const node = data.node || {};
+  return (
+    <article className={`workspace-route-frame-node tone-${data.tone || "x"}`}>
+      <strong>{data.title || shortLabel(node.label || node.local_id || "Route", 84)}</strong>
+      {data.subtitle ? <span>{data.subtitle}</span> : null}
+    </article>
+  );
+});
+
 const WorkspaceArgumentAtomNode = memo(function WorkspaceArgumentAtomNode({ data }) {
   const node = data.node || {};
   const canInspect = Boolean(node.inspector);
@@ -301,29 +312,161 @@ const WorkspaceTimelinePaperNode = memo(function WorkspaceTimelinePaperNode({ da
   );
 });
 
-const WorkspaceExperimentSettingNode = memo(function WorkspaceExperimentSettingNode({ data }) {
+function experimentOriginLabel(value) {
+  return {
+    imported_paper: "Imported Paper",
+    local: "Local",
+    replication: "Replication",
+    external: "External",
+  }[value] || shortLabel(value || "Run", 36);
+}
+
+const WorkspaceExperimentArenaNode = memo(function WorkspaceExperimentArenaNode({ data }) {
   const node = data.node || {};
   const metadata = node.metadata || {};
-  const benchmark = metadata.benchmark || node.label || "Evaluation setting";
-  const dataset = metadata.dataset || "";
-  const metric = metadata.metric_family || "";
   const counts = node.subtitle || `${metadata.experiment_count || 0} experiments / ${metadata.run_count || 0} runs`;
-  const canAct = Boolean(node.drill || node.inspector);
+  const metricSummary = (metadata.metric_families || []).join(" / ") || node.subtitle || "";
   const content = (
     <>
       <Handle type="target" position={Position.Left} className="workspace-node-handle" />
-      <strong>{shortLabel(benchmark, 92)}</strong>
-      {dataset ? <span>{shortLabel(dataset, 96)}</span> : null}
-      {metric ? <em>{shortLabel(metric, 58)}</em> : null}
+      <strong>{shortLabel(node.label || "Evaluation Arena", 56)}</strong>
+      <span>{shortLabel(metricSummary, 48)}</span>
       <small>{counts}</small>
       <Handle type="source" position={Position.Right} className="workspace-node-handle" />
     </>
   );
-  if (!canAct) return <article className="workspace-experiment-setting-node">{content}</article>;
   return (
-    <button type="button" className="workspace-experiment-setting-node" onClick={() => data.onNodeAction?.(node)}>
+    <button type="button" className="workspace-experiment-arena-node" onClick={() => data.onNodeAction?.(node)}>
       {content}
     </button>
+  );
+});
+
+const WorkspaceExperimentContextPanelNode = memo(function WorkspaceExperimentContextPanelNode({ data }) {
+  const node = data.node || {};
+  const metadata = node.metadata || {};
+  const datasets = metadata.datasets || [];
+  const benchmarks = metadata.benchmarks || [];
+  const metrics = metadata.metric_families || [];
+  const countLabel = (count, singular, plural = `${singular}s`) => `${count} ${count === 1 ? singular : plural}`;
+  const summary = [
+    countLabel(datasets.length, "dataset"),
+    countLabel(benchmarks.length, "benchmark"),
+    countLabel(metrics.length, "metric family", "metric families"),
+  ].join(" · ");
+  const rows = [
+    ["Datasets", datasets.length],
+    ["Benchmarks", benchmarks.length],
+    ["Metric families", metrics.length],
+  ];
+  return (
+    <section className="workspace-experiment-context-panel">
+      <Handle type="target" position={Position.Left} className="workspace-node-handle" />
+      <strong>Evaluation Context</strong>
+      <p>{summary} define this arena.</p>
+      <dl>
+        {rows.map(([label, value]) => (
+          <div key={label}>
+            <dt>{label}</dt>
+            <dd>{value}</dd>
+          </div>
+        ))}
+      </dl>
+      <Handle type="source" position={Position.Right} className="workspace-node-handle" />
+    </section>
+  );
+});
+
+const WorkspaceRunResultNode = memo(function WorkspaceRunResultNode({ data }) {
+  const node = data.node || {};
+  const origin = experimentOriginLabel(node.metadata?.origin_type);
+  const metricText = (node.metadata?.metrics || []).slice(0, 3).map((metric) => `${metric.name} ${metric.value}`).join(" / ");
+  return (
+    <button type="button" className={`workspace-run-result-node tone-${data.tone || "r"}`} onClick={() => data.onNodeAction?.(node)}>
+      <Handle type="target" position={Position.Left} className="workspace-node-handle" />
+      <span>{node.local_id || node.entity_type}</span>
+      <strong>{shortLabel(node.label, 72)}</strong>
+      <em>{shortLabel(metricText || node.subtitle || "", 92)}</em>
+      <small>{origin}</small>
+    </button>
+  );
+});
+
+const methodGroupLabels = {
+  model: "Models",
+  baseline: "Baselines",
+  protocol: "Protocol",
+  ablation: "Ablations",
+};
+
+const methodMetadataKeys = {
+  model: "models",
+  baseline: "baselines",
+  protocol: "protocol",
+  ablation: "ablations",
+};
+
+function groupExperimentMethodNodes(nodes) {
+  const methodNode = (nodes || []).find((node) => node.entity_type === "experiment_method");
+  if (methodNode) {
+    return Object.entries(methodMetadataKeys)
+      .map(([kind, key]) => {
+        const values = methodNode.metadata?.[key] || [];
+        const selectedId = `${methodNode.id}:${kind}`;
+        const items = values.map((value, index) => ({
+          id: `${methodNode.id}:${kind}:${index}`,
+          label: String(value),
+        }));
+        return {
+          kind,
+          label: methodGroupLabels[kind] || kind,
+          items,
+          target: {
+            id: selectedId,
+            entity_type: "experiment_method_group",
+            label: methodGroupLabels[kind] || kind,
+            inspector: { selected_id: `${methodNode.id}:${kind}` },
+          },
+        };
+      })
+      .filter((group) => group.items.length);
+  }
+  const groups = { model: [], baseline: [], protocol: [], ablation: [] };
+  for (const node of nodes || []) {
+    if (groups[node.entity_type]) groups[node.entity_type].push(node);
+  }
+  return Object.entries(groups)
+    .filter(([, items]) => items.length)
+    .map(([kind, items]) => ({ kind, label: methodGroupLabels[kind] || kind, items, target: items[0] }));
+}
+
+const WorkspaceExperimentMethodPanelNode = memo(function WorkspaceExperimentMethodPanelNode({ data }) {
+  const groups = data.groups || [];
+  return (
+    <section className="workspace-experiment-method-panel">
+      <Handle type="target" position={Position.Left} className="workspace-node-handle" />
+      <strong>Design Method</strong>
+      <p>Models, baselines, and protocol summarized as experiment recipe.</p>
+      <div className="workspace-experiment-method-groups">
+        {groups.map((group) => (
+          <button
+            key={group.kind}
+            type="button"
+            className="workspace-experiment-method-group-button nodrag"
+            onClick={() => data.onNodeAction?.(group.target)}
+          >
+            <h4>{group.label}</h4>
+            <ul>
+              {group.items.slice(0, 5).map((item) => (
+                <li key={item.id}>{shortLabel(item.label, 72)}</li>
+              ))}
+              {group.items.length > 5 ? <li>{group.items.length - 5} more</li> : null}
+            </ul>
+          </button>
+        ))}
+      </div>
+      <Handle type="source" position={Position.Right} className="workspace-node-handle" />
+    </section>
   );
 });
 
@@ -351,52 +494,16 @@ const WorkspaceExperimentEntityNode = memo(function WorkspaceExperimentEntityNod
 const workspaceNodeTypes = {
   workspaceKnowledgeNode: WorkspaceKnowledgeNode,
   workspaceLaneFrameNode: WorkspaceLaneFrameNode,
+  workspaceRouteFrameNode: WorkspaceRouteFrameNode,
   workspaceArgumentAtomNode: WorkspaceArgumentAtomNode,
   workspacePaperSourceNode: WorkspacePaperSourceNode,
   workspaceTimelinePaperNode: WorkspaceTimelinePaperNode,
-  workspaceExperimentSettingNode: WorkspaceExperimentSettingNode,
+  workspaceExperimentArenaNode: WorkspaceExperimentArenaNode,
+  workspaceExperimentContextPanelNode: WorkspaceExperimentContextPanelNode,
+  workspaceExperimentMethodPanelNode: WorkspaceExperimentMethodPanelNode,
+  workspaceRunResultNode: WorkspaceRunResultNode,
   workspaceExperimentEntityNode: WorkspaceExperimentEntityNode,
 };
-
-function isTopLevelWorkspaceLayer(layer) {
-  return (
-    layer === "project_overview" ||
-    layer === "literature_overview" ||
-    layer === "evaluation_overview"
-  );
-}
-
-function breadcrumbLabelForTarget(target) {
-  const raw = target?.selected_id || target?.focus_id || target?.layer || target?.mode || "Workspace";
-  const text = String(raw).replace(/^[^:]+:/, "").replace(/_/g, " ").trim();
-  return text || "Workspace";
-}
-
-function currentBreadcrumbTarget(model) {
-  const layer = model?.layer || "";
-  const focus_id = model?.focus_id || "";
-  const selected_id = model?.selected_id || "";
-  if (!layer && !focus_id && !selected_id) return null;
-  if (isTopLevelWorkspaceLayer(layer) && !focus_id) return null;
-  if (!focus_id && selected_id) return null;
-  const target = {
-    label: "",
-    mode: model?.mode || "understanding",
-    layer,
-    focus_id,
-    selected_id: model?.selected_id || "",
-  };
-  target.label = breadcrumbLabelForTarget(target);
-  return target;
-}
-
-function sameBreadcrumbTarget(left, right) {
-  return Boolean(left && right)
-    && left.mode === right.mode
-    && left.layer === right.layer
-    && left.focus_id === right.focus_id
-    && left.selected_id === right.selected_id;
-}
 
 function normalizeBreadcrumb(model) {
   const crumbs = Array.isArray(model?.breadcrumb) ? model.breadcrumb : [];
@@ -409,13 +516,9 @@ function normalizeBreadcrumb(model) {
       focus_id: crumb.focus_id || "",
       selected_id: crumb.selected_id || "",
     }));
-  const currentTarget = currentBreadcrumbTarget(model);
-  if (currentTarget && !sameBreadcrumbTarget(normalized[normalized.length - 1], currentTarget)) {
-    normalized.push(currentTarget);
-  }
   if (normalized.length) return normalized;
   return [{
-    label: "Workspace",
+    label: modeLabels[model?.mode] || "Workspace",
     mode: model?.mode || "understanding",
     layer: model?.layer || "",
     focus_id: "",
@@ -453,21 +556,41 @@ function WorkspaceInspector({ inspector }) {
       <p className="eyebrow">{inspector?.kind || "Inspector"}</p>
       <h2>{inspector?.title || "Workspace"}</h2>
       {inspector?.summary ? <p>{inspector.summary}</p> : null}
-      {sections.map((section, index) => (
-        <section key={`${section.kind || "section"}:${index}`}>
-          <h3>{section.title || section.kind || "Section"}</h3>
-          <div className="workspace-inspector-list">
-            {(section.items || []).map((item, itemIndex) => (
-              <article key={item.id || item.local_id || item.label || itemIndex}>
-                <span>{item.local_id || item.id || item.kind || ""}</span>
-                <strong>{item.label || item.title || item.text || item.target_id || ""}</strong>
-                {item.subtitle || item.impact ? <em>{item.subtitle || item.impact}</em> : null}
-              </article>
-            ))}
-            {!section.items?.length ? <em>No records.</em> : null}
-          </div>
-        </section>
-      ))}
+      {sections.map((section, index) => {
+        const title = section.title || {
+          paper_brief: "Paper Brief",
+          paper_node_list: "Paper Argument Nodes",
+        }[section.kind] || section.kind || "Section";
+        if (section.kind === "paper_brief") {
+          return (
+            <section key={`${section.kind || "section"}:${index}`} className="workspace-inspector-section workspace-paper-brief-section">
+              <h3>{title}</h3>
+              {(section.items || []).map((item, itemIndex) => (
+                <article key={item.id || item.local_id || item.label || itemIndex} className="workspace-paper-brief-item">
+                  <strong>{item.label || item.title || item.kind || "Brief"}</strong>
+                  <p>{item.text || item.subtitle || item.impact || ""}</p>
+                </article>
+              ))}
+              {!section.items?.length ? <em>No records.</em> : null}
+            </section>
+          );
+        }
+        return (
+          <section key={`${section.kind || "section"}:${index}`} className={`workspace-inspector-section workspace-inspector-section-${relationClass(section.kind || "section")}`}>
+            <h3>{title}</h3>
+            <div className="workspace-inspector-list">
+              {(section.items || []).map((item, itemIndex) => (
+                <article key={item.id || item.local_id || item.label || itemIndex}>
+                  <span>{item.local_id || item.id || item.kind || ""}</span>
+                  <strong>{item.label || item.title || item.text || item.target_id || ""}</strong>
+                  {item.subtitle || item.impact ? <em>{item.subtitle || item.impact}</em> : null}
+                </article>
+              ))}
+              {!section.items?.length ? <em>No records.</em> : null}
+            </div>
+          </section>
+        );
+      })}
       {Array.isArray(inspector?.actions) && inspector.actions.length ? (
         <section>
           <h3>Actions</h3>
@@ -830,6 +953,12 @@ function WorkspaceGraphRenderer({ model, onNavigate, modeClass, providedNodes = 
     () => providedEdges || (model?.canvas?.edges || []).map((edge) => toFlowEdge(edge, model, focusedIds)),
     [model, focusedIds, providedEdges],
   );
+  const handleNodeClick = useCallback((event, flowNode) => {
+    if (flowNode?.type !== "workspaceRouteFrameNode") return;
+    const target = nodeNavigationTarget(flowNode?.data?.node);
+    if (!target) return;
+    onNavigate?.(target);
+  }, [onNavigate]);
   return (
     <div className={`workspace-knowledge-canvas ${modeClass || ""}`} aria-label="Workspace graph canvas">
       <WorkspaceBreadcrumb model={model} onNavigate={onNavigate} />
@@ -849,6 +978,7 @@ function WorkspaceGraphRenderer({ model, onNavigate, modeClass, providedNodes = 
         zoomOnDoubleClick={false}
         nodesDraggable={false}
         elementsSelectable
+        onNodeClick={handleNodeClick}
         proOptions={{ hideAttribution: true }}
       >
         <Background variant={BackgroundVariant.Lines} gap={42} size={1} color="var(--workspace-grid-color)" />
@@ -912,13 +1042,23 @@ function buildLiteratureOverviewFlowModel(model, onNavigate) {
     const frameWidth = Math.max(980, 310 + routePapers.length * (paperWidth + paperGap));
     nodes.push({
       id: `frame:${route.id}`,
-      type: "workspaceLaneFrameNode",
+      type: "workspaceRouteFrameNode",
       position: { x: -40, y: laneY - 42 },
       style: { width: frameWidth, height: 150 },
       draggable: false,
       selectable: false,
-      zIndex: 0,
-      data: { title: route.label || route.local_id || "Route", subtitle: `${routePapers.length} papers`, tone },
+      zIndex: 2,
+      data: {
+        node: route,
+        title: route.label || route.local_id || "Route",
+        subtitle: `${routePapers.length} papers`,
+        tone,
+        onNodeAction: (item) => {
+          const target = nodeNavigationTarget(item);
+          if (!target) return;
+          onNavigate?.(target);
+        },
+      },
     });
     routePapers.forEach((paper, index) => {
       nodes.push({
@@ -947,18 +1087,24 @@ function buildLiteratureOverviewFlowModel(model, onNavigate) {
   };
 }
 
+function buildLiteratureRouteFocusFlowModel(model, onNavigate) {
+  return buildLiteratureOverviewFlowModel(model, onNavigate);
+}
+
 function LiteratureGraphRenderer({ model, onNavigate }) {
-  const timelineLayer = model?.layer === "literature_overview" || model?.layer === "literature_route_focus";
+  const overviewLayer = model?.layer === "literature_overview";
+  const routeLayer = model?.layer === "literature_route_focus";
   const paperLayer = model?.layer === "literature_paper_focus";
   const flow = useMemo(
     () => {
       if (paperLayer) return buildUnderstandingPaperFocusFlowModel(model, onNavigate);
-      if (timelineLayer) return buildLiteratureOverviewFlowModel(model, onNavigate);
+      if (routeLayer) return buildLiteratureRouteFocusFlowModel(model, onNavigate);
+      if (overviewLayer) return buildLiteratureOverviewFlowModel(model, onNavigate);
       return null;
     },
-    [model, onNavigate, paperLayer, timelineLayer],
+    [model, onNavigate, paperLayer, routeLayer, overviewLayer],
   );
-  if (!timelineLayer && !paperLayer) {
+  if (!overviewLayer && !routeLayer && !paperLayer) {
     return <WorkspaceGraphRenderer model={model} onNavigate={onNavigate} modeClass="is-literature" />;
   }
   return (
@@ -1001,6 +1147,7 @@ function toExperimentEdge(edge) {
   const relation = relationClass(edge.relation || edge.label);
   const color = {
     defines: "#d6a84f",
+    uses: "#d6a84f",
     "measured-by": "#68c7d4",
     "used-by": "#70d6a3",
     produces: "#70d6a3",
@@ -1021,33 +1168,15 @@ function toExperimentEdge(edge) {
   };
 }
 
-function compactExperimentGroupNode(key, title, items, tone) {
-  const labels = items.map((item) => item.label).filter(Boolean);
-  const sample = labels.slice(0, 2).join(" + ");
-  return {
-    id: `experiment-group:${key}`,
-    entity_type: key,
-    local_id: title.toLowerCase(),
-    label: title,
-    subtitle: `${items.length} records${sample ? ` / ${shortLabel(sample, 54)}` : ""}`,
-    status: "",
-    confidence: "",
-    drill: null,
-    inspector: null,
-    metadata: { count: items.length, items: labels },
-    display: { tone },
-  };
-}
-
-function buildExperimentsOverviewFlowModel(model, onNavigate) {
-  const settings = model?.canvas?.nodes || [];
-  const cardWidth = 430;
-  const cardHeight = 156;
-  const gapX = 72;
-  const gapY = 56;
-  const nodes = settings.map((node, index) => ({
+function buildExperimentsArenaOverviewFlowModel(model, onNavigate) {
+  const arenas = model?.canvas?.nodes || [];
+  const cardWidth = 360;
+  const cardHeight = 118;
+  const gapX = 76;
+  const gapY = 54;
+  const nodes = arenas.map((node, index) => ({
     id: node.id,
-    type: "workspaceExperimentSettingNode",
+    type: "workspaceExperimentArenaNode",
     position: { x: (index % 2) * (cardWidth + gapX), y: Math.floor(index / 2) * (cardHeight + gapY) },
     sourcePosition: Position.Right,
     targetPosition: Position.Left,
@@ -1061,76 +1190,126 @@ function buildExperimentsOverviewFlowModel(model, onNavigate) {
   return { nodes, edges: [] };
 }
 
-function buildExperimentsSettingFocusFlowModel(model, onNavigate) {
+function buildExperimentsArenaFocusFlowModel(model, onNavigate) {
   const rawNodes = model?.canvas?.nodes || [];
-  const rawEdges = model?.canvas?.edges || [];
-  const setting = rawNodes.find((node) => node.entity_type === "evaluation_setting");
-  const supportNodes = rawNodes.filter((node) => ["dataset", "benchmark", "metric_family"].includes(node.entity_type));
+  const contextNodes = rawNodes.filter((node) => node.entity_type === "evaluation_context");
   const experimentNodes = rawNodes.filter((node) => node.entity_type === "experiment");
   const focusedIds = focusedNodeIds(model);
   const nodes = [
     {
-      id: "frame:experiment-setting",
+      id: "frame:arena-context",
       type: "workspaceLaneFrameNode",
-      position: { x: 430, y: 10 },
-      style: { width: 410, height: 190 },
+      position: { x: 36, y: -44 },
+      style: { width: 470, height: Math.max(330, contextNodes.length * 104 + 92) },
       draggable: false,
       selectable: false,
       zIndex: 0,
-      data: { title: "Selected Setting", subtitle: "benchmark + dataset + metric", tone: "c" },
+      data: { title: "Evaluation Context", subtitle: "dataset, benchmark, metric", tone: "p" },
     },
     {
-      id: "frame:experiment-context",
+      id: "frame:arena-designs",
       type: "workspaceLaneFrameNode",
-      position: { x: 32, y: -54 },
-      style: { width: 350, height: Math.max(360, supportNodes.length * 112 + 84) },
-      draggable: false,
-      selectable: false,
-      zIndex: 0,
-      data: { title: "Benchmark / Dataset / Metric", subtitle: `${supportNodes.length} context records`, tone: "p" },
-    },
-    {
-      id: "frame:experiment-designs",
-      type: "workspaceLaneFrameNode",
-      position: { x: 430, y: 230 },
-      style: { width: 410, height: Math.max(190, experimentNodes.length * 116 + 82) },
+      position: { x: 590, y: -44 },
+      style: { width: 560, height: Math.max(330, experimentNodes.length * 126 + 92) },
       draggable: false,
       selectable: false,
       zIndex: 0,
       data: { title: "Experiment Designs", subtitle: `${experimentNodes.length} designs`, tone: "e" },
     },
   ];
-  if (setting) {
+  contextNodes.forEach((node, index) => {
     nodes.push({
-      id: setting.id,
-      type: "workspaceExperimentSettingNode",
-      position: { x: 470, y: 68 },
+      id: node.id,
+      type: "workspaceExperimentContextPanelNode",
+      position: { x: 76, y: 34 + index * 150 },
       sourcePosition: Position.Right,
       targetPosition: Position.Left,
-      style: { width: 330, minHeight: 128 },
+      style: { width: 390, minHeight: 136 },
       zIndex: 4,
-      data: { node: setting, onNodeAction: experimentsNodeAction(onNavigate) },
+      data: { node, tone: "p" },
     });
-  }
-  supportNodes.forEach((node, index) => {
-    nodes.push(
-      toExperimentEntityNode(node, index, model, focusedIds, onNavigate, {
-        position: { x: 66, y: 12 + index * 112 },
-        width: 280,
-        minHeight: 92,
-      }),
-    );
   });
   experimentNodes.forEach((node, index) => {
     nodes.push(
       toExperimentEntityNode(node, index, model, focusedIds, onNavigate, {
-        position: { x: 470, y: 296 + index * 116 },
-        width: 330,
-        minHeight: 96,
+        position: { x: 630, y: 28 + index * 126 },
+        width: 470,
+        minHeight: 100,
+        tone: "e",
       }),
     );
   });
-  const visibleIds = new Set(rawNodes.map((node) => node.id));
+  return {
+    nodes,
+    edges: [],
+  };
+}
+
+function buildExperimentsDesignFocusFlowModel(model, onNavigate) {
+  const rawNodes = model?.canvas?.nodes || [];
+  const rawEdges = model?.canvas?.edges || [];
+  const experiment = rawNodes.find((node) => node.entity_type === "experiment");
+  const methodNode = rawNodes.find((node) => node.entity_type === "experiment_method");
+  const methodGroups = groupExperimentMethodNodes(rawNodes);
+  const runNodes = rawNodes.filter((node) => node.entity_type === "run");
+  const focusedIds = focusedNodeIds(model);
+  const runNodeStep = 152;
+  const runNodeHeight = 112;
+  const nodes = [
+    {
+      id: "frame:design-method",
+      type: "workspaceLaneFrameNode",
+      position: { x: 500, y: -48 },
+      style: { width: 500, height: 520 },
+      draggable: false,
+      selectable: false,
+      zIndex: 0,
+      data: { title: "Design Method", subtitle: "models, baselines, protocol", tone: "p" },
+    },
+    {
+      id: "frame:design-runs",
+      type: "workspaceLaneFrameNode",
+      position: { x: 980, y: -48 },
+      style: { width: 430, height: Math.max(330, runNodes.length * runNodeStep + 92) },
+      draggable: false,
+      selectable: false,
+      zIndex: 0,
+      data: { title: "Runs / Results", subtitle: `${runNodes.length} runs`, tone: "r" },
+    },
+  ];
+  if (experiment) {
+    nodes.push(
+      toExperimentEntityNode(experiment, 0, model, focusedIds, onNavigate, {
+        position: { x: 40, y: 72 },
+        width: 400,
+        minHeight: 112,
+        tone: "e",
+      }),
+    );
+  }
+  nodes.push({
+    id: methodNode?.id || "method-panel",
+    type: "workspaceExperimentMethodPanelNode",
+    position: { x: 540, y: 24 },
+    sourcePosition: Position.Right,
+    targetPosition: Position.Left,
+    style: { width: 420, minHeight: 432 },
+    zIndex: 4,
+    data: { groups: methodGroups, node: methodNode, onNodeAction: experimentsNodeAction(onNavigate) },
+  });
+  runNodes.forEach((node, index) => {
+    nodes.push({
+      id: node.id,
+      type: "workspaceRunResultNode",
+      position: { x: 1020, y: 24 + index * runNodeStep },
+      sourcePosition: Position.Right,
+      targetPosition: Position.Left,
+      style: { width: 350, minHeight: runNodeHeight },
+      zIndex: 4,
+      data: { node, tone: "r", onNodeAction: experimentsNodeAction(onNavigate) },
+    });
+  });
+  const visibleIds = new Set(nodes.map((node) => node.id));
   return {
     nodes,
     edges: rawEdges
@@ -1139,104 +1318,13 @@ function buildExperimentsSettingFocusFlowModel(model, onNavigate) {
   };
 }
 
-function buildExperimentsDesignFocusFlowModel(model, onNavigate) {
-  const rawNodes = model?.canvas?.nodes || [];
-  const experiment = rawNodes.find((node) => node.entity_type === "experiment");
-  const focusedIds = focusedNodeIds(model);
-  const nodes = [];
-  const groupSpecs = [
-    { key: "model", title: "Models", tone: "w", y: 0 },
-    { key: "baseline", title: "Baselines", tone: "l", y: 116 },
-    { key: "protocol", title: "Protocol", tone: "p", y: 232 },
-    { key: "metric_family", title: "Metrics", tone: "q", y: 348 },
-  ];
-  const groupNodes = groupSpecs
-    .map((group) => {
-      const items = rawNodes.filter((node) => node.entity_type === group.key);
-      if (!items.length) return null;
-      return { ...group, node: compactExperimentGroupNode(group.key, group.title, items, group.tone) };
-    })
-    .filter(Boolean);
-  const runNodes = rawNodes.filter((node) => node.entity_type === "run");
-  nodes.push({
-    id: "frame:experiment-plan",
-    type: "workspaceLaneFrameNode",
-    position: { x: 430, y: -54 },
-    style: { width: 340, height: Math.max(500, groupNodes.length * 116 + 84) },
-    draggable: false,
-    selectable: false,
-    zIndex: 0,
-    data: { title: "Planned Design", subtitle: "models, baselines, protocol, metrics", tone: "p" },
-  });
-  nodes.push({
-    id: "frame:experiment-runs",
-    type: "workspaceLaneFrameNode",
-    position: { x: 48, y: 420 },
-    style: { width: 360, height: Math.max(170, runNodes.length * 96 + 78) },
-    draggable: false,
-    selectable: false,
-    zIndex: 0,
-    data: { title: "Completed Evidence", subtitle: `${runNodes.length} runs`, tone: "e" },
-  });
-  if (experiment) {
-    nodes.push(
-      toExperimentEntityNode(experiment, 0, model, focusedIds, onNavigate, {
-        position: { x: 72, y: 168 },
-        width: 360,
-        minHeight: 128,
-        tone: "e",
-        zIndex: 4,
-      }),
-    );
-  }
-  groupNodes.forEach((group, index) => {
-    nodes.push(
-      toExperimentEntityNode(group.node, index, model, focusedIds, onNavigate, {
-        position: { x: 468, y: group.y },
-        width: 264,
-        minHeight: 88,
-        tone: group.tone,
-      }),
-    );
-  });
-  runNodes.forEach((node, index) => {
-    nodes.push(
-      toExperimentEntityNode(node, index, model, focusedIds, onNavigate, {
-        position: { x: 84, y: 486 + index * 96 },
-        width: 296,
-        minHeight: 82,
-        tone: "e",
-      }),
-    );
-  });
-  const edges = [];
-  if (experiment) {
-    groupNodes.forEach((group) => {
-      edges.push({
-        id: `experiment-plan:${group.key}`,
-        source: experiment.id,
-        target: group.node.id,
-        relation: "defines",
-      });
-    });
-    runNodes.forEach((run) => {
-      edges.push({
-        id: `experiment-run:${run.id}`,
-        source: experiment.id,
-        target: run.id,
-        relation: "produces",
-      });
-    });
-  }
-  return {
-    nodes,
-    edges: edges.map((edge) => toExperimentEdge(edge)),
-  };
+function buildExperimentsOverviewFlowModel(model, onNavigate) {
+  return buildExperimentsArenaOverviewFlowModel(model, onNavigate);
 }
 
 function buildExperimentsFlowModel(model, onNavigate) {
-  if (model?.layer === "evaluation_overview") return buildExperimentsOverviewFlowModel(model, onNavigate);
-  if (model?.layer === "evaluation_setting_focus") return buildExperimentsSettingFocusFlowModel(model, onNavigate);
+  if (model?.layer === "evaluation_overview") return buildExperimentsArenaOverviewFlowModel(model, onNavigate);
+  if (model?.layer === "evaluation_arena_focus" || model?.layer === "evaluation_setting_focus") return buildExperimentsArenaFocusFlowModel(model, onNavigate);
   if (model?.layer === "experiment_design_focus") return buildExperimentsDesignFocusFlowModel(model, onNavigate);
   return { nodes: [], edges: [] };
 }

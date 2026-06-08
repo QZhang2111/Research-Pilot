@@ -18,7 +18,8 @@ V1_TO_V2_LAYER: dict[tuple[str, str], str] = {
     ("literature", "literature_route_focus"): "literature.route_focus",
     ("literature", "literature_paper_focus"): "literature.paper_focus",
     ("experiments", "evaluation_overview"): "experiments.evaluation_overview",
-    ("experiments", "evaluation_setting_focus"): "experiments.evaluation_setting_focus",
+    ("experiments", "evaluation_arena_focus"): "experiments.evaluation_arena_focus",
+    ("experiments", "evaluation_setting_focus"): "experiments.evaluation_arena_focus",
     ("experiments", "experiment_design_focus"): "experiments.experiment_design_focus",
 }
 
