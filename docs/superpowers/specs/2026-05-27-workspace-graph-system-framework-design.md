@@ -179,7 +179,7 @@ experiment:run:<run_id>
 experiment:metric:<metric_id>
 experiment:artifact:<artifact_id>
 
-derived:evaluation_setting:<project_id>:<slug>
+derived:evaluation_arena:<project_id>:<slug>
 derived:group:<mode>:<layer>:<slug>
 ```
 
@@ -216,7 +216,7 @@ Derived groups carry derivation rules:
 
 ```json
 {
-  "canonical_id": "derived:evaluation_setting:DemoVisualAffordance:agd20k-kld-sim-nss",
+  "canonical_id": "derived:evaluation_arena:DemoVisualAffordance:agd20k-kld-sim-nss",
   "source": {
     "kind": "derived",
     "rule": "benchmark_task + dataset + metric_family",
@@ -243,7 +243,7 @@ type WorkspaceLayer =
   | "literature.route_focus"
   | "literature.paper_focus"
   | "experiments.evaluation_overview"
-  | "experiments.evaluation_setting_focus"
+  | "experiments.evaluation_arena_focus"
   | "experiments.experiment_design_focus";
 
 type SceneObjectKind =
@@ -268,7 +268,8 @@ The v2 layer names are semantic names. The current v1 endpoint uses shorter name
 | `literature` | `literature_route_focus` | `literature.route_focus` |
 | `literature` | `literature_paper_focus` | `literature.paper_focus` |
 | `experiments` | `evaluation_overview` | `experiments.evaluation_overview` |
-| `experiments` | `evaluation_setting_focus` | `experiments.evaluation_setting_focus` |
+| `experiments` | `evaluation_arena_focus` | `experiments.evaluation_arena_focus` |
+| `experiments` | `evaluation_setting_focus` | `experiments.evaluation_arena_focus` |
 | `experiments` | `experiment_design_focus` | `experiments.experiment_design_focus` |
 
 Compatibility rule: the UI may keep URL/query names while the new internal graph system uses v2 names. The adapter owns the mapping. Scene builders should emit v2 names only.
@@ -389,7 +390,7 @@ Some visible objects are not single DB rows but still need stable ids and proven
 
 Examples:
 
-- evaluation setting: dataset + benchmark/task + metric family
+- evaluation arena: coherent evaluation objective from dataset, benchmark/task, metric family, and experiment rows
 - experiment protocol block: selected protocol fields from `experiments.metadata_json`
 - model or baseline block: model/baseline fields from `experiments.metadata_json` or linked artifacts
 - planned metric summary: declared metric fields before run results exist
@@ -399,15 +400,15 @@ Contract:
 
 ```json
 {
-  "canonical_id": "derived:evaluation_setting:DemoVisualAffordance:agd20k-kld-sim-nss",
-  "display_id": "evaluation_setting:agd20k-kld-sim-nss",
-  "entity_type": "evaluation_setting",
-  "title": "AGD20K quantitative evaluation / qualitative validation",
-  "summary": "AGD20K unseen egocentric objects; UMD categorical masks; saliency/heatmap alignment metrics.",
+  "canonical_id": "derived:evaluation_arena:DemoVisualAffordance:agd20k-affordance-localization",
+  "display_id": "evaluation_arena:agd20k_affordance_localization",
+  "entity_type": "evaluation_arena",
+  "title": "AGD20K Affordance Localization",
+  "summary": "Verb-conditioned attention, geometry fusion, heatmap metrics, and qualitative localization evidence.",
   "capabilities": ["inspectable", "drillable"],
   "source": {
     "kind": "derived",
-    "rule": "dataset + benchmark_task + metric_family from experiment rows",
+    "rule": "coherent evaluation objective from experiment metadata, datasets, benchmark tasks, metric families, and runs",
     "inputs": [
       {"table": "experiments", "primary_key": "EXP1"},
       {"table": "experiment_runs", "primary_key": "run:exp1:paper"},
@@ -620,7 +621,7 @@ Examples:
 
 - selected claim in Claim Focus
 - selected route in Literature Route Focus
-- selected evaluation setting in Evaluation Setting Focus
+- selected evaluation arena in Evaluation Arena Focus
 - selected experiment design in Experiment Design Focus
 
 Rules:
@@ -640,7 +641,7 @@ Examples:
 - claim
 - paper/source
 - literature route
-- evaluation setting
+- evaluation arena
 - experiment design
 - run
 
@@ -871,35 +872,38 @@ Literature mode frontend is locked:
 
 `experiments.evaluation_overview`
 
-- Entities: derived evaluation settings only
-- Derived entity rule: benchmark/task + dataset + metric family
-- Relations: none by default, unless setting dependencies become explicit
-- Default inspector: evaluation setting list
-- Projected setting interaction: `drill -> experiments.evaluation_setting_focus`
+- Entities: derived evaluation arenas only
+- Derived entity rule: coherent evaluation objective from experiment rows, run metrics, and experiment metadata
+- Relations: none by default, unless arena dependencies become explicit
+- Default inspector: evaluation arena list
+- Projected arena interaction: `drill -> experiments.evaluation_arena_focus`
 
-`experiments.evaluation_setting_focus`
+`experiments.evaluation_arena_focus`
 
-- Anchor: selected evaluation setting
-- Entities: dataset, benchmark/task, metric family, experiment designs
-- Groups: evaluation substrate frame, experiment design frame
-- Relations: `uses_dataset`, `uses_benchmark`, `measures_with`, `has_design`
+- Anchor: selected evaluation arena
+- Entities: compact evaluation context summary, experiment designs
+- Groups: evaluation context frame, experiment design frame
+- Relations: `defines`, `has_design`
 - Projected experiment design interaction: `drill -> experiments.experiment_design_focus`
 - Runs do not appear here
 
 `experiments.experiment_design_focus`
 
 - Anchor: selected experiment design
-- Entities: derived protocol blocks, derived model/method nodes, derived baseline nodes, derived planned metric summary, DB-backed run nodes
-- Groups: Protocol, Models/Baselines, Runs, Interpretation Links
+- Entities: derived design method summary, DB-backed run nodes
+- Groups: Design Method, Runs / Results
 - Relations: `has_run`, `reports_metric`, `impacts`
 - Projected run role: `terminal`
 - Projected run interaction: `inspect`
+- Projected design method group interaction: `inspect`
 - Project Understanding Impact appears in inspector and portals, not as the primary layout driver
 
 Experiment projection rules:
 
-- Evaluation setting nodes are derived substrate entities, not experiment result claims.
-- Protocol/model/baseline/planned-metric nodes must carry derived provenance from experiment metadata, metrics, artifacts, or run rows.
+- Evaluation arena nodes are derived substrate entities, not experiment result claims.
+- Evaluation arena means a coherent evaluation context: datasets, benchmarks/tasks, and metric families used to compare a set of experiment designs.
+- Dataset, benchmark, and metric records are not separate top-level graph nodes in arena focus; they are summarized into the Evaluation Context panel and detailed in inspector.
+- Protocol/model/baseline/planned-metric values inside Design Method must carry derived provenance from experiment metadata, metrics, artifacts, or run rows.
 - If metadata is absent, the node must not be fabricated. Use inspector warning instead.
 - `impacts` links describe recorded interpretation links. They do not mean the experiment proved the target claim.
 
@@ -1048,7 +1052,7 @@ Browser tests:
 - Understanding overview shows question/claim frames
 - Claim focus shows one claim anchor and E/W/L/source lanes
 - Literature overview readable paper nodes
-- Experiments overview shows evaluation settings only
+- Experiments overview shows evaluation arenas only
 - Inspector scroll does not resize canvas
 - Run click updates inspector, no breadcrumb layer
 
@@ -1082,3 +1086,178 @@ The system framework is ready for implementation when:
 - Every terminal node role is explicit in projection data.
 - Understanding, Literature, and Experiments each have declared mode/layer object contracts.
 - React Flow adapter can be replaced without changing semantic scene builders.
+
+## 21. Concrete Projection Map Contract
+
+This section fixes the current dashboard display as the target projection contract. It is the map from `research-pilot.db` and project-local paper records into the visible Workspace Island.
+
+Projection pipeline:
+
+```text
+DB truth / paper dossier
+  -> WorkspaceScene entity / relation / derived_group / portal
+  -> ProjectedGraph node / edge / frame / portal / interaction
+  -> React Flow adapter node / edge / viewport
+  -> Inspector subject / sections / actions
+```
+
+The projection map is mode/layer-specific. It must not depend on per-project hard-coded labels, DemoVisualAffordance-only ids, or frontend fallback guesses.
+
+### 21.1 Global Projection Rules
+
+- Display title comes from canonical content fields, never raw ids.
+- Source paper title fallback order: paper dossier title, `sources.title`, source metadata title, short source id as debug-only fallback.
+- Raw ids such as `source:paper:*`, `paper:<project>:*`, `literature_lane:*`, and `evaluation_arena:*` may appear in debug/provenance text, not primary card titles.
+- `drill` changes layer and breadcrumb.
+- `inspect` changes inspector only and keeps breadcrumb unchanged.
+- Terminal nodes may use `inspect` or `none`; terminal nodes must not drill.
+- Derived groups become frames only when declared by projection map.
+- Frames are visual grouping, not DB facts.
+- Cross-mode jumps are portals. They are not evidence links unless backed by `entity_links` or a declared relation.
+- Inspector is layer-aware. Overview inspectors describe the layer broadly; terminal inspectors show detailed node knowledge.
+- React Flow layout may move nodes, resize frames, or aggregate edges, but cannot change entity role, interaction, title source, or provenance.
+
+### 21.2 Required Source Tables And Fields
+
+Understanding projection reads:
+
+- `understanding_nodes`: project id, local id, node type, title/text, status, confidence, metadata.
+- `understanding_links`: relation id, relation type, status, metadata.
+- `understanding_link_endpoints`: relation endpoints, endpoint roles, ordering.
+- `sources`: source id, title, year, authors, url/locator metadata.
+- `entity_links`: optional cross-mode references from claims/atoms to sources, experiments, or runs.
+
+Literature projection reads:
+
+- `literature_lanes`: lane id, title, summary, order, status, metadata.
+- `literature_items`: item id, lane id, source id, summary, metadata, order/sort hints.
+- `literature_relations`: source-to-source or lane-to-lane relation type and endpoints.
+- `sources`: title/year/authors/url fallback for every literature item.
+- project-local paper dossiers: paper argument nodes and paper brief when present.
+
+Experiments projection reads:
+
+- `experiments`: experiment id, title, question, hypothesis, expected evidence, risks, status, metadata.
+- `experiment_runs`: run id, experiment id, label, origin, status, summary, results metadata.
+- `experiment_metrics`: metric family/name/value/direction/context.
+- `experiment_artifacts`: artifact labels, paths, source refs.
+- `entity_links`: optional links from experiments/runs/metrics to understanding claims or paper sources.
+
+### 21.3 Understanding Projection Map
+
+| Layer | DB truth input | Scene objects | Projection output | Inspector output | Forbidden |
+| --- | --- | --- | --- | --- | --- |
+| `understanding.project_overview` | Project questions and project claims from `understanding_nodes`; `answers`/claim-support links from `understanding_links` | `question`, `claim`, `answers`, optional claim support relations, question and claim groups | Questions frame, Claims frame; question nodes inspect; claim nodes drill to `understanding.claim_focus` | Default question list; selected question detail with linked claims | Recent Understanding panel, papers, experiment results, raw counts, unrelated debug fields |
+| `understanding.claim_focus` | Focused claim, direct E/W/L/source neighbors, relevant relations | One anchor `claim`; terminal `evidence`, `warrant`, `limitation`; source paper nodes; E/W/L/source frames | Selected claim anchor; Evidence/Grounds frame; Warrants/Bridges frame; Limitations/Boundaries frame; Source Papers frame; atom nodes inspect; source nodes drill/portal to paper focus | Default rich claim detail; selected atom/source detail with source refs and related source papers | Unrelated active claims; deeper E/W/L layers; treating limitation/evidence/warrant as drillable |
+| `understanding.paper_focus` | Selected paper/source plus paper dossier argument records and optional selected project claim context | `project_claim_anchor`; paper question/claim/evidence/warrant/limitation entities; translation relations when present | Fixed paper argument template: Paper Questions, Paper Claims, Paper Evidence, Paper Warrants, Paper Limitations; paper atoms inspect | Paper focus detail; paper brief; argument node detail; translation bridge | Full project claim graph; full literature route graph; raw paper state dump |
+
+Understanding paper focus and Literature paper focus share the same paper argument projection. Only breadcrumb and contextual inspector copy differ.
+
+### 21.4 Literature Projection Map
+
+| Layer | DB truth input | Scene objects | Projection output | Inspector output | Forbidden |
+| --- | --- | --- | --- | --- | --- |
+| `literature.overview` | All literature lanes/items/relations for the project plus source metadata | `literature_lane`, source paper entities, optional literature relations, route frames | Large colored route frames; each route contains readable paper cards; route frame drills to route focus; paper card drills to paper focus | Route list only | Project claim graph, experiment graph, paper argument detail, raw lane ids as card titles |
+| `literature.route_focus` | Selected lane, lane items, lane relations, source metadata | One selected `literature_lane`, source paper entities, route frame | One route frame only; papers inside route; paper card drills to paper focus | Route detail, route explanation, paper list | Unrelated routes; Understanding E/W/L frames; experiment results |
+| `literature.paper_focus` | Selected source, paper dossier/read model, optional route context | Paper argument entities and optional route context | Same fixed paper argument template as Understanding paper focus | Paper focus detail and paper brief | Whole route overview; project claim focus graph unless entered through Understanding context |
+
+Literature route identity is not a paper fact. It is a derived organizing lane from `literature_lanes` plus `literature_items`.
+
+### 21.5 Experiments Projection Map
+
+| Layer | DB truth input | Scene objects | Projection output | Inspector output | Forbidden |
+| --- | --- | --- | --- | --- | --- |
+| `experiments.evaluation_overview` | Experiments, runs, metrics, metadata-derived arena grouping | Derived `evaluation_arena` entities | Arena cards only; concise metric-family summary and experiment/run counts; arena drills to arena focus | Arena list plus next moves | Dataset/benchmark/metric nodes as top-level scatter; claim proof language |
+| `experiments.evaluation_arena_focus` | Selected arena, experiments assigned to arena, summarized datasets/benchmarks/metrics | Anchor `evaluation_arena`, derived compact `evaluation_context`, experiment design entities | Evaluation Context frame with one compact summary panel; Experiment Designs frame with design cards; design drills to design focus; selected context/design inspects only | Arena detail; datasets, benchmarks/tasks, metric families; experiment designs | Run nodes; long dataset/benchmark/metric lists as graph nodes; duplicated context groups |
+| `experiments.experiment_design_focus` | Selected experiment row, experiment metadata, runs, metrics, artifacts, interpretation links | Anchor experiment; derived `experiment_method`; run nodes; optional portals/impact links | Experiment anchor; Design Method frame with clickable model/baseline/protocol/ablation groups; Runs / Results frame; run nodes inspect only | Default experiment detail; method group detail; selected run detail; expected evidence and risks | Separate long model/baseline/protocol node lists; extra drill layer under run/method; claiming proof of Understanding claim |
+
+Evaluation Arena definition:
+
+- Arena is a derived evaluation context, not a DB table row unless backend later adds one.
+- Arena groups experiment designs that share a coherent evaluation objective.
+- Dataset, benchmark/task, and metric family belong to arena context.
+- Runs belong only to experiment design focus.
+- Experiment designs are research plans or completed designs inside an arena.
+
+### 21.6 Paper Focus Projection Map
+
+Paper focus is shared by two entry paths:
+
+- `understanding.claim_focus -> source paper -> understanding.paper_focus`
+- `literature.route_focus|literature.overview -> paper -> literature.paper_focus`
+
+Shared graph:
+
+- Paper Questions lane
+- Paper Claims lane
+- Paper Evidence lane
+- Paper Warrants lane
+- Paper Limitations lane
+
+Shared rules:
+
+- Lanes are fixed categories.
+- Lane membership is data-driven.
+- Empty lanes may be hidden.
+- Paper argument atoms are terminal inspect nodes.
+- More atoms increase cards inside the lane; they do not create a new graph layer.
+
+Context differences:
+
+- Understanding entry may show a selected project claim anchor and translation bridge.
+- Literature entry may show route context in breadcrumb/inspector.
+- Both entries must use the same paper title, paper brief, and paper argument records.
+
+### 21.7 Inspector Projection Map
+
+| Inspector kind | Subject | Trigger | Required content |
+| --- | --- | --- | --- |
+| `overview` | Current layer | Layer default | Short layer explanation and list of drillable top-level objects |
+| `question_detail` | Question | Inspect question | Question text, role, linked claims |
+| `claim_detail` | Claim | Claim focus default or selected claim | Claim text, supporting claims, evidence, warrants, limitations, source papers |
+| `argument_atom_detail` | Evidence/warrant/limitation | Inspect terminal atom | Atom text, source refs, related source papers |
+| `paper_focus` | Source paper | Paper focus default | Paper brief, core contribution, evidence boundary, argument records, project/route context |
+| `route_detail` | Literature lane | Route focus default | Route explanation, papers, position in literature map |
+| `arena_detail` | Evaluation arena | Arena focus default | Datasets, benchmarks/tasks, metric families, designs |
+| `experiment_detail` | Experiment design | Design focus default or selected design | Question, hypothesis, expected evidence, risks, run summary |
+| `experiment_method_detail` | Method group | Inspect method group | Models, baselines, protocol, ablations, provenance |
+| `run_detail` | Experiment run | Inspect run | Origin, status, metric values, artifacts, result notes |
+
+Inspector content may summarize, but must keep subject id and provenance. Inspector scroll must not resize the island canvas.
+
+### 21.8 Validation Rules
+
+Backend scene/projection validation should fail or warn when:
+
+- A visible node has no provenance.
+- A derived group lacks `source.kind = derived`, rule, or inputs.
+- A projected terminal node has `interaction.kind = drill`.
+- A node title falls back to a raw id while a source title exists.
+- A literature item references a source id missing from `sources`.
+- A relation endpoint is absent from the scene without an explicit external reference rule.
+- A layer emits an entity type outside its projection map.
+- Breadcrumb adds a segment for inspect-only selection.
+- `evaluation_setting_focus` appears as emitted semantic layer instead of compatibility input mapped to `evaluation_arena_focus`.
+
+Frontend source validation should fail or warn when:
+
+- React Flow adapter reads DB table-shaped fields directly.
+- React Flow component decides drill/inspect behavior from entity type instead of projected `interaction`.
+- A mode renders a layer not declared in this contract.
+- Card title renders raw canonical id in normal display.
+- Inspector height changes canvas height.
+
+### 21.9 Current Migration State
+
+Current implementation state:
+
+- `/api/workspace-graph` without `schema` returns `workspace-graph-v1` compatibility payload.
+- `?schema=scene-v2` returns semantic scene objects.
+- `?schema=projection-v1` returns projected graph objects.
+- Current frontend still renders mostly from `workspace-graph-v1`.
+
+Target implementation state:
+
+- Frontend renders `workspace-projection-v1`.
+- React Flow adapter only receives projected nodes, edges, frames, portals, and interactions.
+- `workspace-graph-v1` remains compatibility-only until the projection path matches locked screenshots for all accepted layers.
